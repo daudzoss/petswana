@@ -30,6 +30,10 @@ COPIED2	= $0400
 
 start
 
+GRIDW	= $0a
+GRIDH	= $08
+GRIDSIZ	= GRIDW+GRIDH
+
 TP	= 6
 LT	= 4
 BT	= 2
@@ -110,15 +114,46 @@ commodc	.byte	VIDEOBG
 	.byte	VIDEOGY				;15
 
 HIDGRID	= vararea + $00
-var2	= vararea + $50
+TRYGRID	= vararea + GRIDSIZ
+var2	= vararea + 2*GRIDSIZ
 
-;visualz	hal_vis
+inigrid	lda	#0		;inline inigrid(uint1_t c) {
+	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
+-	bcc	+		;  if (c)
+	sta	HIDGRID-1,y	;   HIDGRID[y-1] = 0;
+	bcs	++		;  else
++	sta	TRYGRID-1,y	;   TRYGRID[y-1] = 0;
++	dey			;
+	bne	-		; }
+	rts			;} // inigrid()
+
+rotshap				;} // rotshap (new x in a, new y in y)
+
+DRW_CEL	= 1<<0			;
+DRW_TRY	= 1<<3			;
+DRW_HID	= 1<<4			;
+DRW_MSG	= 1<<5			;
+DRW_LBL	= 1<<6			;
+DRW_MSH	= 1<<7			;
+DRW_ALL	= DRW_MSH|DRW_LBL|DRW_MSG|DRW_HID|DRW_TRY
+	
+visualz	cmp	#0		;
+	POPVARS
 	rts
 
-;inputkb	hal_inp
+hal_vis
+
+inputkb
+	POPVARS
 	rts
 
-main	tsx
+hal_inp
+	
+main	tsx			;
+	sec			;
+	jsr	inigrid		;
+	clc			;
+	jsr	inigrid		;
 
 pre_end
 .align $10
