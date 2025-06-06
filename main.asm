@@ -92,17 +92,36 @@ MIXT_LG	= MIXTWHT | MIXTBLU | MIXTYEL | 0	;14
 MIXTGRY	= MIXTRED | MIXTYEL | MIXTBLU | MIXTWHT ;15
 MIXTOFF	= 1 << (ABSORBD - 1)			;128
 
-commodc	;.byte
+commodc	.byte	VIDEOBG
+	.byte	VIDEOR				;1
+	.byte	VIDEOY				;2
+	.byte	VIDEOO				;3
+	.byte	VIDEOB				;4
+	.byte	VIDEOP				;5
+	.byte	VIDEOG				;6
+	.byte	VIDEOK				;7
+	.byte	VIDEOW				;8
+	.byte	VIDEOLR				;9
+	.byte	VIDEOLY				;10
+	.byte	VIDEOLO				;11
+	.byte	VIDEOLB				;12
+	.byte	VIDEOLP				;13
+	.byte	VIDEOLG				;14
+	.byte	VIDEOGY				;15
 
-var1	= vararea + $00
+HIDGRID	= vararea + $00
+var2	= vararea + $50
 
+;visualz	hal_vis
+	rts
 
-;extern visualz
-
-;extern kbinput
+;inputkb	hal_inp
+	rts
 
 main	tsx
 
 pre_end
+.align $10
+vararea
 .end
 
