@@ -277,10 +277,22 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	adc	#GRIDH		;
 	sta @w	V0LOCAL	;//i	;
 	cmp	#GRIDSIZ	;
-	bcs	+		;
+	bcs	+++		;
 	lda	\gridarr,y	;
-	pha	;//V2LOCAL=temp	;   uint8_t temp = gridarr[y];
-	lda
+	pha	;//V2LOCAL=temp	;   int8_t temp = gridarr[y];
+	bpl	+		;   if (temp < 0) { // absorber, drawn as black
+	ldy	#VIDEOK		;
+	lda	petscii,y	;
+	jsr	putchar		;    putchar(petscii[VIDEOK]);
+	jmp	++		;
+	beq	++		;   } else if (temp > 0) {
++	lsr			;
+	lsr			;
+	lsr			;
+	lsr			;
+	and	#$03		;
+	tay			;    y = (temp & 0x70) >> 4;
+	
 	rule	ZP,$ab,$7b,$b3	;  rule(ZP, 0xab, 0x7b, 0xb3);
 	dec @w	V1LOCAL	;//r	;
 	bne	-		; }
