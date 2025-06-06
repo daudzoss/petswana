@@ -156,8 +156,8 @@ visualz	pha	//what		;
 	beq	+		;
 	bit	vis_msh		;
 	beq	+		;
-.if SCREENW >= 22
-.elsif SCREENW >= 40
+.if SCREENW >= 40
+.elsif SCREENW >= 22
 .else
 .endif
 +
