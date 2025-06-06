@@ -28,6 +28,8 @@ COPIED2	= $0400
 *	= COPIED2
 .endif
 
+start
+
 TP	= 6
 LT	= 4
 BT	= 2
@@ -87,16 +89,18 @@ MIXTSKY	= MIXTBLU | MIXTWHT
 MIXTBRN	= MIXTRED | MIXTYEL | MIXTBLU
 MIXT_LO	= MIXTRED | MIXTYEL | MIXTWHT
 MIXT_LG	= MIXTYEL | MIXTBLU | MIXTWHT
+MIXT_LP	= MIXTRED | MIXTBLU | MIXTWHT
 MIXTGRY	= MIXTRED | MIXTYEL | MIXTBLU | MIXTWHT
 
 var1	= vararea + $00
 
-start
 
-extern visualz
+;extern visualz
 
-extern kbinput	
+;extern kbinput
 
-main	
+main	tsx
 
+pre_end
+.end
 
