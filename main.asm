@@ -136,8 +136,32 @@ DRW_MSG	= 1<<5			;
 DRW_LBL	= 1<<6			;
 DRW_MSH	= 1<<7			;
 DRW_ALL	= DRW_MSH|DRW_LBL|DRW_MSG|DRW_HID|DRW_TRY
+vis_cel	.byte	DRW_CEL		;
+vis_try	.byte	DRW_TRY		;
+vis_hid	.byte	DRW_HID		;
+vis_msg	.byte	DRW_MSG		;
+vis_lbl	.byte	DRW_LBL		;
+vis_msh	.byte	DRW_MSH		;
 	
-visualz	cmp	#0		;
+visualz	pha	//what		;
+	bit	vis_cel		;
+	beq	+		;
+	bit	vis_try		;
+	beq	+		;
+	bit	vis_hid		;
+	beq	+		;
+	bit	vis_msg		;
+	beq	+		;
+	bit	vis_lbl		;
+	beq	+		;
+	bit	vis_msh		;
+	beq	+		;
+.if SCREENW >= 22
+.elsif SCREENW >= 40
+.else
+.endif
++
+	lda @w	V0LOCAL	;//what	;
 	POPVARS
 	rts
 
