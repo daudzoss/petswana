@@ -159,7 +159,7 @@ DRW_HID	= 1<<4			;
 DRW_MSG	= 1<<5			;
 DRW_LBL	= 1<<6			;
 DRW_MSH	= 1<<7			;
-DRW_ALL	= DRW_MSH|DRW_LBL|DRW_MSG|DRW_HID|DRW_TRY
+DRW_ALL	=DRW_MSH|DRW_LBL|DRW_MSG;
 vis_cel	.byte	DRW_CEL		;
 vis_try	.byte	DRW_TRY		;
 vis_hid	.byte	DRW_HID		;
@@ -289,7 +289,7 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	jsr	putchar		;   putchar('|');                              \
 	lda @w	V0LOCAL	;//i	;                                              \
 	cmp	#GRIDSIZ	;                                              \
-	bcs	++++		;                                              \
+	bcs	+++++		;                                              \
 	tay			;                                              \
 	clc			;                                              \
 	adc	#GRIDH		;                                              \
@@ -316,13 +316,16 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	lda	petscii,y	;                                              \
 	jsr	putchar		;    putchar(petscii[1<<(((temp&0x70)>>4)-1)]);\
 +	lda @w	V2LOCAL	;//temp	;   }                                          \
-	and	#$0f		;                                              \
-	ora	#$30		;   register uint8_t a = '0' | (temp & 0x0f);  \
+	and	#$0f		;   register uint8_t a = temp & 0x0f;          \
+	bne	+		;   if (a == 0)                                \
+	lda	#' '		;    a = ' ';                                  \
+	bne	++		;   else                                       \
++	ora	#$30		;                                              \
 	cmp	#'9'+1		;                                              \
 	bcc	+		;                                              \
 	clc			;                                              \
-	adc	#'a'-'9'-1	;                                              \
-+	jsr	putchar		;   putchar((a <= '9') ? a : (a + 'a'-'9'-1)); \
+	adc	#'a'-'9'-1	;    a = '0' | ((a <= 9) ? a : (a+'a'-'9'-1)); \
++	jsr	putchar		;   putchar(a);                                \
 	ldy	#VIDEOGY	;                                              \
 	lda	petscii,y	;                                              \
 	jsr	putchar		;   putchar(petscii[VIDEOGY]);                 \
@@ -370,7 +373,7 @@ main	tsx			;
 	clc			;
 	jsr	inigrid		;
 	FUNCALL			;
-	lda	#DRW_ALL	;
+	lda	#DRW_ALL|DRW_TRY;
 	jsr	visualz		;
 	FUNRETN			;
 	rts			;

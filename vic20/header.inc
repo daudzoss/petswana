@@ -8,7 +8,7 @@ SCREENH = 0;$17
 SCREENC = $9600
 SCREENM = $1e00
 
-VIDEOBG	= $5a			; actually light CYN
+VIDEOBG	= $5a			; actually light CYN    ;FIXME! horrendous, nauseating, vile
 VIDEOR	= $02
 VIDEOY	= $07
 VIDEOO	= $08
