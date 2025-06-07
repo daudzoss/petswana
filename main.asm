@@ -34,6 +34,7 @@ start
 GRIDW	= $0a
 GRIDH	= $08
 GRIDSIZ	= GRIDW*GRIDH
+ANSWERS	= 2*GRIDH + 2*GRIDW
 
 ;;; a cell in a grid has a 7-bit state, representing the residing object portion
 ;;;	7	6	5	4	|	3	2	1	0
@@ -131,9 +132,15 @@ main	tsx	;//req'd for PCS;int main(void) {
 	lda	#VIDEOBG	; if (SCREENW && SCREENH) // addressable screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
+	lda	#$ff		;
+	ldy	#ANSWERS	; for (register uint8_t y = ANSWERS; y; y--) {
+-	sta	PORTALS-1,y	;  // bits 0-3 reflected tint, or bit 4 absorbed
+	dey			;  PORTALS[y-1] = -1; // no beam entry/exit yet
+	bne	-		; }
 	clc	;TRYGRID	;
 	jsr	inigrid		;
 	jsrAPCS	rndgrid		;
+
 	jsrAPCS	visualz,#DRW_ALL|DRW_TRY
 	rts			;} // main()
 	
@@ -179,7 +186,8 @@ RVS_OFF	=
 	
 HIDGRID	= vararea + $00
 TRYGRID	= vararea + GRIDSIZ
-var2	= vararea + 2*GRIDSIZ
+PORTALS	= vararea + 2*GRIDSIZ
+OTHRVAR	= vararea + 2*GRIDSIZ + ANSWERS
 
 DRW_CEL	= 1<<0			;
 DRW_TRY	= 1<<3			;
