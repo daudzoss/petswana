@@ -144,6 +144,8 @@ main	tsx	;//req'd for PCS;int main(void) {
 	jsrAPCS	visualz,#DRW_ALL|DRW_TRY
 	rts			;} // main()
 	
+bportal				;//1-18 (0x01~0x12) and A-R (0x41~0x52) to index
+
 inigrid	lda	#0		;inline inigrid(uint1_t c) {
 	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
 -	bcc	+		;  if (c)
@@ -153,8 +155,6 @@ inigrid	lda	#0		;inline inigrid(uint1_t c) {
 +	dey			;
 	bne	-		; }
 	rts			;} // inigrid()
-
-rndgrid	
 
 rotshap				;} // rotshap (new x in a, new y in y)
 
@@ -181,8 +181,8 @@ petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
 	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
 	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
 	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
-RVS_ON	= 
-RVS_OFF	= 
+RVS_ON	= $12
+RVS_OFF	= $92
 	
 HIDGRID	= vararea + $00
 TRYGRID	= vararea + GRIDSIZ
