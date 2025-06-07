@@ -288,12 +288,12 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 -	lda	#$7d		;  for (putchar('\n');(y=i)<GRIDSIZ;i+=GRIDH) {\
 	jsr	putchar		;   putchar('|');                              \
 	lda @w	V0LOCAL	;//i	;                                              \
+	cmp	#GRIDSIZ	;                                              \
+	bcs	++++		;                                              \
 	tay			;                                              \
 	clc			;                                              \
 	adc	#GRIDH		;                                              \
 	sta @w	V0LOCAL	;//i	;                                              \
-	cmp	#GRIDSIZ	;                                              \
-	bcs	++++		;                                              \
 	lda	\gridarr,y	;                                              \
 	sta @w	V2LOCAL	;//temp	;   temp = gridarr[y];                         \
 	bpl	+		;   if (temp < 0) { // absorber, drawn as black\
@@ -363,7 +363,8 @@ inputkb
 hal_inp
 
 main	tsx			;
-	;; set background color
+	lda	#VIDEOBG	;
+	sta	BKGRNDC		;
 	sec			;
 	jsr	inigrid		;
 	clc			;
