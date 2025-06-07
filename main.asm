@@ -36,8 +36,8 @@ GRIDH	= $08
 GRIDSIZ	= GRIDW*GRIDH
 
 ;;; a cell in a grid has a 7-bit state, representing the residing object portion
-;;;	7	6	5	4	|		2	1	0
-;;; {UNTINTD=0;TINT*=1,2,3,4;ABSORBD=8}     0  {BLANK=0;CHAMF*=1,2,3,4;SQUARE=7}
+;;;	7	6	5	4	|	3	2	1	0
+;;; {UNTINTD=0;TINT*=1,2,3,4;ABSORBD=8}	{marker in TRY} {BLANK=0;CHAMF;SQUARE=7}
 
 ;;; the wavefront of a beam has a 7-bit state, in addition to its x and y coords
 ;;; 	7	6		4	|	3	2	1	0
@@ -86,6 +86,8 @@ CHAMFTR = 4			;      "        "     , chamfer at top right
 ;BOREDLR	= 5			; transmits left-right but rebounds top-bottom
 ;BOREDTB	= 6			; transmits top-bottom but rebounds left-right
 SQUARE	= 7			; cell filled in so all four sides will rebound
+SOBLANK	= 8			; marker (in TRYGRID only) that blank confirmed
+SOFILLD	= 9			; marker (in TRYGRID only) that object confirmed
 
 ;;; upper nybble of grid square absorbs/reflects beam, optionally imparting tint
 UNTINTD	= 0
@@ -170,33 +172,23 @@ vis_msh	.byte	DRW_MSH		;
 visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
 	bit	vis_msh		;                                 uint4_t y0) {
 	beq	+		; if (a & DRW_MSH) {
-	FUNCALL			;
-	jsr	hal_msh		;  hal_msh(a);
-	FUNRETN			;
+	jsrAPCS	hal_msh		;  hal_msh(a);
 	lda @w	V0LOCAL		; }
 +	bit	vis_lbl		;
 	beq	+		; if (a & DRW_LBL) {
-	FUNCALL			;
-	jsr	hal_lbl		;  hal_lbl(a);
-	FUNRETN			;
+	jsrAPCS	hal_lbl		;  hal_lbl(a);
 	lda @w	V0LOCAL		; }
 +	bit	vis_msg		;
 	beq	+		; if (a & DRW_MSG) {
-	FUNCALL			;
-	jsr	hal_msg		;  hal_msg(a);
-	FUNRETN			;
+	jsrAPCS	hal_msg		;  hal_msg(a);
 	lda @w	V0LOCAL		; }
 +	bit	vis_hid		;
 	beq	+		; if (a & DRW_HID) {
-	FUNCALL			;
-	jsr	hal_hid		;  hal_hid(a);
-	FUNRETN			;
+	jsrAPCS	hal_hid		;  hal_hid(a);
 	lda @w	V0LOCAL		; }
 +	bit	vis_try		;
 	beq	+		; if (a & DRW_TRY) {
-	FUNCALL			;
-	jsr	hal_try		;  hal_try(a);
-	FUNRETN			;
+	jsrAPCS	hal_try		;  hal_try(a);
 	lda @w	V0LOCAL		; }
 +	bit	vis_cel		;
 	beq	+		; if (a & DRW_CEL) {
@@ -204,9 +196,7 @@ visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
 	sta @w	V0LOCAL	;//y0	;
 	lda	A0FUNCT		;
 	pha	;//V1LOCAL=x0	;
-	FUNCALL			;
-	jsr	hal_cel		;  hal_cel(x0, y0);
-	FUNRETN			;
+	jsrAPCS	hal_cel		;  hal_cel(x0, y0);
 +	POPVARS			; }
 	rts			;} // visualz()
 
@@ -368,16 +358,14 @@ hal_inp
 main	tsx			;
 	lda	#VIDEOBG	;
 	sta	BKGRNDC		;
-	sec			;
+	sec	;HIDGRID	;
 	jsr	inigrid		;
-	clc			;
+	clc	;TRYGRID	;
 	jsr	inigrid		;
-	FUNCALL			;
-	lda	#DRW_ALL|DRW_TRY;
-	jsr	visualz		;
-	FUNRETN			;
+	jsrAPCS	rndgrid		;
+	jsrAPCS	visualz,#DRW_ALL|DRW_TRY
 	rts			;
-
+rndgrid
 pre_end
 .align $10
 vararea
