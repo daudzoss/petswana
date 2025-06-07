@@ -235,7 +235,7 @@ rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	dey			;                                              \
 	dey			;                                              \
 -	tya			;                                              \
-	sta @w	\temp		;  for (*temp = GRIDW - 2; *temp; --*temp) {   \
+	sta @w	\temp		;  for (temp = GRIDW - 2; temp; --temp) {      \
 	lda	#\mj		;                                              \
 	jsr	putchar		;   putchar(mj);                               \
 	lda	#$60		;                                              \
@@ -307,20 +307,24 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	ldy	#VIDEOGY	;                                              \
 	lda	petscii,y	;                                              \
 	jsr	putchar		;   putchar(petscii[VIDEOGY]);                 \
-	jmp	-		;  }putchar('|');                              \
-+	inc @w	V0LOCAL	;//i	;  i += 1;                                     \
+	jmp	--		;  }putchar('|');                              \
++	lda @w	V0LOCAL	;//i	;                                              \
+	and	#GRIDH-1	;                                              \
+	clc			;                                              \
+	adc	#1		;                                              \
+	sta @w	V0LOCAL	;//i	;  i = (i & (GRIDH-1)) + 1;                    \
 	dec @w	V1LOCAL	;//r	;  if (r == 1) // no draw interior joints last \
 	beq	+		;   break;                                     \
 	rule V2LOCAL,$ab,$7b,$b3;  rule(temp, 0xab, 0x7b, 0xb3);               \
-	jmp	--		; }                                            \
+	jmp	---		; }                                            \
 +	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
 	POPVARS			;                                              \
 	.endm			;} // putgrid
 
-petscii	.byte	$,$,$,$		;
-	.byte	$,$,$,$		;
-	.byte	$,$,$,$		;
-	.byte	$,$,$,$		;
+petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
+	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
+	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
+	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
 hal_try putgrid	TRYGRID		;
 	rts			;
 hal_hid putgrid	HIDGRID		;
