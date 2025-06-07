@@ -127,7 +127,7 @@ commodc	.byte	VIDEOBG
 	.byte	VIDEOB				;4
 	.byte	VIDEOP				;5
 	.byte	VIDEOG				;6
-	.byte	VIDEOK				;7
+	.byte	VIDEOBK				;7
 	.byte	VIDEOW				;8
 	.byte	VIDEOLR				;9
 	.byte	VIDEOLY				;10
@@ -173,35 +173,30 @@ visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
 	FUNCALL			;
 	jsr	hal_msh		;  hal_msh(a);
 	FUNRETN			;
- jmp ++++++
 	lda @w	V0LOCAL		; }
 +	bit	vis_lbl		;
 	beq	+		; if (a & DRW_LBL) {
 	FUNCALL			;
 	jsr	hal_lbl		;  hal_lbl(a);
 	FUNRETN			;
- jmp +++++
 	lda @w	V0LOCAL		; }
 +	bit	vis_msg		;
 	beq	+		; if (a & DRW_MSG) {
 	FUNCALL			;
 	jsr	hal_msg		;  hal_msg(a);
 	FUNRETN			;
- jmp ++++
 	lda @w	V0LOCAL		; }
 +	bit	vis_hid		;
 	beq	+		; if (a & DRW_HID) {
 	FUNCALL			;
 	jsr	hal_hid		;  hal_hid(a);
 	FUNRETN			;
- jmp +++
 	lda @w	V0LOCAL		; }
 +	bit	vis_try		;
 	beq	+		; if (a & DRW_TRY) {
 	FUNCALL			;
 	jsr	hal_try		;  hal_try(a);
 	FUNRETN			;
- jmp ++
 	lda @w	V0LOCAL		; }
 +	bit	vis_cel		;
 	beq	+		; if (a & DRW_CEL) {
@@ -212,14 +207,12 @@ visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
 	FUNCALL			;
 	jsr	hal_cel		;  hal_cel(x0, y0);
 	FUNRETN			;
- jmp +
 +	POPVARS			; }
 	rts			;} // visualz()
 
 .if SCREENW >= $28
 .elsif SCREENW >= $16
 .else
-.endif ;//FIXME:move this line to after the code below
 putchar	tay			;inline void putchar(register uint8_t a) {
 	txa			; // a stashed in y
 	pha			; // x stashed in a, then on stack
@@ -229,93 +222,114 @@ putchar	tay			;inline void putchar(register uint8_t a) {
 	tax			; // x restored from stack by way of a
 	rts			;} // putchar()
 
-rule	.macro	temp,lj,mj,rj	;#define rule(temp,ljoin,mjoin,rjoin) {        \
+rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	lda	#$0d		;                                              \
-	jsr	$ffd2		; putchar('\n');                               \
-	lda	#\ljoin		;                                              \
-	jsr	$ffd2		; putchar(ljoin);                              \
+	jsr	putchar		; putchar('\n');                               \
+	lda	#\lj		;                                              \
+	jsr	putchar		; putchar(lj);                                 \
 	lda	#$60		;                                              \
-	jsr	$ffd2		; putchar('-');                                \
+	jsr	putchar		; putchar('-');                                \
 	ldy	#GRIDW		;                                              \
 	cpy	#3		;                                              \
 	bcc	+		; if (GRIDW > 2) {                             \
 	dey			;                                              \
 	dey			;                                              \
 -	sty @w	\temp		;  for (*temp = GRIDW - 2; *temp; --*temp) {   \
-	lda	#\mjoin		;                                              \
-	jsr	$ffd2		;   putchar(mjoin);                            \
+	lda	#\mj		;                                              \
+	jsr	putchar		;   putchar(mj);                               \
 	lda	#$60		;                                              \
-	jsr	$ffd2		;   putchar('-');                              \
+	jsr	putchar		;   putchar('-');                              \
 	ldy @w	\temp		;                                              \
 	dey			;                                              \
 	bne	-		;  }                                           \
-+	lda	#\mjoin		; }                                            \
-	jsr	$ffd2		; putchar(mjoin);                              \
++	lda	#\mj		; }                                            \
+	jsr	putchar		; putchar(mj);                                 \
 	lda	#$60		;                                              \
-	jsr	$ffd2		; putchar('-');                                \
-	lda	#\rjoin		;                                              \
-	jsr	$ffd2		; putchar(rjoin);                              \
+	jsr	putchar		; putchar('-');                                \
+	lda	#\rj		;                                              \
+	jsr	putchar		; putchar(rj);                                 \
 	.endm			;} // rule
 
 putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
-	pha	;//V0LOCAL=i	;void hal_(void) {                             \
-	pha	;//V1LOCAL=r	; uint8_t i, r;                                \
-;	txa			;                                              \
-;	pha	;//V2LOCAL=x	; uint8_t V2LOCAL = x;                         \
+	pha	;//V0LOCAL=i	; uint8_t i;                                   \
+	pha	;//V1LOCAL=r	; uint8_t r;                                   \
+	pha	;//V2LOCAL=temp	; uint8_t temp;                                \
+	ldy	#VIDEOGY	;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		; putchar(petscii[VIDEOGY]);                   \
 	rule	ZP,$b0,$b2,$ae	; rule(ZP, 0xb0, 0xb2, 0xae);                  \
-	ldy	#0		;                                              \
-	sty @w	V0LOCAL	;//i	; i = 0;                                       \
+	lda	#0		;                                              \
+	sta @w	V0LOCAL	;//i	; i = 0;                                       \
 	lda	#GRIDH		;                                              \
 	sta @w	V1LOCAL	;//r	; for (r = GRIDH; r; r--) {                    \
 -	lda	#$0d		;  register uint8_t y;                         \
 	jsr	putchar		;                                              \
 -	lda	#$7d		;  for (putchar('\n');(y=i)<GRIDSIZ;i+=GRIDH) {\
-	jsr	putchar		;   putchar('|');
-	lda @w	V0LOCAL	;//i	;	
-	tay			;
-	clc			;
-	adc	#GRIDH		;
-	sta @w	V0LOCAL	;//i	;
-	cmp	#GRIDSIZ	;
-	bcs	+++		;
-	lda	\gridarr,y	;
-	pha	;//V2LOCAL=temp	;   int8_t temp = gridarr[y];
-	bpl	+		;   if (temp < 0) { // absorber, drawn as black
-	ldy	#VIDEOK		;
-	lda	petscii,y	;
-	jsr	putchar		;    putchar(petscii[VIDEOK]);
-	jmp	++		;
-	beq	++		;   } else if (temp > 0) {
-+	lsr			;
-	lsr			;
-	lsr			;
-	lsr			;
-	and	#$03		;
-	tay			;    y = (temp & 0x70) >> 4;
-	
-	rule	ZP,$ab,$7b,$b3	;  rule(ZP, 0xab, 0x7b, 0xb3);
-	dec @w	V1LOCAL	;//r	;
-	bne	-		; }
-
-
-;	pla			;
-;	tax			;
-	POPVARS			;
+	jsr	putchar		;   putchar('|');                              \
+	lda @w	V0LOCAL	;//i	;                                              \
+	tay			;                                              \
+	clc			;                                              \
+	adc	#GRIDH		;                                              \
+	sta @w	V0LOCAL	;//i	;                                              \
+	cmp	#GRIDSIZ	;                                              \
+	bcs	++++		;                                              \
+	lda	\gridarr,y	;                                              \
+	sta @w	V2LOCAL	;//temp	;   temp = gridarr[y];                         \
+	bpl	+		;   if (temp < 0) { // absorber, drawn as black\
+	ldy	#VIDEOBK	;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		;    putchar(petscii[VIDEOBK]);                \
+	jmp	++		;                                              \
++	lsr			;                                              \
+	lsr			;                                              \
+	lsr			;                                              \
+	lsr			;                                              \
+	beq	+		;   } else if (temp >= 0x10) {// nontransparent\
+	tay			;                                              \
+	sec			;    // 0x1_ => 0x01 => 1<<(1-1) == 1==MIXTRED \
+	lda	#0		;    // 0x2_ => 0x02 => 1<<(2-1) == 2==MIXTYEL \
+-	rol			;    // 0x3_ => 0x03 => 1<<(3-1) == 4==MIXTBLU \
+	dey			;    // 0x4_ => 0x04 => 1<<(4-1) == 8==MIXTWHT \
+	bne	-		;                                              \
+	tay			;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		;    putchar(petscii[1<<(((temp&0x70)>>4)-1)]);\
++	lda @w	V2LOCAL	;//temp	;   }                                          \
+	and	#$0f		;                                              \
+	ora	#$30		;   register uint8_t a = '0' | (temp & 0x0f);  \
+	cmp	#'9'+1		;                                              \
+	bcc	+		;                                              \
+	clc			;                                              \
+	adc	#'a'-'9'-1	;                                              \
++	jsr	putchar		;   putchar((a <= '9') ? a : (a + 'a'-'9'-1)); \
+	ldy	#VIDEOGY	;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		;   putchar(petscii[VIDEOGY]);                 \
+	jmp	-		;  }putchar('|');                              \
++	inc @w	V0LOCAL	;//i	;  i += 1;                                     \
+	dec @w	V1LOCAL	;//r	;  if (r == 1) // no draw interior joints last \
+	beq	+		;   break;                                     \
+	rule	ZP,$ab,$7b,$b3	;  rule(ZP, 0xab, 0x7b, 0xb3);                 \
+	jmp	--		; }                                            \
++	rule	ZP,$ad,$b1,$bd	; rule(ZP, 0xad, 0xb1, 0xb3);                  \
+	POPVARS			;                                              \
 	.endm			;} // putgrid
 
 petscii	.byte	$,$,$,$		;
 	.byte	$,$,$,$		;
 	.byte	$,$,$,$		;
 	.byte	$,$,$,$		;
-hal_try putgrid	HID_GRID	;
+hal_try putgrid	TRYGRID		;
 	rts			;
-hal_hid
+hal_hid putgrid	HIDGRID		;
+	rts			;
 hal_msg
 hal_lbl
 hal_msh
 	rts			;
 hal_cel
 	rts
+.endif
 
 inputkb
 	POPVARS
