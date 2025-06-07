@@ -1,5 +1,8 @@
 all : petswana_vic20.prg petswana_p500.prg petswana_c64.prg petswana_c16.prg
 
+generic : 6502apcs.inc main.asm generic/header.inc
+	64tass -a generic/header.inc main.asm --verbose-list -L petswana.lst -o petswana.prg
+
 petswana_vic20.prg : 6502apcs.inc main.asm vic20/header.inc
 	64tass -a vic20/header.inc main.asm --verbose-list -L petswana_vic20.lst -o petswana_vic20.prg
 

@@ -37,7 +37,7 @@ GRIDSIZ	= GRIDW*GRIDH
 
 ;;; a cell in a grid has a 7-bit state, representing the residing object portion
 ;;;	7	6	5	4	|	3	2	1	0
-;;; {UNTINTD=0;TINT*=1,2,3,4;ABSORBD=8}	{marker in TRY} {BLANK=0;CHAMF;SQUARE=7}
+;;; {UNTINTD=0;TINT*=1,2,3,4;ABSORBD=8}	{marker in TRY}	{BLANK=0;CHAMF;SQUARE=7}
 
 ;;; the wavefront of a beam has a 7-bit state, in addition to its x and y coords
 ;;; 	7	6		4	|	3	2	1	0
@@ -78,6 +78,10 @@ bounce6	.byte	(NOBOUNC << TP) | (RABOUNC << LT) | (NOBOUNC << BT) | RABOUNC;RT
 bounce7	.byte	RABOUNC x 4
 
 ;;; lower nybble of a grid square affects incident beam path, indexing bounces[]
+;;; 
+;;; an X marker in TRYGRID (0x80) confirming no obstacle actually would block a
+;;; beam but we only trace those inside HIDGRID; TRYGRID markers are effectively
+;;; apertures cut in a TRYGRID cell that allow HIDGRID X or O to show through
 BLANK	= 0			; nothing in the cell to block an incident beam
 CHAMFBR	= 1			; triangular reflector, chamfer at bottom right
 CHAMFBL	= 2			;      "        "     , chamfer at bottom left
@@ -122,6 +126,32 @@ MIXT_LG	= MIXTWHT | MIXTBLU | MIXTYEL | 0	;14
 MIXTGRY	= MIXTRED | MIXTYEL | MIXTBLU | MIXTWHT ;15
 MIXTOFF	= 1 << 4				;16
 
+main	tsx	;//req'd for PCS;int main(void) {
+.if SCREENW && SCREENH
+	lda	#VIDEOBG	; if (SCREENW && SCREENH) // addressable screen
+	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
+.endif
+	clc	;TRYGRID	;
+	jsr	inigrid		;
+	jsrAPCS	rndgrid		;
+	jsrAPCS	visualz,#DRW_ALL|DRW_TRY
+	rts			;} // main()
+	
+inigrid	lda	#0		;inline inigrid(uint1_t c) {
+	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
+-	bcc	+		;  if (c)
+	sta	HIDGRID-1,y	;   HIDGRID[y-1] = 0;
+	bcs	++		;  else
++	sta	TRYGRID-1,y	;   TRYGRID[y-1] = 0;
++	dey			;
+	bne	-		; }
+	rts			;} // inigrid()
+
+rndgrid	
+
+rotshap				;} // rotshap (new x in a, new y in y)
+
+;;; color-memory codes for addressable screens
 commodc	.byte	VIDEOBG
 	.byte	VIDEOR				;1
 	.byte	VIDEOY				;2
@@ -139,21 +169,17 @@ commodc	.byte	VIDEOBG
 	.byte	VIDEOLG				;14
 	.byte	VIDEOGY				;15
 
+;;; getchar()-printable color codes for generic terminal-mode platforms // (c64)
+petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
+	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
+	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
+	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
+RVS_ON	= 
+RVS_OFF	= 
+	
 HIDGRID	= vararea + $00
 TRYGRID	= vararea + GRIDSIZ
 var2	= vararea + 2*GRIDSIZ
-
-inigrid	lda	#0		;inline inigrid(uint1_t c) {
-	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
--	bcc	+		;  if (c)
-	sta	HIDGRID-1,y	;   HIDGRID[y-1] = 0;
-	bcs	++		;  else
-+	sta	TRYGRID-1,y	;   TRYGRID[y-1] = 0;
-+	dey			;
-	bne	-		; }
-	rts			;} // inigrid()
-
-rotshap				;} // rotshap (new x in a, new y in y)
 
 DRW_CEL	= 1<<0			;
 DRW_TRY	= 1<<3			;
@@ -224,11 +250,11 @@ hal_cel	rts
 .else
 putchar	tay			;inline void putchar(register uint8_t a) {
 	txa			; // a stashed in y
-	pha			; // x stashed in a, then on stack
+	pha			; // x stashed on stack, by way of a
 	tya			; // a restored from y
-	jsr	$ffd2		; (* ((*)()) 0xffd2)(a);
+	jsr	$ffd2		; (* ((*)(uint8_t)) 0xffd2)(a);
 	pla			;
-	tax			; // x restored from stack by way of a
+	tax			; // x restored from stack, by way of a
 	rts			;} // putchar()
 
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
@@ -307,15 +333,21 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	jsr	putchar		;    putchar(petscii[1<<(((temp&0x70)>>4)-1)]);\
 +	lda @w	V2LOCAL	;//temp	;   }                                          \
 	and	#$0f		;   register uint8_t a = temp & 0x0f;          \
-	bne	+		;   if (a == 0)                                \
+	bne	+		;   if (a == 0) {                              \
 	lda	#' '		;    a = ' ';                                  \
-	bne	++		;   else                                       \
-+	ora	#$30		;                                              \
+	bne	++		;   } else { // FIXME: check bit 3 for 'X'/'O' \
++	lda	#RVS_ON		;                                              \
+	jsr	putchar		;    putchar(RVS_ON);                          \
+	lda @w	V2LOCAL	;//temp	;                                              \
+	and	#$0f		;                                              \
+	ora	#$30		;                                              \
 	cmp	#'9'+1		;                                              \
 	bcc	+		;                                              \
-	clc			;                                              \
-	adc	#'a'-'9'-1	;    a = '0' | ((a <= 9) ? a : (a+'a'-'9'-1)); \
+	clc			;    a = '0' | ((a <= 9) ? a : (a+'a'-'9'-1)); \
+	adc	#'a'-'9'-1	;   }                                          \
 +	jsr	putchar		;   putchar(a);                                \
+	lda	#RVS_OFF	;                                              \
+	jsr	putchar		;   putchar(RVS_OFF);                          \
 	ldy	#VIDEOGY	;                                              \
 	lda	petscii,y	;                                              \
 	jsr	putchar		;   putchar(petscii[VIDEOGY]);                 \
@@ -333,10 +365,6 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	POPVARS			;                                              \
 	.endm			;} // putgrid
 
-petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
-	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
-	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
-	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
 hal_try putgrid	TRYGRID		;
 	rts			;
 hal_hid putgrid	HIDGRID		;
@@ -355,17 +383,38 @@ inputkb
 
 hal_inp
 
-main	tsx			;
-	lda	#VIDEOBG	;
-	sta	BKGRNDC		;
-	sec	;HIDGRID	;
-	jsr	inigrid		;
-	clc	;TRYGRID	;
-	jsr	inigrid		;
-	jsrAPCS	rndgrid		;
-	jsrAPCS	visualz,#DRW_ALL|DRW_TRY
-	rts			;
-rndgrid
+.if RNDLOC1 && RNDLOC2
+rndgrid	sec	;HIDGRID	;void rndgrid(void) {
+	jsr	inigrid		; inigrid(1);
+.else
+cangrid	.byte	$,$,$,$		;static uint8_t cangrid[] = {0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
+	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0};
+rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {
+-	lda	cangrid-1,y	; for (register uint8_t y = GRIDSIZ; y; y--) {
+	sta	HIDGRID-1,y	;  // not very random, it turns out:
+	dey			;  HIDGRID[y-1] = cangrid[y-1];
+	bne	-		; }
+.endif
+	rts			;} // rndgrid()
+
 pre_end
 .align $10
 vararea
