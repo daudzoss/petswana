@@ -234,12 +234,14 @@ rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	bcc	+		; if (GRIDW > 2) {                             \
 	dey			;                                              \
 	dey			;                                              \
--	sty @w	\temp		;  for (*temp = GRIDW - 2; *temp; --*temp) {   \
+-	tya			;                                              \
+	sta @w	\temp		;  for (*temp = GRIDW - 2; *temp; --*temp) {   \
 	lda	#\mj		;                                              \
 	jsr	putchar		;   putchar(mj);                               \
 	lda	#$60		;                                              \
 	jsr	putchar		;   putchar('-');                              \
-	ldy @w	\temp		;                                              \
+	lda @w	\temp		;                                              \
+	tay			;                                              \
 	dey			;                                              \
 	bne	-		;  }                                           \
 +	lda	#\mj		; }                                            \
@@ -257,7 +259,7 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	ldy	#VIDEOGY	;                                              \
 	lda	petscii,y	;                                              \
 	jsr	putchar		; putchar(petscii[VIDEOGY]);                   \
-	rule	ZP,$b0,$b2,$ae	; rule(ZP, 0xb0, 0xb2, 0xae);                  \
+	rule V2LOCAL,$b0,$b2,$ae; rule(temp, 0xb0, 0xb2, 0xae) ;               \
 	lda	#0		;                                              \
 	sta @w	V0LOCAL	;//i	; i = 0;                                       \
 	lda	#GRIDH		;                                              \
@@ -309,9 +311,9 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 +	inc @w	V0LOCAL	;//i	;  i += 1;                                     \
 	dec @w	V1LOCAL	;//r	;  if (r == 1) // no draw interior joints last \
 	beq	+		;   break;                                     \
-	rule	ZP,$ab,$7b,$b3	;  rule(ZP, 0xab, 0x7b, 0xb3);                 \
+	rule V2LOCAL,$ab,$7b,$b3;  rule(temp, 0xab, 0x7b, 0xb3);               \
 	jmp	--		; }                                            \
-+	rule	ZP,$ad,$b1,$bd	; rule(ZP, 0xad, 0xb1, 0xb3);                  \
++	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
 	POPVARS			;                                              \
 	.endm			;} // putgrid
 
