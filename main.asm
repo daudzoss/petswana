@@ -210,8 +210,27 @@ visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
 +	POPVARS			; }
 	rts			;} // visualz()
 
-.if SCREENW >= $28
+.if SCREENW >= $50
+hal_try
+hal_hid
+hal_msg
+hal_lbl
+hal_msh
+hal_cel	rts
+.elsif SCREENW >= $28
+hal_try
+hal_hid
+hal_msg
+hal_lbl
+hal_msh
+hal_cel	rts
 .elsif SCREENW >= $16
+hal_try
+hal_hid
+hal_msg
+hal_lbl
+hal_msh
+hal_cel	rts
 .else
 putchar	tay			;inline void putchar(register uint8_t a) {
 	txa			; // a stashed in y
