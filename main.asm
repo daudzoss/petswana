@@ -28,18 +28,31 @@ COPIED2	= $0400
 *	= COPIED2
 .endif
 
-start
-
 ;;; 10x8 playfield: labeled 1-10 on top, 11-18 on right, A-H on left, I-R on bot
 GRIDW	= $0a
 GRIDH	= $08
 GRIDSIZ	= GRIDW*GRIDH
 ANSWERS	= 2*GRIDH + 2*GRIDW
 
+HIDGRID	= vararea + $00
+TRYGRID	= vararea + GRIDSIZ
+PORTALS	= vararea + 2*GRIDSIZ
+PORTINT	= vararea + 2*GRIDSIZ + ANSWERS
+OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS
+
+;;; HIDGRID[] and TRYGRID[]:
 ;;; a cell in a grid has a 7-bit state, representing the residing object portion
 ;;;	7	6	5	4	|	3	2	1	0
 ;;; {UNTINTD=0;TINT*=1,2,3,4;ABSORBD=8}	{marker in TRY}	{BLANK=0;CHAMF;SQUARE=7}
 
+;;; PORTALS[]:
+;;; each of the ANSWERS indices indicates which index a beam shone into the grid
+;;; at it exits, itself in case of bouncing perpendicularly back off an obstacle
+;;; or <0 if absorbed before bouncing (in which case bit 4 of its PORTINT[] == 0
+;;;	7	6	5	4	|	3	2	1	0
+;;; {ABSORBD}			{0 to 
+
+;;; PORTINT[]:
 ;;; the wavefront of a beam has a 7-bit state, in addition to its x and y coords
 ;;; 	7	6		4	|	3	2	1	0
 ;;; {FROM_*=0,1,2,3}	0	{UNTINTD=0;MIXT*=1,2,3,...13,14,15;MIXTOFF=16}
@@ -67,6 +80,8 @@ TWRD_RT	= RABOUNCE ^ FROM_RT
 TWRD_BT	= RABOUNCE ^ FROM_BT
 TWRD_LT	= RABOUNCE ^ FROM_LT
 TWRD_TP	= RABOUNCE ^ FROM_TP
+
+start
 
 ;;; from top|left|bot|right, corresponding to the possible cell shapes 0-7 below
 bounces	.byte	NOBOUNC x 4
@@ -144,8 +159,70 @@ main	tsx	;//req'd for PCS;int main(void) {
 	jsrAPCS	visualz,#DRW_ALL|DRW_TRY
 	rts			;} // main()
 	
-bportal				;//1-18 (0x01~0x12) and A-R (0x41~0x52) to index
 
+portal	tya			;register uint8_t portal(register uint8_t y) {
+	cmp	#8	 	; register uint8_t a = y;
+	bcs	+		; if (a < 8)	// leftmost column, 0~7
+	clc			;
+	adc	#'a'		;
+	bne	portalx		;  return y = a + 'a'; // A~H
++	cmp	#8*9		;  
+	bcc	+		; if (a >= 72)	// rightmost colmun, 72~79
+	sec			;
+	sbc	#72-11		;
+	bne	portalx		;  return y = a - (72-11); // 11~18
++	pha	;//colnm	;
+	lsr @w	V0LOCAL	;//colnm;
+	lsr @w	V0LOCAL	;//colnm;
+	lsr @w	V0LOCAL	;//colnm; uint8_t colnm = a >> 3; // 0~9
+ 	and	#$07		;
+	bne	+		; if (a & 0x07 == 0) // topmost row, 0_?_0
+	ldy @w	V0LOCAL	;//colnm;
+	iny			;
+	bne	portaly		;  return y = colnm + 1; // 1~10
++	cmp	#$07		;
+	bne	+		; if (a & 0x07 == 7) // bottommost row, 0_?_7
+	lda @w	V0LOCAL	;//colnm;
+	clc			;
+	adc	#'i'		;
+	bne	portalx		;  return y = a + 'i'; // I~R
++	lda	#0		; return y = 0;
+portalx	tay			;
+portaly	POPVARS			;
+	rts			;} // portal()
+bportal				;//1~18(1~0x12),A~R(0x41~0x52) to PORTALS index
+bindex				;//PORTALS index <ANSWERS to grid index <GRIDSIZ
+
+waybeam	tya			;register uint8_t waybeam(register uint8_t y) {
+	pha	;//orign	; uint8_t orign = y;
+	pha	;//wavef	; uint8_t wavef;
+	and	#$40		;
+	php			;
+	lda @w	V0LOCAL	;//orign;
+	plp			;
+	beq	++		; if (orign & 0x40) { // letter A~H,I-R on LT,BT
+	cmp	#'i'		;
+	bcc	+		;  if (origin >= 'i') // beam comes from BT
+	lda	#FROM_BT<<6	;   wavef = FROM_BT<<6; // 01000000
+	bne	gotbeam		;  else
++	lda	#FROM_LT<<6	;   wavef = FROM_LT<<6; // 10000000
+	bne	gotbeam		; } else { // number 1-10,11-18 on TP,RT
++	cmp	#$0b		;
+	bcs	+		;  if (origin < 11) // beam comes from TP
+	lda	#FROM_TP<<6	;   wavef = FROM_TP<<6; // 11000000
+	bne	gotbeam		;  else
++	lda	#FROM_RT<<6	;   wavef = FROM_RT<<6; // 00000000
+gotbeam	sta @w	V1LOCAL	;//wavef; }
+	ldy @w	V0LOCAL	;//orign;
+	jsrAPCS	bportal		; y = bportal(orign); // get its PORTALS[] index
+	tya			; if (y < 0)
+	bmi	badbeam		;  return y=?;
+	jsrAPCS	bindex		; y = bindex(y); // from which a HIDGRID[] index
+	
+badbeam	ldy	#$ff		;
+	POPVARS			;
+	rts			;
+	
 inigrid	lda	#0		;inline inigrid(uint1_t c) {
 	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
 -	bcc	+		;  if (c)
@@ -184,11 +261,6 @@ petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
 RVS_ON	= $12
 RVS_OFF	= $92
 	
-HIDGRID	= vararea + $00
-TRYGRID	= vararea + GRIDSIZ
-PORTALS	= vararea + 2*GRIDSIZ
-OTHRVAR	= vararea + 2*GRIDSIZ + ANSWERS
-
 DRW_CEL	= 1<<0			;
 DRW_TRY	= 1<<3			;
 DRW_HID	= 1<<4			;
