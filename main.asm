@@ -179,7 +179,7 @@ main	tsx	;//req'd by APCS;int main(void) {
 	jsrAPCS	visualz		;
 	rts			;} // main()
 	
-;;; when the beam is about to leave the cell a[6:0],
+;;; when the beam is about to leave the grid cell a[6:0],
 ;;; travelling in the direction c:a[7],
 ;;; return nonzero if it will exit the grid and processing should stop
 portal	pha	;//gridi	;register uint6_t portal(register uint9_t a){//!
@@ -283,11 +283,6 @@ portala	tay			;  else return y = 0;
 portaly	POPVARS			; }
 	rts			;} // portal()
 
-;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS index
-bportal	
-
-;//PORTALS index <ANSWERS to grid index <GRIDSIZ
-bindex	
 
 toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	clc			; register int8_t a) {
@@ -296,46 +291,70 @@ toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	rts			;} // toalpha()
 
 waybeam	pha	;//orign	;register uint8_t waybeam(register int8_t a) {
-	pha	;//wavef	;
-	pha	;//bounc	; uint8_t bounc, wavef, orign = a;
-	and	#$20		;
+	pha	;//wavef	; uint8_t wavef, orign = a;
+	and	#$20		; register uint8_t y;
 	php			;
 	lda @w	V0LOCAL	;//orign;
 	plp			;
 	beq	++		; if (orign & 0x20) { // letter A~H,I-R on LT,BT
 	cmp	#'i' ^ $60	;
 	bcc	+		;  if (origin >= 0x28)
-	lda	#FROM_BT x 4	;   bounc = 0x55; // 01010101
+	lda	#FROM_BT << 6	;   wavef = 0x40; // 01000000
 	bne	gotbeam		;  else
-+	lda	#FROM_LT x 4	;   bounc = 0xaa; // 10101010
++	lda	#FROM_LT << 6	;   wavef = 0x80; // 10000000
 	bne	gotbeam		;
 +	cmp	#$0b		; } else { // number 1-10,11-18 on TP,RT
 	bcs	+		;  if (origin < 11)
-	lda	#FROM_TP x 4	;   bounc = 0xff; // 11111111
+	lda	#FROM_TP << 6	;   wavef = 0xc0; // 11000000
 	bne	gotbeam		;  else
-+	lda	#FROM_RT x 4	;   bounc = 0x00; // 00000000
-gotbeam	sta @w	V2LOCAL	;//bounc; }
-	and	#%1100 .. %0000	;
-	sta @w	V1LOCAL	;//wavef; wavef = bounc & 0xc0;
++	lda	#FROM_RT << 6	;   wavef = 0x00; // 00000000
+gotbeam	sta @w	V1LOCAL	;//wavef; }
 	lda @w	V0LOCAL	;//orign;
-	cmp	#$21		;
-	bcs	+		; if (orign < 0x21)
+	jsr	bportal		; y = bportal(orign); // beam's HIDGRID[] entry
+	jsr	bindex		; for (y = bindex(y); ; ) {
+	pha	;//oldy		;  uint8_t oldy;
+propag8	lda	HIDGRID,y	;  register uint9_t a = HIDGRID[y]; // next cell
+	bne	+		;  if (a == 0) { // most common is transmissive
+	tya			;
+	lsr			;   register uint1_t c = y & 1;
+	sta @w	V2LOCAL	;//oldy	;   oldy = y >> 1;
+	lda @w	V1LOCAL	;//wavef;
+	and	#%1100 .. $0000	;
+	ora @w	V2LOCAL	;//oldy ;   // travel direction .. HIDGRID[] index
+	rol			;   a = ((uint9_t)(wavef&0xc0)<<1)|(oldy<<1)|c;
+	sta @w	V2LOCAL	;//oldy	;   oldy = a & 0x0ff;
 	tay			;
-	dey			;  y = orign - 1; // 0x01 => 0, 0x12 => 17
-	bcc	++		; else
-+	;sec			;
-	sbc	#$21 - $12	;
-	tay			;  y = orign - 15; // 0x21 => 18, 0x32 =>  35
-+	jsr	bindex		; y = bindex(y); // starting HIDGRID[] index
-
-propag8	
+	jsrAPCS	portal		;   y = portal(y = a);
+	tya			;   if (y) // contains the exit location
+	bne	propag9		;    break;
+	;; do math on y based on continuing to move in current direction
 
 
-	
+
+
+
+
+
+propag9
+
+
+
 badbeam	ldy	#$ff		;
 	POPVARS			;
 	rts			;
 
+;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS[] index
+bportal	cmp	#$21		;register uint6_t bportal(register uint 6_t a) {
+	bcs	+		; if (a < 0x21)
+	tay			;
+	dey			;  y = a - 1; // 0x01 => 0, 0x12 => 17
+	bcc	++		; else
++	;sec			;
+	sbc	#$21 - $12	;  y = a - 15; // 0x21 => 18, 0x32 =>  35
+	tay			;
++	rts			;} // bportal()
+
+;//PORTALS index <ANSWERS to grid index <GRIDSIZ
 bindex	lda	bindice,y	;register uint7_t bindex(register uint6_t y) {
 	tay			;
 	rts			; static uint7_t bindice[] =
