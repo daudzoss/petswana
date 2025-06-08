@@ -283,7 +283,6 @@ portala	tay			;  else return y = 0;
 portaly	POPVARS			; }
 	rts			;} // portal()
 
-
 toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	clc			; register int8_t a) {
 	adc	#%001 .. %00000	; return a = (a < 0x20) ? a :
@@ -315,10 +314,12 @@ gotbeam	sta @w	V1LOCAL	;//wavef; }
 	pha	;//oldy		;  register uint9_t a;
 	pha	;//bump		;  register uint1_t c = y & 1;
 	pha	;//oldir	;
-propag8	sty @w	V2LOCAL	;//oldy	;  uint8_t oldy = y, bump, oldir;
+propag8	tya			;  uint8_t oldy, bump, oldir;
+	sta @w	V2LOCAL	;//oldy	;  oldy = y;
 	lda	HIDGRID,y	;
-	bmi	deadend		;  if ((HIDGRID[y] >> 4) & ABSORBED == 0) { //go
-	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
+	bpl	+		;
+	jmp	deadend		;  if ((HIDGRID[y] >> 4) & ABSORBED == 0) { //go
++	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
 	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];
 	lsr			;
 	lsr			;
@@ -365,7 +366,7 @@ propag8	sty @w	V2LOCAL	;//oldy	;  uint8_t oldy = y, bump, oldir;
 	lsr			;   // whether we deflected or not, check exit
 	sta @w	V2LOCAL	;//oldy	;   oldy = y >> 1;
 	lda @w	V1LOCAL	;//wavef;
-	and	#%1100 .. $0000	;
+	and	#%1100 .. %0000	;
 	ora @w	V2LOCAL	;//oldy ;   // travel direction .. HIDGRID[] index
 	rol			;   a = ((uint9_t)(wavef&0xc0)<<1)|(oldy<<1)|c;
 	sta @w	V2LOCAL	;//oldy	;   oldy = a & 0x0ff;
@@ -397,7 +398,7 @@ propag8	sty @w	V2LOCAL	;//oldy	;  uint8_t oldy = y, bump, oldir;
 	jmp	propag8		;    continue;
 propag9
 
-
+deadend
 
 badbeam	ldy	#$ff		;
 	POPVARS			;
@@ -581,7 +582,7 @@ rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	jsr	putchar		; putchar(rj);                                 \
 	.endm			;} // rule
 
-putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
+putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	pha	;//V0LOCAL=i	; uint8_t i;                                   \
 	pha	;//V1LOCAL=r	; uint8_t r;                                   \
 	pha	;//V2LOCAL=temp	; uint8_t temp;                                \
@@ -589,13 +590,20 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	lda	petscii,y	;                                              \
 	jsr	putchar		; putchar(petscii[VIDEOGY]);                   \
 	rule V2LOCAL,$b0,$b2,$ae; rule(temp, 0xb0, 0xb2, 0xae) ;               \
+.if SCREENW > $16
+	lda	#'1'		;                                              \
+	jsr 	putchar		; putchar('1'); //  right-edge label 10's digit\
+.endif
 	lda	#0		;                                              \
 	sta @w	V0LOCAL	;//i	; i = 0;                                       \
-	lda	#GRIDH		;                                              \
-	sta @w	V1LOCAL	;//r	; for (r = GRIDH; r; r--) {                    \
+	sta @w	V1LOCAL	;//r	; for (r = 0; r < GRIDH; r++) {                \
 -	lda	#$0d		;  register uint8_t y;                         \
-	jsr	putchar		;                                              \
--	lda	#$7d		;  for (putchar('\n');(y=i)<GRIDSIZ;i+=GRIDH) {\
+	jsr	putchar		;  putchar('\n');                              \
+	lda @w	V1LOCAL	;//r	;                                              \
+	clc			;                                              \
+	adc	#'a'		;                                              \
+	jsr	putchar		;  putchar('a' + r); // A~H down left side     \
+-	lda	#$7d		;  for (; (y=i) < GRIDSIZ; i+=GRIDH) {         \
 	jsr	putchar		;   putchar('|');                              \
 	lda @w	V0LOCAL	;//i	;                                              \
 	cmp	#GRIDSIZ	;                                              \
@@ -646,16 +654,28 @@ putgrid	.macro	gridarr		;#define putgrid(gridarr) {                    \
 	lda	petscii,y	;                                              \
 	jsr	putchar		;   putchar(petscii[VIDEOGY]);                 \
 	jmp	--		;  }putchar('|');                              \
-+	lda @w	V0LOCAL	;//i	;                                              \
++
+.if SCREENW > $16
+	lda	#' '		;                                              \
+	jsr	putchar		;  putchar(' '); // offset 1's digit diagonally\
+	lda @w	V1LOCAL	;//r	;                                              \
+	clc			;                                              \
+	adc	#'1'		;                                              \
+	jsr	putchar		;  putchar(r + '1'); // 11~18                  \
+.endif
+	lda @w	V0LOCAL	;//i	;                                              \
 	and	#GRIDH-1	;                                              \
 	clc			;                                              \
 	adc	#1		;                                              \
 	sta @w	V0LOCAL	;//i	;  i = (i & (GRIDH-1)) + 1;                    \
-	dec @w	V1LOCAL	;//r	;  if (r == 1) // no draw interior joints last \
-	beq	+		;   break;                                     \
+	inc @w	V1LOCAL	;//r	;  if (r == GRIDH) // no interior joints at bot\
+	cmp	#GRIDH		;
+	bcs	+		;   break;                                     \
 	rule V2LOCAL,$ab,$7b,$b3;  rule(temp, 0xab, 0x7b, 0xb3);               \
 	jmp	---		; }                                            \
 +	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
+	lda	#0;//FIXME: DEL	;                                              \
+	jsr	putchar		; putchar(DEL);                                \
 	POPVARS			;                                              \
 	.endm			;} // putgrid
 
