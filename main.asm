@@ -1,5 +1,13 @@
 .include "6502apcs.inc"
 
+;;; we generally use "tint" for the beam, initially transparent, moving through
+;;;  a grid and changing properties along the way;"color" for a commodore screen
+
+;;; "#define x(a,b) {}" without a return type: macro expansion in situ
+;;; "inline register uint8_t" return type: returned in a and/or y (non-APCS jsr)
+;;; "register uint8_t" return type: returned in y
+;;; "uint8_t" return type: stuffed back into A0LOCAL of caller
+
 .if BASIC
 *	= BASIC+1
 .else
@@ -31,8 +39,11 @@ COPIED2	= $0400
 ;;; 10x8 playfield: labeled 1-10 on top, 11-18 on right, A-H on left, I-R on bot
 GRIDW	= $0a
 GRIDH	= $08
-GRIDSIZ	= GRIDW*GRIDH
-ANSWERS	= 2*GRIDH + 2*GRIDW
+.if (GRIDW > $2f) || (GRIDH > $2f)
+.error	"too large to fit portal references in 6 bits"
+.endif
+GRIDSIZ	= GRIDW*GRIDH		; sizeof(HIDGRID); sizeof(TRYGRID);
+ANSWERS	= 2*GRIDH + 2*GRIDW	; sizeof(PORTALS); sizeof(PORTINT);
 
 HIDGRID	= vararea + $00
 TRYGRID	= vararea + GRIDSIZ
@@ -47,12 +58,15 @@ OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS
 
 ;;; PORTALS[]:
 ;;; each of the ANSWERS indices indicates which index a beam shone into the grid
-;;; at it exits, itself in case of bouncing perpendicularly back off an obstacle
+;;; there exits, itself in case of bouncing perpendicularly back off an obstacle
+;;; 0 if not yet tested
 ;;; or <0 if absorbed before bouncing (in which case bit 4 of its PORTINT[] == 0
 ;;;	7	6	5	4	|	3	2	1	0
-;;; {ABSORBD}			{0 to 
+;;; {ABSORBD}		{33~50 for A~R,                         1~18 for 1~18}
 
 ;;; PORTINT[]:
+;;; each of the ANSWERS indices indicates which tint enters/exits from there
+
 ;;; the wavefront of a beam has a 7-bit state, in addition to its x and y coords
 ;;; 	7	6		4	|	3	2	1	0
 ;;; {FROM_*=0,1,2,3}	0	{UNTINTD=0;MIXT*=1,2,3,...13,14,15;MIXTOFF=16}
@@ -95,9 +109,9 @@ bounce7	.byte	RABOUNC x 4
 
 ;;; lower nybble of a grid square affects incident beam path, indexing bounces[]
 ;;; 
-;;; an X marker in TRYGRID (0x80) confirming no obstacle actually would block a
-;;; beam but we only trace those inside HIDGRID; TRYGRID markers are effectively
-;;; apertures cut in a TRYGRID cell that allow HIDGRID X or O to show through
+;;; an X marker in TRYGRID (0x08) confirming no obstacle actually would block a
+;;; beam but we only trace beams inside HIDGRID; TRYGRID markers are effectively
+;;; apertures cut in a TRYGRID cell that allow HIDGRID to show through as X or O
 BLANK	= 0			; nothing in the cell to block an incident beam
 CHAMFBR	= 1			; triangular reflector, chamfer at bottom right
 CHAMFBL	= 2			;      "        "     , chamfer at bottom left
@@ -106,6 +120,7 @@ CHAMFTR = 4			;      "        "     , chamfer at top right
 ;BOREDLR	= 5			; transmits left-right but rebounds top-bottom
 ;BOREDTB	= 6			; transmits top-bottom but rebounds left-right
 SQUARE	= 7			; cell filled in so all four sides will rebound
+
 SOBLANK	= 8			; marker (in TRYGRID only) that blank confirmed
 SOFILLD	= 9			; marker (in TRYGRID only) that object confirmed
 
@@ -142,15 +157,16 @@ MIXT_LG	= MIXTWHT | MIXTBLU | MIXTYEL | 0	;14
 MIXTGRY	= MIXTRED | MIXTYEL | MIXTBLU | MIXTWHT ;15
 MIXTOFF	= 1 << 4				;16
 
-main	tsx	;//req'd for PCS;int main(void) {
+main	tsx	;//req'd by APCS;int main(void) {
 .if SCREENW && SCREENH
 	lda	#VIDEOBG	; if (SCREENW && SCREENH) // addressable screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
-	lda	#$ff		;
-	ldy	#ANSWERS	; for (register uint8_t y = ANSWERS; y; y--) {
--	sta	PORTALS-1,y	;  // bits 0-3 reflected tint, or bit 4 absorbed
-	dey			;  PORTALS[y-1] = -1; // no beam entry/exit yet
+	lda	#$00		; for (register uint8_t y = ANSWERS; y; y--) {
+	ldy	#ANSWERS	;  // bits 5~0 where a beam into this one exits
+-	sta	PORTALS-1,y	;  PORTALS[y-1] = 0; // no beam entry/exit yet
+	sta	PORTINT-1,y	;  // bits 3~0 tint reflected, or bit 4 absorbed
+	dey			;  PORTALS[y-1] = 0; // no beam entry/exit yet
 	bne	-		; }
 	clc	;TRYGRID	;
 	jsr	inigrid		;
@@ -159,38 +175,48 @@ main	tsx	;//req'd for PCS;int main(void) {
 	jsrAPCS	visualz		;
 	rts			;} // main()
 	
-
 portal	cmp	#8	 	;register uint8_t portal(register uint8_t a) {
 	bcs	+		; if (a < 8)	// leftmost column, 0~7
 	clc			;
-	adc	#'a'		;
-	bne	portalx		;  return y = a + 'a'; // A~H
+	adc	#'a' - $20	;
+	ora	#FROM_LT << 6	;
+	bne	portalx		;  return y = a + ('a' - 0x20); // A~H
 +	cmp	#8*9		;  
 	bcc	+		; if (a >= 72)	// rightmost colmun, 72~79
 	sec			;
 	sbc	#72-11		;
+	ora	#FROM_RT << 6	;
 	bne	portalx		;  return y = a - (72-11); // 11~18
 +	pha	;//colnm	;
 	lsr @w	V0LOCAL	;//colnm;
 	lsr @w	V0LOCAL	;//colnm;
 	lsr @w	V0LOCAL	;//colnm; uint8_t colnm = a >> 3; // 0~9
  	and	#$07		;
-	bne	+		; if (a & 0x07 == 0) // topmost row, 0_?_0
+	bne	+		; if (a & 0x07 == 0) // topmost row, 0?0
 	ldy @w	V0LOCAL	;//colnm;
 	iny			;
+	ora	#FROM_TP << 6	;
 	bne	portaly		;  return y = colnm + 1; // 1~10
 +	cmp	#$07		;
-	bne	+		; if (a & 0x07 == 7) // bottommost row, 0_?_7
+	bne	+		; if (a & 0x07 == 7) // bottommost row, 0?7
 	lda @w	V0LOCAL	;//colnm;
 	clc			;
-	adc	#'i'		;
-	bne	portalx		;  return y = a + 'i'; // I~R
+	adc	#'i' - $20	;
+	ora	#FROM_BT << 6	;
+	bne	portalx		;  return y = a + ('i' - 0x20); // I~R
 +	lda	#0		; return y = 0;
 portalx	tay			;
 portaly	POPVARS			;
 	rts			;} // portal()
-bportal				;//1~18(1~0x12),A~R(0x41~0x52) to PORTALS index
+
+bportal				;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS index
 bindex				;//PORTALS index <ANSWERS to grid index <GRIDSIZ
+
+toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
+	clc			; register int8_t a) {
+	adc	#%001 .. %00000	; return a = (a < 0x20) ? a :
+	and	#%010 .. %11111	;                         a - 0x20 + 0x40; //A-I
+	rts			;} // toalpha()
 
 waybeam	pha	;//orign	;register uint8_t waybeam(register int8_t a) {
 	pha	;//wavef	; uint8_t wavef, orign = y;
@@ -256,13 +282,19 @@ commodc	.byte	VIDEOBG
 	.byte	VIDEOLP				;13
 	.byte	VIDEOLG				;14
 	.byte	VIDEOGY				;15
-.endif
-
-;;; getchar()-printable color codes for generic terminal-mode platforms // (c64)
+	
+;;; putchar()-printable dummy color codes for generic terminal-mode platforms
+petscii	.byte	$,$,$,$		;static uint8_t petscii[] = {0, 0, 0, 0,
+	.byte	$,$,$,$		;                            0, 0, 0, 0,
+	.byte	$,$,$,$		;                            0, 0, 0, 0,
+	.byte	$,$,$,$		;                            0, 0, 0, 0};
+.else
+;;; puttchar()-printable color codes for terminal-mode on color platforms // c64
 petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
 	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
 	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
 	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
+.endif
 RVS_ON	= $12
 RVS_OFF	= $92
 	
