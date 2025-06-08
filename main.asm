@@ -70,6 +70,7 @@ OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS
 
 ;;; PORTINT[]:
 ;;; each of the ANSWERS indices indicates which tint enters/exits from there
+;;; basically the value of the wavefront below but sign-extended from 5-bit to 8
 
 ;;; the wavefront of a beam has a 7-bit state, in addition to its x and y coords
 ;;; 	7	6		4	|	3	2	1	0
@@ -292,7 +293,7 @@ toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 waybeam	pha	;//orign	;register uint8_t waybeam(register int8_t a) {
 	pha	;//wavef	; uint8_t wavef, orign = a;
 	and	#$20		; register uint8_t y;
-	php			;
+	php			; register uint9_t a;
 	lda @w	V0LOCAL	;//orign;
 	plp			;
 	beq	++		; if (orign & 0x20) { // letter A~H,I-R on LT,BT
@@ -311,7 +312,7 @@ gotbeam	sta @w	V1LOCAL	;//wavef; }
 	lda @w	V0LOCAL	;//orign;
 	jsr	bportal		; y = bportal(orign); // beam's HIDGRID[] entry
 	jsr	bindex		; for (y = bindex(y); ; ) {
-	pha	;//oldy		;  register uint9_t a;
+	pha	;//oldy		;
 	pha	;//bump		;  register uint1_t c = y & 1;
 	pha	;//oldir	;
 propag8	tya			;  uint8_t oldy, bump, oldir;
@@ -396,13 +397,18 @@ propag8	tya			;  uint8_t oldy, bump, oldir;
 +	tay 			;   } else /* if ((wavef >> 6) == FROM_TP) */ {   
 	iny			;    y = (oldy & 0x7f) + 1; // next cell tw'd BT
 	jmp	propag8		;    continue;
-propag9
-
-deadend
-
-badbeam	ldy	#$ff		;
-	POPVARS			;
-	rts			;
+propag9	tya			;   }
+	and	#%0011 .. %1111	;  }
+	sta @w	V2LOCAL	;//oldy	;  oldy = y & 0x3f; // identifier of exit cell
+	jsr	bportal		;  y = bportal(y); // array index of exit cell
+	lda @w	V1LOCAL	;//wavef;
+	and	#%0000 .. %1111	;
+	sta	PORTINT,y	;  PORTINT[y] = wavef & 0x0f;
+	ldy @w	V2LOCAL	;//oldy	;  y = oldy; // caller must update other portal!
+	jmp	endbeam		; } else
+deadend	ldy	#$ff		;  y = -1;
+endbeam	POPVARS			; return y;
+	rts			;} // waybeam()
 
 ;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS[] index
 bportal	cmp	#$21		;register uint6_t bportal(register uint 6_t a) {
@@ -429,6 +435,7 @@ bindice	.byte	$00,$08,$10,$18	; {0x00,0x08,0x10,0x18, // topmost row of 10
 	.byte	$17,$1f,$27,$2f	;  0x17,0x1f,0x27,0x2f,
 	.byte	$37,$3f,$47,$4f	;  0x30,0x3f,0x47,0x4f}; return y = bindice[y];}
 
+blaunch
 
 inigrid	lda	#0		;inline inigrid(uint1_t c) {
 	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
