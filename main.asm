@@ -46,9 +46,6 @@ COPIED2	= $0400
 ;;; 10x8 playfield: labeled 1-10 on top, 11-18 on right, A-H on left, I-R on bot
 GRIDW	= $0a
 GRIDH	= $08
-.if (GRIDW > $1f) || (GRIDH > $1f)
-.error	"too large to fit portal references in 6 bits (5+1 for alpha v numeric)"
-.endif
 GRIDSIZ	= GRIDW*GRIDH		; sizeof(HIDGRID); sizeof(TRYGRID);
 ANSWERS	= 2*GRIDH + 2*GRIDW	; sizeof(PORTALS); sizeof(PORTINT);
 
@@ -182,33 +179,108 @@ main	tsx	;//req'd by APCS;int main(void) {
 	jsrAPCS	visualz		;
 	rts			;} // main()
 	
-;// the exit side from a corner is actually ambiguous, so we only flag (not map)
-;// xor this result with the beam and and with %11000000, Z set -> exiting here
-portal	ldy	#0		;register uint8_t portal(register uint8_t a) {
-	cmp	#8	 	; uint1_t y = 0;
-	bcs	+		; if (a < 8)	// leftmost column, 0~7
-	ldy	#(FROM_RT<<6)|1	;
-	bne	portaly		;  return y = 1;
-+	cmp	#8*9		;  
-	bcc	+		; if (a >= 72)	// rightmost column, 72~79
-	ldy	#(FROM_LT<<6)|1	;
-	bne	portaly		;  return y = a - (72-11); // 11~18
-+	pha	;//colnm	;
-	lsr @w	V0LOCAL	;//colnm;
-	lsr @w	V0LOCAL	;//colnm;
-	lsr @w	V0LOCAL	;//colnm; uint8_t colnm = a >> 3; // 0~9
- 	and	#$07		;
-	bne	+		; if (a & 0x07 == 0) // topmost row, 0?0
-	iny			;
-	bne	portaly		;  return y = colnm + 1; // 1~10
-+	cmp	#$07		;
-	bne	+		; if (a & 0x07 == 7) // bottommost row, 0?7
-	lda @w	V0LOCAL	;//colnm;
+;;; when the beam is about to leave the cell a[6:0],
+;;; travelling in the direction c:a[7],
+;;; return nonzero if it will exit the grid and processing should stop
+portal	pha	;//gridi	;register uint6_t portal(register uint9_t a){//!
+	ror			; uint8_t gridi = a & 0xff;
+	and	#%1100 .. %0000	;
+	pha	;//travd	; uint8_t travd = (a >> 1) & 0xc0; //FROM_* << 6
+	ldy	#0		; register uint8_t y = 0;
+	lda @w	V0LOCAL	;//gridi;
+	and	#%0111 .. %1111	;
+	sta @w	V0LOCAL	;//gridi; gridi &= 0x7f; // no more H/V bit in bit 7?
+	
+	bne	+++		; if (gridi == 0) { // upper-left corner
+	lda @w	V1LOCAL	;//travd;
+	bne	+		;  if ((travd >> 6) == FROM_RT)
+	ldy	#'a' ^ $60	;   return y = 0x21; // A
+	jmp	portaly		;
++	cmp	#FROM_BT << 6	;
+	beq	+		;
+	jmp	portaly		;  else if ((travd >> 6) == FROM_BT)
++	ldy	#1		;   return y = 0x01; // 1
+	jmp	portaly		;  else return y = 0;
+
++	cmp	#7		;
+	bne	+++		; } else if (gridi == 7) { // lower-left corner
+	lda @w	V1LOCAL	;//travd;
+	bne	+		;  if ((travd >> 6) == FROM_RT)
+	ldy	#'h' ^ $60	;   return y = 0x28; // H
+	jmp	portaly		;
++	cmp	#FROM_TP << 6	;
+	beq	+		;
+	jmp	portaly		;  else if ((travd >> 6) == FROM_TP)
++	ldy	#'i' ^ $60	;   return y = 0x29; // I
+	bne	portaly		;  else return y = 0;
+
++	cmp	#$48		;
+	bne	++		; } else if (gridi == 72) {// upper-right corner
+	lda @w	V1LOCAL	;//travd;
+	cmp	#FROM_LT << 6	;
+	bne	+		;  if ((travd >> 6) == FROM_LT)
+	ldy	#$0b		;   return y = 11; // 11
+	bne	portaly		;
++	cmp	#FROM_BT << 6	;
+	bne	portaly		;  else if ((travd >> 6) == FROM_BT)
+	ldy	#$0a		;   return y = 10; // 10
+	bne	portaly		;
+
++	cmp	#$4f		;
+	bne	++		; } else if (gridi == 79) {// lower-right corner
+	lda @w	V1LOCAL	;//travd;
+	cmp	#FROM_LT << 6	;
+	bne	+		;  if ((travd >> 6) == FROM_LT)
+	ldy	#$12		;   return y = 18; // 18
+	bne	portaly		;
++	cmp	#FROM_TP	;
+	bne	portaly		;  else if ((travd >> 6) == FROM_TP)
+	ldy	#'r' ^ $60	;   return y = 0x32; // R
+	bne	portaly		;  else return y = 0;
+
++	cmp	#8	 	; 
+	bcs	+		; } else if (gridi < 8) // leftmost column, 1~6
+	lda @w	V1LOCAL	;//travd;
+	bne	portaly		;  if ((travd >> 6) == FROM_RT)
+	lda @w	V0LOCAL	;//gridi;
 	clc			;
-	adc	#'i' - $20	;
-	bne	portalx		;  return y = a + ('i' - 0x20); // I~R
-+	lda	#0		; return y = 0;
-portaly	POPVARS			;
+	adc	#'a' ^ $60	;   return y = gridi + 0x21; // B~G
+	bne	portala		;  else return y = 0;
+	
++	cmp	#8*9		;  
+	bcc	+		; } else if (gridi >= 72) { // right column, 73~78
+	lda @w	V1LOCAL	;//travd;
+	cmp	#FROM_LT << 6	;
+	bne	portaly		;  if ((travd >> 6) == FROM_LT)
+	lda @w	V0LOCAL	;//gridi;
+	sec			;
+	sbc	#$48 - $0b	;   y = gridi - (72-11); // 12~17
+	bne	portala		;  else return y = 0;
+
++	pha	;//colnm	; }
+	lsr @w	V2LOCAL	;//colnm;
+	lsr @w	V2LOCAL	;//colnm;
+	lsr @w	V2LOCAL	;//colnm; uint8_t colnm = a >> 3; // 0~9
+
+ 	and	#$07		;
+	bne	+		; if (a & 0x07 == 0) { // topmost row, 0_0
+	lda @w	V1LOCAL	;//travd;
+	cmp	#FROM_BT << 6	;  if ((travd >> 6) == FROM_BT)
+	bne	portaly		;
+	ldy @w	V2LOCAL	;//colnm;
+	iny			;   return y = colnm + 1; // 1~10
+	bne	portaly		;  else return y = 0;
+
++	cmp	#$07		;
+	bne	portaly		; } else if (a & 0x07 == 7) // bottom row, 0_7
+	lda @w	V1LOCAL	;//travd;
+	cmp	#FROM_TP << 6	;  if ((travd >> 6) == FROM_TP)
+	bne	portaly		;
+	lda @w	V2LOCAL	;//colnm;
+	clc			;
+	adc	#'i' ^ $60	;   return y = colnm + 0x29; // J~Q
+portala	tay			;  else return y = 0;
+portaly	POPVARS			; }
 	rts			;} // portal()
 
 ;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS index
