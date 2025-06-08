@@ -178,7 +178,7 @@ main	tsx	;//req'd by APCS;int main(void) {
 	lda	#DRW_ALL|DRW_HID;
 	jsrAPCS	visualz		;
 	rts			;} // main()
-	
+
 ;;; when the beam is about to leave the grid cell a[6:0],
 ;;; travelling in the direction c:a[7],
 ;;; return nonzero if it will exit the grid and processing should stop
@@ -190,7 +190,7 @@ portal	pha	;//gridi	;register uint6_t portal(register uint9_t a){//!
 	lda @w	V0LOCAL	;//gridi;
 	and	#%0111 .. %1111	;
 	sta @w	V0LOCAL	;//gridi; gridi &= 0x7f; // no more H/V bit in bit 7?
-	
+
 	bne	+++		; if (gridi == 0) { // upper-left corner
 	lda @w	V1LOCAL	;//travd;
 	bne	+		;  if ((travd >> 6) == FROM_RT)
@@ -246,7 +246,7 @@ portal	pha	;//gridi	;register uint6_t portal(register uint9_t a){//!
 	clc			;
 	adc	#'a' ^ $60	;   return y = gridi + 0x21; // B~G
 	bne	portala		;  else return y = 0;
-	
+
 +	cmp	#8*9		;  
 	bcc	+		; } else if (gridi >= 72) { // right column, 73~78
 	lda @w	V1LOCAL	;//travd;
@@ -312,11 +312,57 @@ gotbeam	sta @w	V1LOCAL	;//wavef; }
 	lda @w	V0LOCAL	;//orign;
 	jsr	bportal		; y = bportal(orign); // beam's HIDGRID[] entry
 	jsr	bindex		; for (y = bindex(y); ; ) {
-	pha	;//oldy		;  uint8_t oldy;
-propag8	lda	HIDGRID,y	;  register uint9_t a = HIDGRID[y]; // next cell
-	bne	+		;  if (a == 0) { // most common is transmissive
-	tya			;
-	lsr			;   register uint1_t c = y & 1;
+	pha	;//oldy		;  register uint9_t a;
+	pha	;//bump		;  register uint1_t c = y & 1;
+	pha	;//oldir	;
+propag8	sty @w	V2LOCAL	;//oldy	;  uint8_t oldy = y, bump, oldir;
+	lda	HIDGRID,y	;
+	bmi	deadend		;  if ((HIDGRID[y] >> 4) & ABSORBED == 0) { //go
+	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
+	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];
+	lsr			;
+	lsr			;
+	lsr			;
+	lsr			;
+	tay			;    y = bump >> 4; // tint added by a collision
+	iny			;
+	clc			;
+	lda	#%1000 .. %0000	;
+-	rol			;
+	dey			;
+	bne	-		;
+	ora @w	V1LOCAL	;//wavef;
+	sta @w	V1LOCAL	;//wavef;    wavef |= y ? (1 << (y-1)) : 0; // set tint
+	rol			;
+	rol			;
+	rol			;
+	and	#%0000 .. %0011	;
+	sta @w	V4LOCAL	;//oldir;    oldir = wavef >> 6; // old origin of beam
+	lda @w	V3LOCAL	;//bump	;
+	and	#%0000 .. %0111	;
+	tay			;
+	lda	bounces,y	;
+	ldy @w	V4LOCAL	;//oldir;
+	iny			;
+	rol			;
+	rol			;
+-	ror			;    
+	ror			;
+	dey			;
+	bne	-		;
+	and	#%0000 .. %0011	;
+	ror			;
+	ror			;
+	ror			;
+	sta @w	V3LOCAL	;//bump	;    bump = ((bounces[bump&7]>>(oldir*2))&3)<<6;
+	lda @w	V1LOCAL	;//wavef;
+	and	#%0011 .. %0000	;
+	ora @w	V3LOCAL	;//bump	;
+	sta @w	V1LOCAL	;//wavef;    wavef = bump | (wavef & 0x3f); // deflected
+
+	ldy @w	V2LOCAL	;//oldy	;    y = oldy;
++	tya			;   }
+	lsr			;   // whether we deflected or not, check exit
 	sta @w	V2LOCAL	;//oldy	;   oldy = y >> 1;
 	lda @w	V1LOCAL	;//wavef;
 	and	#%1100 .. $0000	;
@@ -327,14 +373,28 @@ propag8	lda	HIDGRID,y	;  register uint9_t a = HIDGRID[y]; // next cell
 	jsrAPCS	portal		;   y = portal(y = a);
 	tya			;   if (y) // contains the exit location
 	bne	propag9		;    break;
-	;; do math on y based on continuing to move in current direction
-
-
-
-
-
-
-
+	lda @w	V1LOCAL	;//wavef;
+	sta	OTHRVAR		;
+	lda @w	V2LOCAL	;//oldy	;
+	and	#%0111 .. %1111	;
+	bit	OTHRVAR		;
+	bmi	++		;   // set y to index of the beam's next cell
+	bvs	+		;   if ((wavef >> 6) == FROM_RT) {
+	sec 			;
+	sbc	#GRIDH		;
+	tay			;    y = (oldy & 0x7f) - GRIDH; // next cell LT
+	jmp	propag8		;    continue;
++	tay 			;   } else if ((wavef >> 6) == FROM_BT) {   
+	dey			;    y = (oldy & 0x7f) - 1; // next cell tw'd TP
+	jmp	propag8		;    continue;
++	bvs	+		;   } else if ((wavef >> 6) == FROM_LT) {   
+	clc 			;
+	adc	#GRIDH		;
+	tay			;    y = (oldy & 0x7f) + GRIDH; // next cell RT
+	jmp	propag8		;    continue;
++	tay 			;   } else /* if ((wavef >> 6) == FROM_TP) */ {   
+	iny			;    y = (oldy & 0x7f) + 1; // next cell tw'd BT
+	jmp	propag8		;    continue;
 propag9
 
 
@@ -399,7 +459,7 @@ commodc	.byte	VIDEOBG
 	.byte	VIDEOLP				;13
 	.byte	VIDEOLG				;14
 	.byte	VIDEOGY				;15
-	
+
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
 petscii	.byte	$,$,$,$		;static uint8_t petscii[] = {0, 0, 0, 0,
 	.byte	$,$,$,$		;                            0, 0, 0, 0,
@@ -414,7 +474,7 @@ petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
 .endif
 RVS_ON	= $12
 RVS_OFF	= $92
-	
+
 DRW_CEL	= 1<<0			;
 DRW_TRY	= 1<<3			;
 DRW_HID	= 1<<4			;
