@@ -296,39 +296,60 @@ toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	rts			;} // toalpha()
 
 waybeam	pha	;//orign	;register uint8_t waybeam(register int8_t a) {
-	pha	;//wavef	; uint8_t wavef, orign = y;
-	and	#$40		;
+	pha	;//wavef	;
+	pha	;//bounc	; uint8_t bounc, wavef, orign = a;
+	and	#$20		;
 	php			;
 	lda @w	V0LOCAL	;//orign;
 	plp			;
-	beq	++		; if (orign & 0x40) { // letter A~H,I-R on LT,BT
-	cmp	#'i'		;
-	bcc	+		;  if (origin >= 'i')
-	lda	#FROM_BT<<6	;   wavef = FROM_BT<<6; // 01000000
+	beq	++		; if (orign & 0x20) { // letter A~H,I-R on LT,BT
+	cmp	#'i' ^ $60	;
+	bcc	+		;  if (origin >= 0x28)
+	lda	#FROM_BT x 4	;   bounc = 0x55; // 01010101
 	bne	gotbeam		;  else
-+	lda	#FROM_LT<<6	;   wavef = FROM_LT<<6; // 10000000
++	lda	#FROM_LT x 4	;   bounc = 0xaa; // 10101010
 	bne	gotbeam		;
 +	cmp	#$0b		; } else { // number 1-10,11-18 on TP,RT
 	bcs	+		;  if (origin < 11)
-	lda	#FROM_TP<<6	;   wavef = FROM_TP<<6; // 11000000
+	lda	#FROM_TP x 4	;   bounc = 0xff; // 11111111
 	bne	gotbeam		;  else
-+	lda	#FROM_RT<<6	;   wavef = FROM_RT<<6; // 00000000
-gotbeam	sta @w	V1LOCAL	;//wavef; }
-	ldy @w	V0LOCAL		;
-	jsrAPCS	bportal		; y = bportal(orign); // get its PORTALS[] index
-	bmi	badbeam		; if (y < 0) return y=?;
-	jsrAPCS	bindex		; y = bindex(y); // from which a HIDGRID[] index
-	bmi	badbeam		; if (y < 0) return y=?;
++	lda	#FROM_RT x 4	;   bounc = 0x00; // 00000000
+gotbeam	sta @w	V2LOCAL	;//bounc; }
+	and	#%1100 .. %0000	;
+	sta @w	V1LOCAL	;//wavef; wavef = bounc & 0xc0;
+	lda @w	V0LOCAL	;//orign;
+	cmp	#$21		;
+	bcs	+		; if (orign < 0x21)
+	tay			;
+	dey			;  y = orign - 1; // 0x01 => 0, 0x12 => 17
+	bcc	++		; else
++	;sec			;
+	sbc	#$21 - $12	;
+	tay			;  y = orign - 15; // 0x21 => 18, 0x32 =>  35
++	jsr	bindex		; y = bindex(y); // starting HIDGRID[] index
 
-	
-
+propag8	
 
 
 	
 badbeam	ldy	#$ff		;
 	POPVARS			;
 	rts			;
-	
+
+bindex	lda	bindice,y	;register uint7_t bindex(register uint6_t y) {
+	tay			;
+	rts			; static uint7_t bindice[] =
+bindice	.byte	$00,$08,$10,$18	; {0x00,0x08,0x10,0x18, // topmost row of 10
+	.byte	$20,$28,$30,$38	;  0x20,0x28,0x30,0x38,                   
+	.byte	$40,$48,$48,$49	;  0x40,0x48,0x48,0x49, // rightmost column of 8
+	.byte	$4a,$4b,$4c,$4d	;  0x4a,0x4b,0x4c,0x4d,
+	.byte	$4e,$4f,$00,$01	;  0x4e,0x4f,0x00,0x01,  // leftmost column of 8
+	.byte	$02,$03,$04,$05	;  0x02,0x03,0x04,0x05,
+	.byte	$06,$07,$07,$0f	;  0x06,0x07,0x07,0x0f   // bottommost row of 10
+	.byte	$17,$1f,$27,$2f	;  0x17,0x1f,0x27,0x2f,
+	.byte	$37,$3f,$47,$4f	;  0x30,0x3f,0x47,0x4f}; return y = bindice[y];}
+
+
 inigrid	lda	#0		;inline inigrid(uint1_t c) {
 	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
 -	bcc	+		;  if (c)
