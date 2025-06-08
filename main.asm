@@ -155,13 +155,12 @@ main	tsx	;//req'd for PCS;int main(void) {
 	clc	;TRYGRID	;
 	jsr	inigrid		;
 	jsrAPCS	rndgrid		;
-
-	jsrAPCS	visualz,#DRW_ALL|DRW_TRY
+	ldy	#DRW_ALL|DRW_TRY;
+	jsrAPCS	visualz		;
 	rts			;} // main()
 	
 
-portal	tya			;register uint8_t portal(register uint8_t y) {
-	cmp	#8	 	; register uint8_t a = y;
+portal	cmp	#8	 	;register uint8_t portal(register uint8_t a) {
 	bcs	+		; if (a < 8)	// leftmost column, 0~7
 	clc			;
 	adc	#'a'		;
@@ -193,31 +192,35 @@ portaly	POPVARS			;
 bportal				;//1~18(1~0x12),A~R(0x41~0x52) to PORTALS index
 bindex				;//PORTALS index <ANSWERS to grid index <GRIDSIZ
 
-waybeam	tya			;register uint8_t waybeam(register uint8_t y) {
-	pha	;//orign	; uint8_t orign = y;
-	pha	;//wavef	; uint8_t wavef;
+waybeam	pha	;//orign	;register uint8_t waybeam(register int8_t a) {
+	pha	;//wavef	; uint8_t wavef, orign = y;
 	and	#$40		;
 	php			;
 	lda @w	V0LOCAL	;//orign;
 	plp			;
 	beq	++		; if (orign & 0x40) { // letter A~H,I-R on LT,BT
 	cmp	#'i'		;
-	bcc	+		;  if (origin >= 'i') // beam comes from BT
+	bcc	+		;  if (origin >= 'i')
 	lda	#FROM_BT<<6	;   wavef = FROM_BT<<6; // 01000000
 	bne	gotbeam		;  else
 +	lda	#FROM_LT<<6	;   wavef = FROM_LT<<6; // 10000000
-	bne	gotbeam		; } else { // number 1-10,11-18 on TP,RT
-+	cmp	#$0b		;
-	bcs	+		;  if (origin < 11) // beam comes from TP
+	bne	gotbeam		;
++	cmp	#$0b		; } else { // number 1-10,11-18 on TP,RT
+	bcs	+		;  if (origin < 11)
 	lda	#FROM_TP<<6	;   wavef = FROM_TP<<6; // 11000000
 	bne	gotbeam		;  else
 +	lda	#FROM_RT<<6	;   wavef = FROM_RT<<6; // 00000000
 gotbeam	sta @w	V1LOCAL	;//wavef; }
-	ldy @w	V0LOCAL	;//orign;
+	ldy @w	V0LOCAL		;
 	jsrAPCS	bportal		; y = bportal(orign); // get its PORTALS[] index
-	tya			; if (y < 0)
-	bmi	badbeam		;  return y=?;
+	bmi	badbeam		; if (y < 0) return y=?;
 	jsrAPCS	bindex		; y = bindex(y); // from which a HIDGRID[] index
+	bmi	badbeam		; if (y < 0) return y=?;
+
+	
+
+
+
 	
 badbeam	ldy	#$ff		;
 	POPVARS			;
@@ -236,6 +239,7 @@ inigrid	lda	#0		;inline inigrid(uint1_t c) {
 rotshap				;} // rotshap (new x in a, new y in y)
 
 ;;; color-memory codes for addressable screens
+.if SCREENW && SCREENH
 commodc	.byte	VIDEOBG
 	.byte	VIDEOR				;1
 	.byte	VIDEOY				;2
@@ -252,6 +256,7 @@ commodc	.byte	VIDEOBG
 	.byte	VIDEOLP				;13
 	.byte	VIDEOLG				;14
 	.byte	VIDEOGY				;15
+.endif
 
 ;;; getchar()-printable color codes for generic terminal-mode platforms // (c64)
 petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
