@@ -4,9 +4,16 @@
 ;;;  a grid and changing properties along the way;"color" for a commodore screen
 
 ;;; "#define x(a,b) {}" without a return type: macro expansion in situ
-;;; "inline register uint8_t" return type: returned in a and/or y (non-APCS jsr)
-;;; "register uint8_t" return type: returned in y
+;;; "inline register uint8_t" return type: returned in A and/or Y (non-APCS jsr)
+;;; "register uint8_t" return type: returned in Y
 ;;; "uint8_t" return type: stuffed back into A0LOCAL of caller
+
+;;; "lda #1 : ldy #2 : jsr f" function taking args in, and returning in, A and Y
+;;; "ldy #1 : jsrAPCS f" function taking an arg in A=Y and returning value in Y
+;;; "ldy #1 : jsrAPCS f,lda,#2" function taking args in A and Y and returning Y
+;;;
+;;; in the first jsrAPCS example, the flags at the entry into f() are set per Y
+;;; in the second jsrAPCS example, the  "    "  "    "     "   "   "   "   "  A
 
 .if BASIC
 *	= BASIC+1
@@ -39,8 +46,8 @@ COPIED2	= $0400
 ;;; 10x8 playfield: labeled 1-10 on top, 11-18 on right, A-H on left, I-R on bot
 GRIDW	= $0a
 GRIDH	= $08
-.if (GRIDW > $2f) || (GRIDH > $2f)
-.error	"too large to fit portal references in 6 bits"
+.if (GRIDW > $1f) || (GRIDH > $1f)
+.error	"too large to fit portal references in 6 bits (5+1 for alpha v numeric)"
 .endif
 GRIDSIZ	= GRIDW*GRIDH		; sizeof(HIDGRID); sizeof(TRYGRID);
 ANSWERS	= 2*GRIDH + 2*GRIDW	; sizeof(PORTALS); sizeof(PORTINT);
@@ -171,46 +178,44 @@ main	tsx	;//req'd by APCS;int main(void) {
 	clc	;TRYGRID	;
 	jsr	inigrid		;
 	jsrAPCS	rndgrid		;
-	ldy	#DRW_ALL|DRW_TRY;
+	lda	#DRW_ALL|DRW_HID;
 	jsrAPCS	visualz		;
 	rts			;} // main()
 	
-portal	cmp	#8	 	;register uint8_t portal(register uint8_t a) {
+;// the exit side from a corner is actually ambiguous, so we only flag (not map)
+;// xor this result with the beam and and with %11000000, Z set -> exiting here
+portal	ldy	#0		;register uint8_t portal(register uint8_t a) {
+	cmp	#8	 	; uint1_t y = 0;
 	bcs	+		; if (a < 8)	// leftmost column, 0~7
-	clc			;
-	adc	#'a' - $20	;
-	ora	#FROM_LT << 6	;
-	bne	portalx		;  return y = a + ('a' - 0x20); // A~H
+	ldy	#(FROM_RT<<6)|1	;
+	bne	portaly		;  return y = 1;
 +	cmp	#8*9		;  
-	bcc	+		; if (a >= 72)	// rightmost colmun, 72~79
-	sec			;
-	sbc	#72-11		;
-	ora	#FROM_RT << 6	;
-	bne	portalx		;  return y = a - (72-11); // 11~18
+	bcc	+		; if (a >= 72)	// rightmost column, 72~79
+	ldy	#(FROM_LT<<6)|1	;
+	bne	portaly		;  return y = a - (72-11); // 11~18
 +	pha	;//colnm	;
 	lsr @w	V0LOCAL	;//colnm;
 	lsr @w	V0LOCAL	;//colnm;
 	lsr @w	V0LOCAL	;//colnm; uint8_t colnm = a >> 3; // 0~9
  	and	#$07		;
 	bne	+		; if (a & 0x07 == 0) // topmost row, 0?0
-	ldy @w	V0LOCAL	;//colnm;
 	iny			;
-	ora	#FROM_TP << 6	;
 	bne	portaly		;  return y = colnm + 1; // 1~10
 +	cmp	#$07		;
 	bne	+		; if (a & 0x07 == 7) // bottommost row, 0?7
 	lda @w	V0LOCAL	;//colnm;
 	clc			;
 	adc	#'i' - $20	;
-	ora	#FROM_BT << 6	;
 	bne	portalx		;  return y = a + ('i' - 0x20); // I~R
 +	lda	#0		; return y = 0;
-portalx	tay			;
 portaly	POPVARS			;
 	rts			;} // portal()
 
-bportal				;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS index
-bindex				;//PORTALS index <ANSWERS to grid index <GRIDSIZ
+;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS index
+bportal	
+
+;//PORTALS index <ANSWERS to grid index <GRIDSIZ
+bindex	
 
 toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	clc			; register int8_t a) {
