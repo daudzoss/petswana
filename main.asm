@@ -669,13 +669,25 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	adc	#1		;                                              \
 	sta @w	V0LOCAL	;//i	;  i = (i & (GRIDH-1)) + 1;                    \
 	inc @w	V1LOCAL	;//r	;  if (r == GRIDH) // no interior joints at bot\
-	cmp	#GRIDH		;
+	cmp	#GRIDH		;                                              \
 	bcs	+		;   break;                                     \
 	rule V2LOCAL,$ab,$7b,$b3;  rule(temp, 0xab, 0x7b, 0xb3);               \
 	jmp	---		; }                                            \
 +	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
 	lda	#0;//FIXME: DEL	;                                              \
 	jsr	putchar		; putchar(DEL);                                \
+	lda	#$0d		;                                              \
+	jsr	putchar		; putchar('\n');                               \
+	lda	#' '		;                                              \
+	jsr	putchar		; putchar(' ');                                \
+	lda	#'i'		;                                              \
+	sta @w	V0LOCAL	;//i	; for (i = 'i'; i < 's'; i++) {                \
+-	jsr	putchar		;  putchar(i);                                 \
+	lda	#' '		;                                              \
+	jsr	putchar		;  putchar(' ');                               \
+	lda @w	V0LOCAL	;//i	;                                              \
+	cmp	#'s'		;                                              \
+	bcc	-		; }                                            \
 	POPVARS			;                                              \
 	.endm			;} // putgrid
 
