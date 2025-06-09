@@ -180,6 +180,134 @@ main	tsx	;//req'd by APCS;int main(void) {
 	jsrAPCS	visualz		;
 	rts			;} // main()
 
+
+toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
+	clc			; register int8_t a) {
+	adc	#%001 .. %00000	; return a = (a < 0x20) ? a :
+	and	#%010 .. %11111	;                         a - 0x20 + 0x40; //A-I
+	rts			;} // toalpha()
+
+blaunch
+
+waybeam	pha	;//orign	;register uint8_t waybeam(register int8_t a) {
+	pha	;//wavef	; uint8_t wavef, orign = a;
+	and	#$20		; register uint8_t y;
+	php			; register uint9_t a;
+	lda @w	V0LOCAL	;//orign;
+	plp			;
+	beq	++		; if (orign & 0x20) { // letter A~H,I-R on LT,BT
+	cmp	#'i' ^ $60	;
+	bcc	+		;  if (origin >= 0x28)
+	lda	#FROM_BT << 6	;   wavef = 0x40; // 01000000
+	bne	gotbeam		;  else
++	lda	#FROM_LT << 6	;   wavef = 0x80; // 10000000
+	bne	gotbeam		;
++	cmp	#$0b		; } else { // number 1-10,11-18 on TP,RT
+	bcs	+		;  if (origin < 11)
+	lda	#FROM_TP << 6	;   wavef = 0xc0; // 11000000
+	bne	gotbeam		;  else
++	lda	#FROM_RT << 6	;   wavef = 0x00; // 00000000
+gotbeam	sta @w	V1LOCAL	;//wavef; }
+	lda @w	V0LOCAL	;//orign;
+	jsr	bportal		; y = bportal(orign); // letter/number to 0~35
+	jsr	bindex		; y = bindex(y); // beam's start in HIDGRID[]
+	pha	;//oldy		; while (1) { // cell by cell as beam travels
+	pha	;//bump		;
+	pha	;//oldir	;  uint8_t oldy, bump, oldir;
+propag8	tya			;  register uint1_t c;
+	sta @w	V2LOCAL	;//oldy	;  oldy = y;
+	lda	HIDGRID,y	;
+	bpl	+		;
+	jmp	deadend		;  if ((HIDGRID[y] >> 4) & BEAMOFF == 0) { // on
++	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
+	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];//H nyb tint, L nyb shape
+	lsr			;
+	lsr			;
+	lsr			;
+	lsr			;
+	tay			;    y = bump >> 4; // tint added by a collision
+	iny			;
+	clc			;
+	lda	#%1000 .. %0000	;
+-	rol			;
+	dey			;
+	bne	-		;
+	ora @w	V1LOCAL	;//wavef;
+	sta @w	V1LOCAL	;//wavef;    wavef |= y ? (1 << (y-1)) : 0; // set tint
+	rol			;
+	rol			;
+	rol			;
+	and	#%0000 .. %0011	;
+	sta @w	V4LOCAL	;//oldir;    oldir = wavef >> 6; // pre-bounce direction
+	lda @w	V3LOCAL	;//bump	;
+	and	#%0000 .. %0111	;
+	tay			;
+	lda	bounces,y	;
+	ldy @w	V4LOCAL	;//oldir;
+	iny			;
+	rol			;
+	rol			;
+-	ror			;    
+	ror			;
+	dey			;
+	bne	-		;
+	and	#%0000 .. %0011	;
+	ror			;
+	ror			;
+	ror			;
+	sta @w	V3LOCAL	;//bump	;    bump = ((bounces[bump&7]>>(oldir*2))&3)<<6;
+	lda @w	V1LOCAL	;//wavef;
+	and	#%0011 .. %ffff	;
+	ora @w	V3LOCAL	;//bump	;
+	sta @w	V1LOCAL	;//wavef;    wavef = bump | (wavef & 0x3f); // deflected
+	ldy @w	V2LOCAL	;//oldy	;    y = oldy;
++	tya			;   }
+	lsr			;   c = y & 1;
+	sta @w	V2LOCAL	;//oldy	;   oldy = y >> 1;
+	lda @w	V1LOCAL	;//wavef;   // check if exit whether it deflected or not
+	and	#%1100 .. %0000	;
+	ora @w	V2LOCAL	;//oldy ;   // travel direction .. HIDGRID[] index
+	rol			;   a = ((uint9_t)(wavef&0xc0)<<1)|(oldy<<1)|c;
+	sta @w	V2LOCAL	;//oldy	;   oldy = a & 0x0ff;
+	tay			;
+	jsrAPCS	portal		;   y = portal(y = a);
+	tya			;   if (y) // contains the exit location
+	bne	propag9		;    break;
+	lda @w	V1LOCAL	;//wavef;
+	sta	OTHRVAR		;
+	lda @w	V2LOCAL	;//oldy	;
+	and	#%0111 .. %1111	;
+	bit	OTHRVAR		;
+	bmi	++		;   // set y to index of the beam's next cell
+	bvs	+		;   if ((wavef >> 6) == FROM_RT) {
+	sec 			;
+	sbc	#GRIDH		;
+	tay			;    y = (oldy & 0x7f) - GRIDH; // next cell LT
+	jmp	propag8		;    continue;
++	tay 			;   } else if ((wavef >> 6) == FROM_BT) {   
+	dey			;    y = (oldy & 0x7f) - 1; // next cell tw'd TP
+	jmp	propag8		;    continue;
++	bvs	+		;   } else if ((wavef >> 6) == FROM_LT) {   
+	clc 			;
+	adc	#GRIDH		;
+	tay			;    y = (oldy & 0x7f) + GRIDH; // next cell RT
+	jmp	propag8		;    continue;
++	tay 			;   } else /* if ((wavef >> 6) == FROM_TP) */ {   
+	iny			;    y = (oldy & 0x7f) + 1; // next cell tw'd BT
+	jmp	propag8		;    continue;
+propag9	tya			;   }
+	and	#%0011 .. %1111	;  }
+	sta @w	V2LOCAL	;//oldy	;  oldy = y & 0x3f; // identifier of exit cell
+	jsr	bportal		;  y = bportal(y); // array index of exit cell
+	lda @w	V1LOCAL	;//wavef;
+	and	#%0000 .. %1111	;
+	sta	PORTINT,y	;  PORTINT[y] = wavef & 0x0f;
+	ldy @w	V2LOCAL	;//oldy	;  y = oldy; // caller must update other portal!
+	jmp	endbeam		; } else
+deadend	ldy	#$ff		;  y = -1; // struck an absorber and can't leave
+endbeam	POPVARS			; return y; // identifier of exit cell
+	rts			;} // waybeam()
+
 ;;; when the beam is about to leave the grid cell a[6:0],
 ;;; travelling in the direction c:a[7],
 ;;; return nonzero if it will exit the grid and processing should stop
@@ -283,134 +411,8 @@ portal	pha	;//gridi	;register uint6_t portal(register uint9_t a){//!
 portala	tay			;  else return y = 0;
 portaly	POPVARS			; }
 	rts			;} // portal()
-
-toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
-	clc			; register int8_t a) {
-	adc	#%001 .. %00000	; return a = (a < 0x20) ? a :
-	and	#%010 .. %11111	;                         a - 0x20 + 0x40; //A-I
-	rts			;} // toalpha()
-
-waybeam	pha	;//orign	;register uint8_t waybeam(register int8_t a) {
-	pha	;//wavef	; uint8_t wavef, orign = a;
-	and	#$20		; register uint8_t y;
-	php			; register uint9_t a;
-	lda @w	V0LOCAL	;//orign;
-	plp			;
-	beq	++		; if (orign & 0x20) { // letter A~H,I-R on LT,BT
-	cmp	#'i' ^ $60	;
-	bcc	+		;  if (origin >= 0x28)
-	lda	#FROM_BT << 6	;   wavef = 0x40; // 01000000
-	bne	gotbeam		;  else
-+	lda	#FROM_LT << 6	;   wavef = 0x80; // 10000000
-	bne	gotbeam		;
-+	cmp	#$0b		; } else { // number 1-10,11-18 on TP,RT
-	bcs	+		;  if (origin < 11)
-	lda	#FROM_TP << 6	;   wavef = 0xc0; // 11000000
-	bne	gotbeam		;  else
-+	lda	#FROM_RT << 6	;   wavef = 0x00; // 00000000
-gotbeam	sta @w	V1LOCAL	;//wavef; }
-	lda @w	V0LOCAL	;//orign;
-	jsr	bportal		; y = bportal(orign); // beam's HIDGRID[] entry
-	jsr	bindex		; for (y = bindex(y); ; ) {
-	pha	;//oldy		;
-	pha	;//bump		;  register uint1_t c = y & 1;
-	pha	;//oldir	;
-propag8	tya			;  uint8_t oldy, bump, oldir;
-	sta @w	V2LOCAL	;//oldy	;  oldy = y;
-	lda	HIDGRID,y	;
-	bpl	+		;
-	jmp	deadend		;  if ((HIDGRID[y] >> 4) & ABSORBED == 0) { //go
-+	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
-	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];
-	lsr			;
-	lsr			;
-	lsr			;
-	lsr			;
-	tay			;    y = bump >> 4; // tint added by a collision
-	iny			;
-	clc			;
-	lda	#%1000 .. %0000	;
--	rol			;
-	dey			;
-	bne	-		;
-	ora @w	V1LOCAL	;//wavef;
-	sta @w	V1LOCAL	;//wavef;    wavef |= y ? (1 << (y-1)) : 0; // set tint
-	rol			;
-	rol			;
-	rol			;
-	and	#%0000 .. %0011	;
-	sta @w	V4LOCAL	;//oldir;    oldir = wavef >> 6; // old origin of beam
-	lda @w	V3LOCAL	;//bump	;
-	and	#%0000 .. %0111	;
-	tay			;
-	lda	bounces,y	;
-	ldy @w	V4LOCAL	;//oldir;
-	iny			;
-	rol			;
-	rol			;
--	ror			;    
-	ror			;
-	dey			;
-	bne	-		;
-	and	#%0000 .. %0011	;
-	ror			;
-	ror			;
-	ror			;
-	sta @w	V3LOCAL	;//bump	;    bump = ((bounces[bump&7]>>(oldir*2))&3)<<6;
-	lda @w	V1LOCAL	;//wavef;
-	and	#%0011 .. %0000	;
-	ora @w	V3LOCAL	;//bump	;
-	sta @w	V1LOCAL	;//wavef;    wavef = bump | (wavef & 0x3f); // deflected
-
-	ldy @w	V2LOCAL	;//oldy	;    y = oldy;
-+	tya			;   }
-	lsr			;   // whether we deflected or not, check exit
-	sta @w	V2LOCAL	;//oldy	;   oldy = y >> 1;
-	lda @w	V1LOCAL	;//wavef;
-	and	#%1100 .. %0000	;
-	ora @w	V2LOCAL	;//oldy ;   // travel direction .. HIDGRID[] index
-	rol			;   a = ((uint9_t)(wavef&0xc0)<<1)|(oldy<<1)|c;
-	sta @w	V2LOCAL	;//oldy	;   oldy = a & 0x0ff;
-	tay			;
-	jsrAPCS	portal		;   y = portal(y = a);
-	tya			;   if (y) // contains the exit location
-	bne	propag9		;    break;
-	lda @w	V1LOCAL	;//wavef;
-	sta	OTHRVAR		;
-	lda @w	V2LOCAL	;//oldy	;
-	and	#%0111 .. %1111	;
-	bit	OTHRVAR		;
-	bmi	++		;   // set y to index of the beam's next cell
-	bvs	+		;   if ((wavef >> 6) == FROM_RT) {
-	sec 			;
-	sbc	#GRIDH		;
-	tay			;    y = (oldy & 0x7f) - GRIDH; // next cell LT
-	jmp	propag8		;    continue;
-+	tay 			;   } else if ((wavef >> 6) == FROM_BT) {   
-	dey			;    y = (oldy & 0x7f) - 1; // next cell tw'd TP
-	jmp	propag8		;    continue;
-+	bvs	+		;   } else if ((wavef >> 6) == FROM_LT) {   
-	clc 			;
-	adc	#GRIDH		;
-	tay			;    y = (oldy & 0x7f) + GRIDH; // next cell RT
-	jmp	propag8		;    continue;
-+	tay 			;   } else /* if ((wavef >> 6) == FROM_TP) */ {   
-	iny			;    y = (oldy & 0x7f) + 1; // next cell tw'd BT
-	jmp	propag8		;    continue;
-propag9	tya			;   }
-	and	#%0011 .. %1111	;  }
-	sta @w	V2LOCAL	;//oldy	;  oldy = y & 0x3f; // identifier of exit cell
-	jsr	bportal		;  y = bportal(y); // array index of exit cell
-	lda @w	V1LOCAL	;//wavef;
-	and	#%0000 .. %1111	;
-	sta	PORTINT,y	;  PORTINT[y] = wavef & 0x0f;
-	ldy @w	V2LOCAL	;//oldy	;  y = oldy; // caller must update other portal!
-	jmp	endbeam		; } else
-deadend	ldy	#$ff		;  y = -1;
-endbeam	POPVARS			; return y;
-	rts			;} // waybeam()
-
-;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS[] index
+	
+;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS[] or PORTINT[] index
 bportal	cmp	#$21		;register uint6_t bportal(register uint 6_t a) {
 	bcs	+		; if (a < 0x21)
 	tay			;
@@ -434,8 +436,6 @@ bindice	.byte	$00,$08,$10,$18	; {0x00,0x08,0x10,0x18, // topmost row of 10
 	.byte	$06,$07,$07,$0f	;  0x06,0x07,0x07,0x0f   // bottommost row of 10
 	.byte	$17,$1f,$27,$2f	;  0x17,0x1f,0x27,0x2f,
 	.byte	$37,$3f,$47,$4f	;  0x30,0x3f,0x47,0x4f}; return y = bindice[y];}
-
-blaunch
 
 inigrid	lda	#0		;inline inigrid(uint1_t c) {
 	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
