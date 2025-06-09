@@ -164,7 +164,7 @@ MIXTOFF	= $f << 4				;16
 
 main	tsx	;//req'd by APCS;int main(void) {
 .if BKGRNDC
-	lda	#VIDEOBG	; if (SCREENW && SCREENH) // addressable screen
+	lda	#VIDEOBG	; if (BKGRNDC) // addressable screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
 	lda	#$00		; for (register uint8_t y = ANSWERS; y; y--) {
@@ -571,21 +571,21 @@ visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
 +	POPVARS			; }
 	rts			;} // visualz()
 
-.if SCREENW >= $50
+.if SCREENH && (SCREENW >= $50)
 hal_try
 hal_hid
 hal_msg
 hal_lbl
 hal_msh
 hal_cel	rts
-.elsif SCREENW >= $28
+.elsif SCREENH && (SCREENW >= $28)
 hal_try
 hal_hid
 hal_msg
 hal_lbl
 hal_msh
 hal_cel	rts
-.elsif SCREENW >= $16
+.elsif SCREENH && (SCREENW >= $16)
 hal_try
 hal_hid
 hal_msg
@@ -605,6 +605,8 @@ putchar	tay			;inline void putchar(register uint8_t a) {
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	lda	#$0d		;                                              \
 	jsr	putchar		; putchar('\n');                               \
+	lda	#$20		;                                              \
+	jsr	putchar		; putchar(' ');                               \
 	lda	#\lj		;                                              \
 	jsr	putchar		; putchar(lj);                                 \
 	lda	#$60		;                                              \
@@ -639,6 +641,25 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	ldy	#VIDEOGY	;                                              \
 	lda	petscii,y	;                                              \
 	jsr	putchar		; putchar(petscii[VIDEOGY]);                   \
+	lda	#$0d		;                                              \
+	jsr	putchar		; putchar('\n');                               \
+	lda	#' '		;                                              \
+	jsr	putchar		; putchar(' ');                                \
+	lda	#' '		;                                              \
+	jsr	putchar		; putchar(' ');                                \
+	lda	#'1'		;                                              \
+	sta @w	V0LOCAL	;//i	; for (i = '1'; i <= '9'; i++) {                \
+-	jsr	putchar		;  putchar(i);                                 \
+	lda	#' '		;                                              \
+	jsr	putchar		;  putchar(' ');                               \
+	inc @w	V0LOCAL	;//i	;                                              \
+	lda @w	V0LOCAL	;//i	;                                              \
+	cmp	#'9'+1		;                                              \
+	bcc	-		; }                                            \
+	lda	#'1'		;                                              \
+	jsr	putchar		; putchar(' ');                                \
+	lda	#'0'		;                                              \
+	jsr	putchar		; putchar(' ');                                \
 	rule V2LOCAL,$b0,$b2,$ae; rule(temp, 0xb0, 0xb2, 0xae) ;               \
 .if SCREENW > $16
 	lda	#'1'		;                                              \
@@ -705,7 +726,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		;   putchar(petscii[VIDEOGY]);                 \
 	jmp	--		;  }putchar('|');                              \
 +
-.if SCREENW > $16
+.if SCREENW > $17
 	lda	#' '		;                                              \
 	jsr	putchar		;  putchar(' '); // offset 1's digit diagonally\
 	lda @w	V1LOCAL	;//r	;                                              \
@@ -722,12 +743,16 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	cmp	#GRIDH		;                                              \
 	bcs	+		;   break;                                     \
 	rule V2LOCAL,$ab,$7b,$b3;  rule(temp, 0xab, 0x7b, 0xb3);               \
+.if SCREENW > $16
+	lda	#'1'		;                                              \
+	jsr 	putchar		; putchar('1'); //  right-edge label 10's digit\
+.endif
 	jmp	---		; }                                            \
 +	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
-	lda	#0;//FIXME: DEL	;                                              \
-	jsr	putchar		; putchar(DEL);                                \
 	lda	#$0d		;                                              \
 	jsr	putchar		; putchar('\n');                               \
+	lda	#' '		;                                              \
+	jsr	putchar		; putchar(' ');                                \
 	lda	#' '		;                                              \
 	jsr	putchar		; putchar(' ');                                \
 	lda	#'i'		;                                              \
