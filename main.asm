@@ -151,7 +151,7 @@ MIXTORN	= 0 | 0 | MIXTRED | MIXTYEL		;3
 MIXTBLU	= 0 | 1 << (TINTBLU - 1) | 0 | 0	;4
 MIXTPUR	= 0 | MIXTBLUE | 0 | MIXTRED		;5
 MIXTGRN	= 0 | MIXTBLU | MIXTYEL	| 0		;6
-MIXTBLK	= 0 | MIXTBLU | MIXTYEL | MIXTRED	;7
+MIXTBRN	= 0 | MIXTBLU | MIXTYEL | MIXTRED	;7
 MIXTWHT	= 1 << (TINTWHT - 1) | 0 | 0 | 0	;8
 MIXT_LR	= MIXTWHT | 0 | 0 | MIXTRED		;9
 MIXT_LY	= MIXTWHT | 0 | MIXTYEL	| 0		;10
@@ -494,28 +494,47 @@ rotshap				;} // rotshap (new x in a, new y in y)
 
 ;;; color-memory codes for addressable screens
 .if BKGRNDC
-commodc	.byte	VIDEOBG
-	.byte	VIDEOR				;1
-	.byte	VIDEOY				;2
-	.byte	VIDEOO				;3
-	.byte	VIDEOB				;4
-	.byte	VIDEOP				;5
-	.byte	VIDEOG				;6
-	.byte	VIDEOBK				;7
-	.byte	VIDEOW				;8
-	.byte	VIDEOLR				;9
-	.byte	VIDEOLY				;10
-	.byte	VIDEOLO				;11
-	.byte	VIDEOLB				;12
-	.byte	VIDEOLP				;13
-	.byte	VIDEOLG				;14
-	.byte	VIDEOGY				;15
+commodc	.byte	VIDTEXT		;0
+	.byte	VIDEOR		;1
+	.byte	VIDEOY		;2
+	.byte	VIDEOO		;3
+	.byte	VIDEOBL		;4
+	.byte	VIDEOP		;5
+	.byte	VIDEOG		;6
+	.byte	VIDEOBR		;7
+	.byte	VIDEOW		;8
+	.byte	VIDEOLR		;9
+	.byte	VIDEOLY		;10
+	.byte	VIDEOLO		;11
+	.byte	VIDEOLB		;12
+	.byte	VIDEOLP		;13
+	.byte	VIDEOLG		;14
+	.byte	VIDEOGY		;15
+	.byte	VIDEOBK		;16
 
-;;; putchar()-printable color codes for terminal-mode on color platforms // c64
-petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
-	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
-	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
-	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
+;;; putchar()-printable color codes for terminal-mode on color platforms (vic20)
+petscii	.byte	$		;static uint8_t petscii[17] = {0x, // UNMIXED
+	.byte	$1c		;                              0x1c, // MIXTRED
+	.byte	$		;                              0x, // MIXTYEL
+	.byte	$		;                              0x, // MIXTORN
+	.byte	$		;                              0x, // MIXTBLU
+	.byte	$		;                              0x, // MIXTPUR
+	.byte	$		;                              0x, // MIXTGRN
+	.byte	$		;                              0x, // MIXTBRN
+	.byte	$		;                              0x, // MIXTWHT
+	.byte	$		;                              0x, // MIXT_LR
+	.byte	$		;                              0x, // MIXT_LY
+	.byte	$		;                              0x, // MIXT_LO
+	.byte	$		;                              0x, // MIXT_LB
+	.byte	$		;                              0x, // MIXT_LP
+	.byte	$		;                              0x, // MIXT_LG
+	.byte	$		;                              0x, // MIXTGRY
+	.byte	$		;                              0x};// MIXTOFF
+
+;petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
+;	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
+;	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
+;	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
 .else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
 petscii	.byte	$,$,$,$		;static uint8_t petscii[] = {0, 0, 0, 0,
@@ -640,7 +659,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	pha	;//V2LOCAL=temp	; uint8_t temp;                                \
 	ldy	#VIDEOGY	;                                              \
 	lda	petscii,y	;                                              \
-	jsr	putchar		; putchar(petscii[VIDEOGY]);                   \
+	jsr	putchar		; putchar(petscii[VIDTEXT]);                   \
 	lda	#$0d		;                                              \
 	jsr	putchar		; putchar('\n');                               \
 	lda	#' '		;                                              \
@@ -697,7 +716,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		;  putchar('a' + r); // A~H down left side     \
 	ldy	#VIDEOGY	;                                              \
 	lda	petscii,y	;                                              \
-	jsr	putchar		;  putchar(petscii[VIDEOGY]);                  \
+	jsr	putchar		;  putchar(petscii[VIDTEXT]);                  \
 -	lda	#$7d		;  for (; (y=i) < GRIDSIZ; i+=GRIDH) {         \
 	jsr	putchar		;   putchar('|');                              \
 	lda @w	V0LOCAL	;//i	;                                              \
@@ -747,7 +766,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		;   putchar(RVS_OFF);                          \
 	ldy	#VIDEOGY	;                                              \
 	lda	petscii,y	;                                              \
-	jsr	putchar		;   putchar(petscii[VIDEOGY]);                 \
+	jsr	putchar		;   putchar(petscii[VIDTEXT]);                 \
 	jmp	--		;  }putchar('|');                              \
 +
 .if SCREENW > $17
