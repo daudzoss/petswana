@@ -160,7 +160,7 @@ MIXT_LB	= MIXTWHT | MIXTBLU | 0 | 0		;12
 MIXT_LP	= MIXTWHT | MIXTBLU | 0 | MIXTRED	;13
 MIXT_LG	= MIXTWHT | MIXTBLU | MIXTYEL | 0	;14
 MIXTGRY	= MIXTRED | MIXTYEL | MIXTBLU | MIXTWHT ;15
-MIXTOFF	= 1 << 4				;16
+MIXTOFF	= $f << 4				;16
 
 main	tsx	;//req'd by APCS;int main(void) {
 .if SCREENW && SCREENH
@@ -171,15 +171,26 @@ main	tsx	;//req'd by APCS;int main(void) {
 	ldy	#ANSWERS	;  // bits 5~0 where a beam into this one exits
 -	sta	PORTALS-1,y	;  PORTALS[y-1] = 0; // no beam entry/exit yet
 	sta	PORTINT-1,y	;  // bits 3~0 tint reflected, or bit 4 absorbed
-	dey			;  PORTALS[y-1] = 0; // no beam entry/exit yet
+	dey			;  PORTINT[y-1] = 0; // no beam entry/exit yet
 	bne	-		; }
 	clc	;TRYGRID	;
-	jsr	inigrid		;
-	jsrAPCS	rndgrid		;
-	lda	#DRW_ALL|DRW_HID;
-	jsrAPCS	visualz		;
-	rts			;} // main()
+	jsr	inigrid		; inigrid(0);
+	jsrAPCS	rndgrid		; rndgrid();
+-	lda	#DRW_ALL|DRW_HID; do { register uint8_t a;
+	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_HID);
+	jsr	tempinp		;  a = tempinp();
+	beq	+		;  if (a)
+	tay			;
+	jsrAPCS	shinein		;  
+	tya			;
+	jsr	tempout		;   tempout(shinein(a));
+	jmp	-		; } while(a);
++	rts			;} // main()
 
+tempinp
+	rts
+tempout
+	rts
 
 toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	clc			; register int8_t a) {
@@ -187,7 +198,37 @@ toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	and	#%010 .. %11111	;                         a - 0x20 + 0x40; //A-I
 	rts			;} // toalpha()
 
-blaunch
+shinein	tya			;register uint8_t shinein(register uint8_t y) {
+	pha	;//iport	; uint8_t iport = y, i_idx, oport, o_idx;
+	jsr	bportal		;
+	tya			;
+	pha	;//i_idx	; i_idx = bportal(y); //PORTINT[],PORTALS[]
+	lda	PORTALS,y   	; if (PORTALS[i_idx])
+	bne	++		;  return PORTALS[i_idx]; // won't have changed!
+	ldy @w	V0LOCAL	;//iport;
+	jsrAPCS	waybeam		;
+	tya			;
+	pha	;//oport	; oport  = waybeam(iport);
+	bpl	+		; if (oport & BEAMOFF) { // sign bit, absorbed
+	ldy @w	V1LOCAL	;//i_idx; 
+	lda	#MIXTOFF	;
+	sta	PORTINT,y	;  PORTINT[i_idx] = MIXTOFF;
+	lda	#BEAMOFF	;
+	sta	PORTALS,y	;  PORTALS[i_idx] = BEAMOFF;
+	jmp	++		; } else { // waybeam set PORTINT[o_idx] already
++	jsr	bportal		;
+	tya			;
+;	pha	;//o_idx	;  o_idx = bportal(oport); //PORTINT[],PORTALS[]
+	lda @w	V0LOCAL	;//iport;
+	sta	PORTALS,y	;  PORTALS[o_idx] = iport; // out linked to in
+	lda	PORTINT,y	;
+	ldy @w	V1LOCAL	;//i_idx;
+	sta`	PORTINT,y	;  PORTINT[i_idx] = PORTINT[o_idx]; // same tint
+	lda @w	V2LOCAL	;//oport;
+	sta	PORTALS,y	;  PORTALS[i_idx] = oport; // in linked to out
++	tay			; }
+	POPVARS			; return y = PORTALS[i_idx];
+	rts			;} shinein()
 
 waybeam	pha	;//orign	;register uint8_t waybeam(register int8_t a) {
 	pha	;//wavef	; uint8_t wavef, orign = a;
@@ -211,7 +252,7 @@ gotbeam	sta @w	V1LOCAL	;//wavef; }
 	lda @w	V0LOCAL	;//orign;
 	jsr	bportal		; y = bportal(orign); // letter/number to 0~35
 	jsr	bindex		; y = bindex(y); // beam's start in HIDGRID[]
-	pha	;//oldy		; while (1) { // cell by cell as beam travels
+	pha	;//oldy		; do { // check cell by cell as the beam travels
 	pha	;//bump		;
 	pha	;//oldir	;  uint8_t oldy, bump, oldir;
 propag8	tya			;  register uint1_t c;
@@ -257,7 +298,7 @@ propag8	tya			;  register uint1_t c;
 	ror			;
 	sta @w	V3LOCAL	;//bump	;    bump = ((bounces[bump&7]>>(oldir*2))&3)<<6;
 	lda @w	V1LOCAL	;//wavef;
-	and	#%0011 .. %ffff	;
+	and	#%0011 .. %1111	;
 	ora @w	V3LOCAL	;//bump	;
 	sta @w	V1LOCAL	;//wavef;    wavef = bump | (wavef & 0x3f); // deflected
 	ldy @w	V2LOCAL	;//oldy	;    y = oldy;
@@ -296,9 +337,9 @@ propag8	tya			;  register uint1_t c;
 	iny			;    y = (oldy & 0x7f) + 1; // next cell tw'd BT
 	jmp	propag8		;    continue;
 propag9	tya			;   }
-	and	#%0011 .. %1111	;  }
+	and	#%0011 .. %1111	;  } while (1);
 	sta @w	V2LOCAL	;//oldy	;  oldy = y & 0x3f; // identifier of exit cell
-	jsr	bportal		;  y = bportal(y); // array index of exit cell
+	jsr	bportal		;  y = bportal(oldy); // that cell's array index
 	lda @w	V1LOCAL	;//wavef;
 	and	#%0000 .. %1111	;
 	sta	PORTINT,y	;  PORTINT[y] = wavef & 0x0f;
@@ -413,9 +454,9 @@ portaly	POPVARS			; }
 	rts			;} // portal()
 	
 ;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS[] or PORTINT[] index
-bportal	cmp	#$21		;register uint6_t bportal(register uint 6_t a) {
-	bcs	+		; if (a < 0x21)
-	tay			;
+bportal	cmp	#$21		;inline register int6_t bportal(register int6_t
+	bcs	+		;                                           a) {
+	tay			; if (a < 0x21)
 	dey			;  y = a - 1; // 0x01 => 0, 0x12 => 17
 	bcc	++		; else
 +	;sec			;
