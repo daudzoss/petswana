@@ -144,7 +144,7 @@ OBJTWHT	= TINTWHT << 4		; " white-  "     "     "    "  TINTWHT-1th  "
 BEAMOFF	= ABSORBD << 4		; perfect blackbody, no further travel of a beam
 
 ;;; beam spectrum bit values, reflecting a tint mixture after multiple rebounds
-;UNTINTD = 0
+UNMIXED = 0
 MIXTRED	= 0 | 0 | 0 | 1 << (TINTRED - 1)	;1
 MIXTYEL	= 0 | 0 | 1 << (TINTYEL - 1) | 0	;2
 MIXTORN	= 0 | 0 | MIXTRED | MIXTYEL		;3
@@ -493,7 +493,7 @@ inigrid	lda	#0		;inline inigrid(uint1_t c) {
 rotshap				;} // rotshap (new x in a, new y in y)
 
 ;;; color-memory codes for addressable screens
-.if SCREENW && SCREENH
+.if BKGRNDC
 commodc	.byte	VIDEOBG
 	.byte	VIDEOR				;1
 	.byte	VIDEOY				;2
@@ -511,17 +511,17 @@ commodc	.byte	VIDEOBG
 	.byte	VIDEOLG				;14
 	.byte	VIDEOGY				;15
 
+;;; putchar()-printable color codes for terminal-mode on color platforms // c64
+petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
+	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
+	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
+	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
+.else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
 petscii	.byte	$,$,$,$		;static uint8_t petscii[] = {0, 0, 0, 0,
 	.byte	$,$,$,$		;                            0, 0, 0, 0,
 	.byte	$,$,$,$		;                            0, 0, 0, 0,
 	.byte	$,$,$,$		;                            0, 0, 0, 0};
-.else
-;;; puttchar()-printable color codes for terminal-mode on color platforms // c64
-petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
-	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
-	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
-	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
 .endif
 RVS_ON	= $12
 RVS_OFF	= $92
@@ -647,19 +647,32 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		; putchar(' ');                                \
 	lda	#' '		;                                              \
 	jsr	putchar		; putchar(' ');                                \
-	lda	#'1'		;                                              \
-	sta @w	V0LOCAL	;//i	; for (i = '1'; i <= '9'; i++) {                \
--	jsr	putchar		;  putchar(i);                                 \
+	lda	PORTINT		;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		; putchar(petscii[PORTINT[0] & 0x1f]);
+	lda	#0		;                                              \
+	sta @w	V0LOCAL	;//i	; for (i = 0; i < 9; i++) {                \
+-	clc			;
+	adc	#'1'		;
+	jsr	putchar		;  putchar(i);                                 \
 	lda	#' '		;                                              \
 	jsr	putchar		;  putchar(' ');                               \
 	inc @w	V0LOCAL	;//i	;                                              \
+	ldy @w	V0LOCAL	;//i	;                                              \
+	lda	PORTINT,y	;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;  putchar(petscii[PORTINT[i+1] & 0x1f]);
 	lda @w	V0LOCAL	;//i	;                                              \
-	cmp	#'9'+1		;                                              \
+	cmp	#9		;                                              \
 	bcc	-		; }                                            \
 	lda	#'1'		;                                              \
-	jsr	putchar		; putchar(' ');                                \
+	jsr	putchar		; putchar('1');                                \
 	lda	#'0'		;                                              \
-	jsr	putchar		; putchar(' ');                                \
+	jsr	putchar		; putchar('0');                                \
 	rule V2LOCAL,$b0,$b2,$ae; rule(temp, 0xb0, 0xb2, 0xae) ;               \
 .if SCREENW > $16
 	lda	#'1'		;                                              \
@@ -671,9 +684,20 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 -	lda	#$0d		;  register uint8_t y;                         \
 	jsr	putchar		;  putchar('\n');                              \
 	lda @w	V1LOCAL	;//r	;                                              \
+	adc	#GRIDW+GRIDH	;
+	tay			;
+	lda	PORTINT,y	;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;  putchar(petscii[PORTINT[r+GRIDH+GRIDY]]);
+	lda @w	V1LOCAL	;//r	;                                              \
 	clc			;                                              \
 	adc	#'a'		;                                              \
 	jsr	putchar		;  putchar('a' + r); // A~H down left side     \
+	ldy	#VIDEOGY	;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		;  putchar(petscii[VIDEOGY]);                  \
 -	lda	#$7d		;  for (; (y=i) < GRIDSIZ; i+=GRIDH) {         \
 	jsr	putchar		;   putchar('|');                              \
 	lda @w	V0LOCAL	;//i	;                                              \
