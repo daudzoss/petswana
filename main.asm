@@ -163,7 +163,7 @@ MIXTGRY	= MIXTRED | MIXTYEL | MIXTBLU | MIXTWHT ;15
 MIXTOFF	= $f << 4				;16
 
 main	tsx	;//req'd by APCS;int main(void) {
-.if SCREENW && SCREENH
+.if BKGRNDC
 	lda	#VIDEOBG	; if (SCREENW && SCREENH) // addressable screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
@@ -177,6 +177,8 @@ main	tsx	;//req'd by APCS;int main(void) {
 	jsr	inigrid		; inigrid(0);
 	jsrAPCS	rndgrid		; rndgrid();
 -	lda	#DRW_ALL|DRW_HID; do { register uint8_t a;
+ jsrAPCS hal_hid
+ brk
 	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_HID);
 	jsr	tempinp		;  a = tempinp();
 	beq	+		;  if (a)
@@ -733,6 +735,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 -	jsr	putchar		;  putchar(i);                                 \
 	lda	#' '		;                                              \
 	jsr	putchar		;  putchar(' ');                               \
+	inc @w	V0LOCAL	;//i	;                                              \
 	lda @w	V0LOCAL	;//i	;                                              \
 	cmp	#'s'		;                                              \
 	bcc	-		; }                                            \
