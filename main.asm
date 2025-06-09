@@ -117,31 +117,29 @@ bounce7	.byte	RABOUNC x 4
 ;;; an X marker in TRYGRID (0x08) confirming no obstacle actually would block a
 ;;; beam but we only trace beams inside HIDGRID; TRYGRID markers are effectively
 ;;; apertures cut in a TRYGRID cell that allow HIDGRID to show through as X or O
-BLANK	= 0			; nothing in the cell to block an incident beam
-CHAMFBR	= 1			; triangular reflector, chamfer at bottom right
-CHAMFBL	= 2			;      "        "     , chamfer at bottom left
-CHAMFTL	= 3			;      "        "     , chamfer at top left
-CHAMFTR = 4			;      "        "     , chamfer at top right
-;BOREDLR	= 5			; transmits left-right but rebounds top-bottom
-;BOREDTB	= 6			; transmits top-bottom but rebounds left-right
-SQUARE	= 7			; cell filled in so all four sides will rebound
-
-SOBLANK	= 8			; marker (in TRYGRID only) that blank confirmed
-SOFILLD	= 9			; marker (in TRYGRID only) that object confirmed
+BLANK	= $0			; nothing in the cell to block an incident beam
+CHAMFBR	= $1			; triangular reflector, chamfer at bottom right
+CHAMFBL	= $2			;      "        "     , chamfer at bottom left
+CHAMFTL	= $3			;      "        "     , chamfer at top left
+CHAMFTR = $4			;      "        "     , chamfer at top right
+BOREDLR	= $5			; transmits left-right but rebounds top-bottom
+BOREDTB	= $6			; transmits top-bottom but rebounds left-right
+SQUARE	= $7			; cell filled in so all four sides will rebound
+SOBLANK	= $8			; marker (in TRYGRID only) that blank confirmed
+SOFILLD	= $9			; marker (in TRYGRID only) that object confirmed
 
 ;;; upper nybble of grid square absorbs/reflects beam, optionally imparting tint
-UNTINTD	= 0
-TINTRED	= 1
-TINTYEL	= 2
-TINTBLU	= 3
-TINTWHT	= 4
-ABSORBD	= 8
-OBJTUNT	= UNTINTD << 4		; no tint change: blank cell or transparent refl
-OBJTRED = TINTRED << 4		; a red-tinted object sets beam TINTRED-1th bit
-OBJTYEL	= TINTYEL << 4		; " yellow- "     "     "    "  TINTYEL-1th  "
-OBJTBLU	= TINTBLU << 4		; " blue-   "     "     "    "  TINTBLU-1th  "
-OBJTWHT	= TINTWHT << 4		; " white-  "     "     "    "  TINTWHT-1th  "
-BEAMOFF	= ABSORBD << 4		; perfect blackbody, no further travel of a beam
+UNTINTD	= $0			; no tint change: blank cell or transparent refl
+TINTRED	= $1			; a red-tinted object sets beam TINTRED-1th bit
+TINTYEL	= $2			; " yellow- "     "     "    "  TINTYEL-1th  "
+TINTBLU	= $3			; " blue-   "     "     "    "  TINTBLU-1th  "
+TINTWHT	= $4			; " white-  "     "     "    "  TINTWHT-1th  "
+ABSORBD	= $8			; perfect blackbody, no further travel of a beam
+RUBRED	= TINTRED .. %0000
+RUBYEL	= TINTYEL .. %0000
+RUBBLU	= TINTBLU .. %0000
+RUBWHT	= TINTWHT .. %0000
+RUBOUT	= ABSORBD .. %0000
 
 ;;; beam spectrum bit values, reflecting a tint mixture after multiple rebounds
 UNMIXED = 0
@@ -211,12 +209,12 @@ shinein	tya			;register uint8_t shinein(register uint8_t y) {
 	jsrAPCS	waybeam		;
 	tya			;
 	pha	;//oport	; oport  = waybeam(iport);
-	bpl	+		; if (oport & BEAMOFF) { // sign bit, absorbed
+	bpl	+		; if (oport & RUBOUT) { // sign bit, absorbed
 	ldy @w	V1LOCAL	;//i_idx; 
 	lda	#MIXTOFF	;
 	sta	PORTINT,y	;  PORTINT[i_idx] = MIXTOFF;
-	lda	#BEAMOFF	;
-	sta	PORTALS,y	;  PORTALS[i_idx] = BEAMOFF;
+	lda	#RUBOUT	;
+	sta	PORTALS,y	;  PORTALS[i_idx] = RUBOUT;
 	jmp	++		; } else { // waybeam set PORTINT[o_idx] already
 +	jsr	bportal		;
 	tya			;
@@ -261,7 +259,7 @@ propag8	tya			;  register uint1_t c;
 	sta @w	V2LOCAL	;//oldy	;  oldy = y;
 	lda	HIDGRID,y	;
 	bpl	+		;
-	jmp	deadend		;  if ((HIDGRID[y] >> 4) & BEAMOFF == 0) { // on
+	jmp	deadend		;  if ((HIDGRID[y] >> 4) & RUBOUT == 0) { // on
 +	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
 	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];//H nyb tint, L nyb shape
 	lsr			;
@@ -824,29 +822,27 @@ inputkb
 hal_inp
 
 .if RNDLOC1 && RNDLOC2
-rndgrid	sec	;HIDGRID	;void rndgrid(void) {
-	jsr	inigrid		; inigrid(1);
+rndgrid	sec	;HIDGRID	;void rndgrid(void) { inigrid(1);
+	jsr	inigrid		;static uint8_t cangrid[80];
 .else
-cangrid	.byte	$,$,$,$		;static uint8_t cangrid[] = {0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0,
-	.byte	$,$,$,$		; 0x0, 0x0, 0x0, 0x0};
+cangrid	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		RUBWHT|CHAMFTL,	RUBWHT|CHAMFBL,	BLANK
+	.byte	BLANK,		RUBRED|CHAMFTR,	RUBRED|SQUARE,	RUBRED|CHAMFBL
+	.byte	RUBWHT|CHAMFTL,	RUBWHT|SQUARE,	RUBWHT|SQUARE,	RUBWHT|CHAMFBL
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	RUBWHT|CHAMFTL,	RUBWHT|CHAMFBL,	BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	RUBWHT|CHAMFTR,	RUBBLU|CHAMFTL,	BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	RUBBLU|CHAMFTL,	RUBBLU|SQUARE,	BLANK,		BLANK
+	.byte	RUBYEL|CHAMFTR,	RUBYEL|SQUARE,	BLANK,		BLANK
+	.byte	RUBBLU|CHAMFTR,	RUBBLU|SQUARE,	BLANK,		BLANK
+	.byte	BLANK,		RUBYEL|CHAMFTR,	BLANK,		BLANK
+	.byte	BLANK,		RUBBLU|CHAMFTR,	BLANK,		BLANK
 rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {
 -	lda	cangrid-1,y	; for (register uint8_t y = GRIDSIZ; y; y--) {
 	sta	HIDGRID-1,y	;  // not very random, it turns out:
