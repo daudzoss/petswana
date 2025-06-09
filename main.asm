@@ -513,28 +513,23 @@ commodc	.byte	VIDTEXT		;0
 	.byte	VIDEOBK		;16
 
 ;;; putchar()-printable color codes for terminal-mode on color platforms (vic20)
-petscii	.byte	$		;static uint8_t petscii[17] = {0x, // UNMIXED
-	.byte	$1c		;                              0x1c, // MIXTRED
-	.byte	$		;                              0x, // MIXTYEL
-	.byte	$		;                              0x, // MIXTORN
-	.byte	$		;                              0x, // MIXTBLU
-	.byte	$		;                              0x, // MIXTPUR
-	.byte	$		;                              0x, // MIXTGRN
-	.byte	$		;                              0x, // MIXTBRN
-	.byte	$		;                              0x, // MIXTWHT
-	.byte	$		;                              0x, // MIXT_LR
-	.byte	$		;                              0x, // MIXT_LY
-	.byte	$		;                              0x, // MIXT_LO
-	.byte	$		;                              0x, // MIXT_LB
-	.byte	$		;                              0x, // MIXT_LP
-	.byte	$		;                              0x, // MIXT_LG
-	.byte	$		;                              0x, // MIXTGRY
-	.byte	$		;                              0x};// MIXTOFF
-
-;petscii	.byte	$90,$05,$1c,$9f	;static uint8_t petscii[] = {0x90,0x5,0x1c,0x9f,
-;	.byte	$9c,$1e,$1f,$9e	; 0x9c,0x1e,0x1f,0x9e  //BLK,WHT,RED,CYN,PUR,GRN
-;	.byte	$81,$85,$96,$97	; 0x81,0x85,0x96,0x97,     //BLU,YEL,ORA,BRN,LRD
-;	.byte	$98,$99,$9a,$9b	; 0x98,0x99,0x9a,0x9b};    //GY1,GY2,LGR,LBL,GY3
+petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
+	.byte	$1c		;/* annotations are UNMIXED */ 0x1c, // MIXTRED
+	.byte	$9e		;/* i.e. 0x98 = c16 blu-grn */ 0x9e, // MIXTYEL
+	.byte	$81		;/*  and 0x98 = c64 med-gry */ 0x81, // MIXTORN
+	.byte	$1f		;                              0x1f, // MIXTBLU
+	.byte	$9c		;                              0x9c, // MIXTPUR
+	.byte	$1e		;                              0x1e, // MIXTGRN
+	.byte	$95		;                              0x95, // MIXTBRN
+	.byte	$05		;                              0x05, // MIXTWHT
+	.byte	$96		; /* on c16 this is yel-grn */ 0x96, // MIXT_LR
+	.byte	$9b		; /* l. g; no l. y. PETSCII */ 0x9b, // MIXT_LY
+	.byte	$9f		; /* cyan; no l. o. PETSCII */ 0x9f, // MIXT_LO
+	.byte	$9a		; /* on c16 this is d. blue */ 0x9a, // MIXT_LB
+	.byte	$9f		; /* cyan; no l. p. PETSCII */ 0x9f, // MIXT_LP
+	.byte	$99		; /* on c16 this is l. blue */ 0x99, // MIXT_LG
+	.byte	$97		; /* on c16 this is l. red */  0x97, // MIXTGRY
+	.byte	$90		; /* universally black */      0x90};// MIXTOFF
 .else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
 petscii	.byte	$,$,$,$		;static uint8_t petscii[] = {0, 0, 0, 0,
@@ -657,9 +652,9 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	pha	;//V0LOCAL=i	; uint8_t i;                                   \
 	pha	;//V1LOCAL=r	; uint8_t r;                                   \
 	pha	;//V2LOCAL=temp	; uint8_t temp;                                \
-	ldy	#VIDEOGY	;                                              \
+	ldy	#UNMIXED	;                                              \
 	lda	petscii,y	;                                              \
-	jsr	putchar		; putchar(petscii[VIDTEXT]);                   \
+	jsr	putchar		; putchar(petscii[UNMIXED]);                   \
 	lda	#$0d		;                                              \
 	jsr	putchar		; putchar('\n');                               \
 	lda	#' '		;                                              \
@@ -714,9 +709,9 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	clc			;                                              \
 	adc	#'a'		;                                              \
 	jsr	putchar		;  putchar('a' + r); // A~H down left side     \
-	ldy	#VIDEOGY	;                                              \
+	ldy	#UNMIXED	;                                              \
 	lda	petscii,y	;                                              \
-	jsr	putchar		;  putchar(petscii[VIDTEXT]);                  \
+	jsr	putchar		;  putchar(petscii[UNMIXED]);                  \
 -	lda	#$7d		;  for (; (y=i) < GRIDSIZ; i+=GRIDH) {         \
 	jsr	putchar		;   putchar('|');                              \
 	lda @w	V0LOCAL	;//i	;                                              \
@@ -729,9 +724,9 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	lda	\gridarr,y	;                                              \
 	sta @w	V2LOCAL	;//temp	;   temp = gridarr[y];                         \
 	bpl	+		;   if (temp < 0) { // absorber, drawn as black\
-	ldy	#VIDEOBK	;                                              \
+	ldy	#MIXTOFF	;                                              \
 	lda	petscii,y	;                                              \
-	jsr	putchar		;    putchar(petscii[VIDEOBK]);                \
+	jsr	putchar		;    putchar(petscii[MIXTOFF]);                \
 	jmp	++		;                                              \
 +	lsr			;                                              \
 	lsr			;                                              \
@@ -764,9 +759,9 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 +	jsr	putchar		;   putchar(a);                                \
 	lda	#RVS_OFF	;                                              \
 	jsr	putchar		;   putchar(RVS_OFF);                          \
-	ldy	#VIDEOGY	;                                              \
+	ldy	#UNMIXED	;                                              \
 	lda	petscii,y	;                                              \
-	jsr	putchar		;   putchar(petscii[VIDTEXT]);                 \
+	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
 	jmp	--		;  }putchar('|');                              \
 +
 .if SCREENW > $17
