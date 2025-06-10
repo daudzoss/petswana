@@ -185,10 +185,62 @@ main	tsx	;//req'd by APCS;int main(void) {
 	jmp	-		; } while(a);
 +	rts			;} // main()
 
-tempinp
-	rts
+.if SCREENW && SCREENH
+tempinp rts
+tempout rts
+.else
+tempinp	lda	#$0d		;uint8_t tempinp(void) {
+	jsr	putchar		; putchar('\n');
+	lda	#'?'		;
+	jsr	putchar		; putchar('?');
+-	jsr	getchar		; while ((a = getchar()) != HOME) {
+	tya			;
+	cmp	#$13		;
+	beq	++++		;
+	cmp	#'1'		;
+	bcc	-		;
+	bne	++		;  if (a == '1') {
+	jsr	putchar		;   putchar(a);
+-	jsr	getchar		;   do {
+	tya			;    a = getchar();
+	cmp	#$0d		;
+	bne	+		;    if (a == '\n')
+	lda	#1		;
+	rts			;     return 1; // only time a Return is needed
++	cmp	#'0'		;
+	bcc	-		;    else if (a >= '0'
+	cmp	#'8'+1		;             &&
+	bcs	-		;             a <= '8') {
+	pha			;
+	jsr	putchar		;     putchar(a);
+	pla			;
+	sec			;     return a-'0' + 10;
+	sbc	#'0'-10		;    }
+	rts			;   } while (1);
++	cmp	#'9'+1		;
+	bcs	+		;  } else if (a > '1' && a <= '9') {
+	pha			;
+	jsr	putchar		;   putchar(a);
+	pla			;
+	sec			;
+	sbc	#'0'		;
+	rts			;   return a-'0';
++	and	#%0101 .. %1111	;
+	cmp	#'a'		;
+	bcc	--		;  } else if (toupper(a) >= 'a'
+	cmp	#'s'		;             &&
+	bcs	--		;             tolower(a) <= 'r') {
+	pha			;
+	jsr	putchar		;   putchar(a);
+	pla			;
+	sec			;   return a-'a' + 1 + ANSWERS);
+	sbc	#'a'-1-ANSWERS	;  }
+	rts			; }
++	lda	#0		; return 0;
+	rts			;} // tempinp()
 tempout
 	rts
+.endif
 
 toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	clc			; register int8_t a) {
@@ -581,6 +633,15 @@ visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
 +	POPVARS			; }
 	rts			;} // visualz()
 
+getchar	txa			;inline uint8_t getchar(void) {
+	pha			; // x stashed on stack, by way of a
+-	jsr	$ffe4		; do {
+	beq	-		;  y = (* ((*)(void)) 0xffe4)();
+	tay			; } while (!y);
+	pla			; return y;
+	tax			; // x restored from stack, by way of a
+	rts			;} // getchar()
+
 .if SCREENH && (SCREENW >= $50)
 hal_try
 hal_hid
@@ -819,7 +880,7 @@ inputkb
 
 hal_inp
 
-.if RNDLOC1 && RNDLOC2
+.if 0;RNDLOC1 && RNDLOC2
 rndgrid	sec	;HIDGRID	;void rndgrid(void) { inigrid(1);
 	jsr	inigrid		;static uint8_t cangrid[80];
 .else
