@@ -791,8 +791,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		;   register uint8_t a;                        \
 	lda @w	V0LOCAL	;//i	;   register uint1_t c;                        \
 	cmp	#GRIDSIZ	;   putchar('|');                              \
-	bcs	putgrin		;                                              \
-	clc			;   c = 0;                                     \
+	bcs	putgrin		;   c = 0;                                     \
 	adc	#GRIDH		;   a = ' ';                                   \
 	sta @w	V0LOCAL	;//i	;                                              \
 	lda	\gridarr,y	;                                              \
@@ -801,15 +800,18 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	ldy	#MIXTOFF	;                                              \
 	lda	petscii,y	;                                              \
 	jsr	putchar		;    putchar(petscii[MIXTOFF]);                \
-	lda	#' '		;    a = ' ';                                  \
-	jmp	+++		;    c = 1;                                    \                                             \
+	lda	#' '		;                                              \
+	jmp	++++		;    c = 1;                                    \
 +	lsr			;                                              \
 	lsr			;                                              \
 	lsr			;                                              \
 	lsr			;                                              \
-	clc			;                                              \
-	beq	+++		;   } else if (temp >= 0x10) {// nontransparent\
 	tay			;                                              \
+	clc			;                                              \
+	php			;                                              \
+	lda	#' '		;                                              \
+	plp			;                                              \
+	beq	+		;   } else if (temp >= 0x10) {// nontransparent\
 	sec			;    // 0x1_ => 0x01 => 1<<(1-1) == 1==MIXTRED \
 	lda	#0		;    // 0x2_ => 0x02 => 1<<(2-1) == 2==MIXTYEL \
 -	rol			;    // 0x3_ => 0x03 => 1<<(3-1) == 4==MIXTBLU \
@@ -818,12 +820,12 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	tay			;                                              \
 	lda	petscii,y	;                                              \
 	jsr	putchar		;    putchar(petscii[1<<(((temp&0x70)>>4)-1)]);\
-	lda @w	V2LOCAL	;//temp	;                                              \
++	lda @w	V2LOCAL	;//temp	;   }                                          \
 	and	#%0000 .. %1111	;                                              \
-	tay			;    c = petsyms[temp & 0x0f] & 1;             \
-	lda	petsyms,y	;    a = petsyms[temp & 0x0f] >> 1;            \
-	lsr			;    if (!a)                                   \
-	bne	+		;     a = 0xa9; // only 8-bit stored in petsyms\
+	tay			;   c = petsyms[temp & 0x0f] & 1;              \
+	lda	petsyms,y	;   a = petsyms[temp & 0x0f] >> 1;             \
+	lsr			;   if (!a)                                    \
+	bne	+		;    a = 0xa9; // only 8-bit stored in petsyms \
 	lda	#$a9		;   }                                          \
 +	bcc	++		;   if (c) {                                   \
 +	pha			;                                              \
