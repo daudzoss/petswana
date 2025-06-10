@@ -174,9 +174,7 @@ main	tsx	;//req'd by APCS;int main(void) {
 	clc	;TRYGRID	;
 	jsr	inigrid		; inigrid(0);
 	jsrAPCS	rndgrid		; rndgrid();
--	lda	#DRW_ALL|DRW_HID; do { register uint8_t a;
- jsrAPCS hal_hid
- brk
+-	ldy	#DRW_ALL|DRW_HID; do { register uint8_t a;
 	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_HID);
 	jsr	tempinp		;  a = tempinp();
 	beq	+		;  if (a)
