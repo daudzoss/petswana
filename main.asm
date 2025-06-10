@@ -675,7 +675,9 @@ putchar	tay			;inline void putchar(register uint8_t a) {
 
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	lda	#$0d		;                                              \
+.if SCREENW > $16
 	jsr	putchar		; putchar('\n');                               \
+.endif
 	lda	#$20		;                                              \
 	jsr	putchar		; putchar(' ');                               \
 	lda	#\lj		;                                              \
@@ -753,7 +755,9 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	sta @w	V0LOCAL	;//i	; i = 0;                                       \
 	sta @w	V1LOCAL	;//r	; for (r = 0; r < GRIDH; r++) {                \
 -	lda	#$0d		;  register uint8_t y;                         \
+.if SCREENW > $16
 	jsr	putchar		;  putchar('\n');                              \
+.endif
 	lda @w	V1LOCAL	;//r	;                                              \
 	adc	#GRIDW+GRIDH	;
 	tay			;
@@ -895,7 +899,9 @@ cangrid	.byte	BLANK,		BLANK,		BLANK,		BLANK
 	.byte	BLANK,		BLANK,		BLANK,		BLANK
 	.byte	RUBWHT|CHAMFTL,	RUBWHT|CHAMFBL,	BLANK,		BLANK
 	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	RUBWHT|CHAMFTR,	RUBBLU|CHAMFTL,	BLANK,		BLANK
+	.byte	RUBWHT|CHAMFTR,	RUBWHT|CHAMFBR,	BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		RUBBLU|CHAMFTL,	BLANK,		BLANK
 	.byte	BLANK,		BLANK,		BLANK,		BLANK
 	.byte	RUBBLU|CHAMFTL,	RUBBLU|SQUARE,	BLANK,		BLANK
 	.byte	RUBYEL|CHAMFTR,	RUBYEL|SQUARE,	BLANK,		BLANK
