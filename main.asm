@@ -160,6 +160,14 @@ MIXT_LG	= MIXTWHT | MIXTBLU | MIXTYEL | 0	;14
 MIXTGRY	= MIXTRED | MIXTYEL | MIXTBLU | MIXTWHT ;15
 MIXTOFF	= $f << 4				;16
 
+DRW_CEL	= 1<<0			;
+DRW_TRY	= 1<<3			;
+DRW_HID	= 1<<4			;
+DRW_MSG	= 1<<5			;
+DRW_LBL	= 1<<6			;
+DRW_MSH	= 1<<7			;
+DRW_ALL	=DRW_MSH|DRW_LBL|DRW_MSG;
+
 main	tsx	;//req'd by APCS;int main(void) {
 .if BKGRNDC
 	lda	#VIDEOBG	; if (BKGRNDC) // addressable screen
@@ -578,37 +586,28 @@ petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
 	.byte	$99		; /* on c16 this is l. blue */ 0x99, // MIXT_LG
 	.byte	$97		; /* on c16 this is l. red */  0x97, // MIXTGRY
 	.byte	$90		; /* universally black */      0x90};// MIXTOFF
-petsyms	.byte	$20		;static uint8_t petsyms[] = {0x20, // if BLANK
-	.byte	($00<<1)	;                   (0*0xa9<<1)|0, // if CHAMFBR
-	.byte	($7f<<1)|1	;                     (0x7f<<1)|1, // if CHAMFBL
-	.byte	($00<<1)|1	;                   (0*0xa9<<1)|1, // if CHAMFTL
-	.byte	($7f<<1)	;                     (0x7f<<1)|0, // if CHAMFTR
-	.byte	($60<<1)|1	;                     (0x60<<1)|1, // if BOREDLR
-	.byte	($7d<<1)|1	;                     (0x7d<<1)|1, // if BOREDTB
-	.byte	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
-	.byte	($76<<1)	;                     (0x76<<1)|0, // if SOBLANK
-	.byte	($71<<1)	;                     (0x71<<1)|0};// if SOFILLD
 .else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
 petscii	.byte	$,$,$,$		;static uint8_t petscii[] = {0, 0, 0, 0,
 	.byte	$,$,$,$		;                            0, 0, 0, 0,
 	.byte	$,$,$,$		;                            0, 0, 0, 0,
 	.byte	$,$,$,$		;                            0, 0, 0, 0};
-petsyms	.byte	$30,$31,$32,$33	;static uint8_t petsyms[] = {0, 0, 0, 0,
-	.byte	$34,$35,$36,$37	;                            0, 0, 0, 0,
-	.byte	$38,$39,$,$	;                            0, 0, 0, 0,
-	.byte	$,$,$,$		;                            0, 0, 0, 0};
 .endif
-RVS_ON	= $12
-RVS_OFF	= $92
 
-DRW_CEL	= 1<<0			;
-DRW_TRY	= 1<<3			;
-DRW_HID	= 1<<4			;
-DRW_MSG	= 1<<5			;
-DRW_LBL	= 1<<6			;
-DRW_MSH	= 1<<7			;
-DRW_ALL	=DRW_MSH|DRW_LBL|DRW_MSG;
+;;; putchar()-printable graphics symbols for terminal-mode on all platforms
+petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
+	.byte	($00<<1)	;                   (0*0xa9<<1)|0, // if CHAMFBR
+	.byte	($7f<<1)	;                     (0x7f<<1)|1, // if CHAMFBL
+	.byte	($00<<1)|1	;                   (0*0xa9<<1)|1, // if CHAMFTL
+	.byte	($7f<<1)|1	;                     (0x7f<<1)|0, // if CHAMFTR
+	.byte	($60<<1)|1	;                     (0x60<<1)|1, // if BOREDLR
+	.byte	($7d<<1)|1	;                     (0x7d<<1)|1, // if BOREDTB
+	.byte	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
+	.byte	($76<<1)	;                     (0x76<<1)|0, // if SOBLANK
+	.byte	($71<<1)	;                     (0x71<<1)|0};// if SOFILLD
+RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
+RVS_OFF	= $92			;// done for good measure after printing a cell
+
 vis_cel	.byte	DRW_CEL		;
 vis_try	.byte	DRW_TRY		;
 vis_hid	.byte	DRW_HID		;
@@ -790,6 +789,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 -	lda	#$7d		;  for (; (y=i) < GRIDSIZ; i+=GRIDH) {         \
 	jsr	putchar		;   register uint8_t a;                        \
 	lda @w	V0LOCAL	;//i	;   register uint1_t c;                        \
+	tay			;                                              \
 	cmp	#GRIDSIZ	;   putchar('|');                              \
 	bcs	putgrin		;   c = 0;                                     \
 	adc	#GRIDH		;   a = ' ';                                   \
@@ -807,10 +807,6 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	lsr			;                                              \
 	lsr			;                                              \
 	tay			;                                              \
-	clc			;                                              \
-	php			;                                              \
-	lda	#' '		;                                              \
-	plp			;                                              \
 	beq	+		;   } else if (temp >= 0x10) {// nontransparent\
 	sec			;    // 0x1_ => 0x01 => 1<<(1-1) == 1==MIXTRED \
 	lda	#0		;    // 0x2_ => 0x02 => 1<<(2-1) == 2==MIXTYEL \
@@ -832,7 +828,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	lda	#RVS_ON		;                                              \
 	jsr	putchar		;    putchar(RVS_ON);                          \
 	pla			;   }                                          \
-+	jsr	putchar		;   putchar(a);                                \
++	jsr	putchar		;   putchar(a);                                \ always $20!!!
 	lda	#RVS_OFF	;                                              \
 	jsr	putchar		;   putchar(RVS_OFF);                          \
 	ldy	#UNMIXED	;                                              \
