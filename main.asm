@@ -250,7 +250,6 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	rts			;} // tempinp()
 
 tempout
-.if 0
 	pha			;void tempout(uint8_t a) {
 	lda	#' '		;
 	jsr	putchar		; putchar(' ');
@@ -276,7 +275,6 @@ tempout
 	jsr	putchar		;  putchar('1');
 	pla			;  putchar(a-10 + 0x30);
 	jsr	putchar		; }
-.endif
 	rts			;} // tempout()
 .endif
 
@@ -347,10 +345,12 @@ propag8	tya			;  register uint1_t c;
 	jsrAPCS	putcell		;  y = putcell(y); // y preserved
 	lda	HIDGRID,y	;  // imagine we're on the FROM_ edge of cell y
 .if 0
+	php
 	pha
-	jsr	getchar		;  getchar(); // dealing with infinite bounces
+	jsr	getchar		;  getchar(); // troubleshooting infinite bounces
 	pla
-.endif
+	plp
+.endif	
 	bpl	+		;
 	jmp	deadend		;  if ((HIDGRID[y] >> 4) & RUBOUT == 0) { // on
 +	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
