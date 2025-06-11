@@ -308,7 +308,7 @@ shinein	pha	;//iport	;register uint8_t shinein(register uint8_t a) {
 	sta	PORTALS,y	;  PORTALS[o_idx] = iport; // out linked to in
 	lda	PORTINT,y	;
 	ldy @w	V1LOCAL	;//i_idx;
-	sta`	PORTINT,y	;  PORTINT[i_idx] = PORTINT[o_idx]; // same tint
+	sta	PORTINT,y	;  PORTINT[i_idx] = PORTINT[o_idx]; // same tint
 	lda @w	V2LOCAL	;//oport;
 	sta	PORTALS,y	;  PORTALS[i_idx] = oport; // in linked to out
 +	tay			; }
@@ -558,7 +558,7 @@ bportal	cmp	#$21		;inline register int6_t bportal(register int6_t
 	bcc	++		; else
 +	;sec			;
 	sbc	#$21 - $12	;  y = a - 15; // 0x21 => 18, 0x32 =>  35
-	tay			;
+	tay			; return y;
 +	rts			;} // bportal()
 
 ;//PORTALS index <ANSWERS to grid index <GRIDSIZ
