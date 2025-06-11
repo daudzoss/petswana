@@ -342,20 +342,15 @@ gotbeam	sta @w	V1LOCAL	;//wavef; }
 	pha	;//oldir	;  uint8_t oldy, bump, oldir;
 propag8	tya			;  register uint1_t c;
 	sta @w	V2LOCAL	;//oldy	;  oldy = y;
-	jsrAPCS	putcell		;  y = putcell(y); // y preserved
-	lda	HIDGRID,y	;  // imagine we're on the FROM_ edge of cell y
 .if 0
-	php
-	pha
-	jsr	getchar		;  getchar(); // troubleshooting infinite bounces
-	pla
-	plp
-.endif	
+	jsrAPCS	putcell		;  y = putcell(y); // y preserved
+.endif
+	lda	HIDGRID,y	;  // imagine we're on the FROM_ edge of cell y
 	bpl	+		;
 	jmp	deadend		;  if ((HIDGRID[y] >> 4) & RUBOUT == 0) { // on
 +	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
 	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];//H nyb tint, L nyb shape
-.if 1
+.if 0
 	ldy @w	V1LOCAL	;//wavef;
 	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
 	lda	#','		;
@@ -398,9 +393,11 @@ propag8	tya			;  register uint1_t c;
 	ror			;
 	eor @w	V1LOCAL	;//wavef;    // deflected using xor of bounces[] element
 	sta @w	V1LOCAL	;//wavef;    wavef^=((bounces[bump&7]>>(oldir*2))&3)<<6;
+.if 0
 	tay			;
 	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
 	jsr	getchar		;    getchar(); // dealing with infinite bounces
+.endif
 	ldy @w	V2LOCAL	;//oldy	;    y = oldy;
 +	tya			;   }
 	lsr			;   c = y & 1;
@@ -503,7 +500,7 @@ portal	pha	;//gridi	;register uint6_t portal(register uint9_t a){//!
 	bne	+		;  if ((travd >> 6) == FROM_LT)
 	ldy	#$12		;   return y = 18; // 18
 	bne	portaly		;
-+	cmp	#FROM_TP	;
++	cmp	#FROM_TP << 6	;
 	bne	portaly		;  else if ((travd >> 6) == FROM_TP)
 	ldy	#'r' ^ $60	;   return y = 0x32; // R
 	bne	portaly		;  else return y = 0;
