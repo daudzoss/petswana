@@ -302,7 +302,7 @@ shinein	pha	;//iport	;register uint8_t shinein(register uint8_t a) {
 	sta	PORTALS,y	;  PORTALS[i_idx] = RUBOUT;
 	jmp	++		; } else { // waybeam set PORTINT[o_idx] already
 +	jsr	bportal		;
-	tya			;
+;	tya			;
 ;	pha	;//o_idx	;  o_idx = bportal(oport); //PORTINT[],PORTALS[]
 	lda @w	V0LOCAL	;//iport;
 	sta	PORTALS,y	;  PORTALS[o_idx] = iport; // out linked to in
@@ -819,8 +819,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	pha	;//V0LOCAL=i	; uint8_t i;                                   \
 	pha	;//V1LOCAL=r	; uint8_t r;                                   \
 	pha	;//V2LOCAL=temp	; uint8_t temp;                                \
-	ldy	#UNMIXED	;                                              \
-	lda	petscii,y	;                                              \
+	lda	petscii+UNMIXED	;                                              \
 	jsr	putchar		; putchar(petscii[UNMIXED]);                   \
 	lda	#$0d		;                                              \
 	jsr	putchar		; putchar('\n');                               \
@@ -837,7 +836,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	sta @w	V0LOCAL	;//i	; for (i = 0; i < 9; i++) {                    \
 -	clc			;                                              \
 	adc	#'1'		;                                              \
-	jsr	putchar		;  putchar(i);                                 \
+	jsr	putchar		;  putchar('1' + i);                           \
 	lda	#' '		;                                              \
 	jsr	putchar		;  putchar(' ');                               \
 	inc @w	V0LOCAL	;//i	;                                              \
@@ -854,10 +853,19 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		; putchar('1');                                \
 	lda	#'0'		;                                              \
 	jsr	putchar		; putchar('0');                                \
+	lda	petscii+UNMIXED	;                                              \
+	jsr	putchar		; putchar(petscii[UNMIXED]);                   \
 	rule V2LOCAL,$b0,$b2,$ae; rule(temp, 0xb0, 0xb2, 0xae) ;               \
 .if SCREENW > $16
+	lda	PORTINT+$0b	;                                              \
+	and	#%0001 .. %1111	;                                              \
+	tay			;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		;  putchar(petscii[PORTINT[i+1] & 0x1f]);      \
 	lda	#'1'		;                                              \
 	jsr 	putchar		; putchar('1'); //  right-edge label 10's digit\
+	lda	petscii+UNMIXED	;                                              \
+	jsr	putchar		;  putchar(petscii[UNMIXED]);                  \
 .endif
 	lda	#0		;                                              \
 	sta @w	V0LOCAL	;//i	; i = 0;                                       \
@@ -878,8 +886,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	clc			;                                              \
 	adc	#'a'		;                                              \
 	jsr	putchar		;  putchar('a' + r); // A~H down left side     \
-	ldy	#UNMIXED	;                                              \
-	lda	petscii,y	;                                              \
+	lda	petscii+UNMIXED	;                                              \
 	jsr	putchar		;  putchar(petscii[UNMIXED]);                  \
 -	lda	#$7d		;  for (; (y=i) < GRIDSIZ; i+=GRIDH) {         \
 	jsr	putchar		;   register uint8_t a;                        \
@@ -892,8 +899,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	lda	\gridarr,y	;                                              \
 	sta @w	V2LOCAL	;//temp	;   temp = gridarr[y];                         \
 	bpl	+		;   if (temp < 0) { // absorber, drawn as black\
-	ldy	#MIXTOFF	;                                              \
-	lda	petscii,y	;                                              \
+	lda	petscii+MIXTOFF	;                                              \
 	jsr	putchar		;    putchar(petscii[MIXTOFF]);                \
 	lda	#' '		;                                              \
 	jmp	++++		;    c = 1;                                    \
@@ -926,8 +932,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 +	jsr	putchar		;   putchar(a);                                \
 	lda	#RVS_OFF	;                                              \
 	jsr	putchar		;   putchar(RVS_OFF);                          \
-	ldy	#UNMIXED	;                                              \
-	lda	petscii,y	;                                              \
+	lda	petscii+UNMIXED	;                                              \
 	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
 	jmp	--		;  }putchar('|');                              \
 putgrin
@@ -936,8 +941,19 @@ putgrin
 	jsr	putchar		;  putchar(' '); // offset 1's digit diagonally\
 	lda @w	V1LOCAL	;//r	;                                              \
 	clc			;                                              \
+	adc	#$0a		;                                              \
+	tay			;                                              \
+	lda	PORTINT,y	;                                              \
+	and	#%0001 .. %1111	;                                              \
+	tay			;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		;                                              \
+	lda @w	V1LOCAL	;//r	;                                              \
+	clc			;                                              \
 	adc	#'1'		;                                              \
 	jsr	putchar		;  putchar(r + '1'); // 11~18                  \
+	lda	petscii+UNMIXED	;                                              \
+	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
 .endif
 	lda @w	V0LOCAL	;//i	;                                              \
 	and	#GRIDH-1	;                                              \
@@ -949,8 +965,19 @@ putgrin
 	bcs	+		;   break;                                     \
 	rule V2LOCAL,$ab,$7b,$b3;  rule(temp, 0xab, 0x7b, 0xb3);               \
 .if SCREENW > $16
+	lda @w	V1LOCAL	;//r	;                                              \
+	clc			;                                              \
+	adc	#$0b		;                                              \
+	tay			;                                              \
+	lda	PORTINT,y	;                                              \
+	and	#%0001 .. %1111	;                                              \
+	tay			;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		;                                              \
 	lda	#'1'		;                                              \
 	jsr 	putchar		; putchar('1'); //  right-edge label 10's digit\
+	lda	petscii+UNMIXED	;                                              \
+	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
 .endif
 	jmp	---		; }                                            \
 +	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
@@ -960,15 +987,28 @@ putgrin
 	jsr	putchar		; putchar(' ');                                \
 	lda	#' '		;                                              \
 	jsr	putchar		; putchar(' ');                                \
-	lda	#'i'		;                                              \
-	sta @w	V0LOCAL	;//i	; for (i = 'i'; i < 's'; i++) {                \
--	jsr	putchar		;  putchar(i);                                 \
+	lda	#0		;                                              \
+	sta @w	V0LOCAL	;//i	; for (i = 0; i < 10; i++) {                   \
+-	clc			;
+	adc	#GRIDH*2+GRIDW	;
+	tay			;
+	lda	PORTINT,y	;
+	and	#%0001 .. %1111	;                                              \
+	tay			;                                              \
+	lda	petscii,y	;                                              \
+	jsr	putchar		;                                              \
+	lda @w	V0LOCAL	;//i	;
+	clc			;
+	adc	#'i'		;
+	jsr	putchar		;  putchar(i);                                 \
 	lda	#' '		;                                              \
 	jsr	putchar		;  putchar(' ');                               \
 	inc @w	V0LOCAL	;//i	;                                              \
 	lda @w	V0LOCAL	;//i	;                                              \
-	cmp	#'s'		;                                              \
+	cmp	#$a		;                                              \
 	bcc	-		; }                                            \
+	lda	petscii+UNMIXED	;                                              \
+	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
 	POPVARS			;                                              \
 	.endm			;} // putgrid
 
