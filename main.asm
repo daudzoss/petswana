@@ -496,7 +496,7 @@ inigrid	lda	#0		;inline inigrid(uint1_t c) {
 rndgrid	sec	;HIDGRID	;void rndgrid(void) { inigrid(1);
 	jsr	inigrid		;static uint8_t cangrid[80];
 .else
-cangrid	.byte	BLANK,		BLANK,		BLANK,		BLANK
+cangrid	.byte	0|CHAMFTL,	0|SQUARE,	0|CHAMFBL,	BLANK
 	.byte	BLANK,		BLANK,		RUBOUT|SQUARE,	RUBOUT|SQUARE
 	.byte	BLANK,		BLANK,		BLANK,		BLANK
 	.byte	BLANK,		BLANK,		BLANK,		BLANK
