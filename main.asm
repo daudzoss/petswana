@@ -249,32 +249,32 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 +	lda	#0		; return 0;
 	rts			;} // tempinp()
 
-tempout	pha			;
+tempout	pha			;void tempout(uint8_t a) {
 	lda	#' '		;
-	jsr	putchar		;
+	jsr	putchar		; putchar(' ');
 	pla			;
 	clc			;
 	adc	#$20		;
 	and	#$5f		;
 	sta	OTHRVAR		;
 	bit	OTHRVAR		;
-	bvc	+		;
-	jsr	putchar		;
+	bvc	+		; if (a > 0x20) { // A~R
+	jsr	putchar		;  putchar(a + 0x20);
 	rts			;
 +	clc			;
 	adc	#$30		;
 	cmp	#$3a		;
-	bcs	+		;
-	jsr	putchar		;
+	bcs	+		; } else if (a < 10) { // 1-9
+	jsr	putchar		;  putchar(a + 0x30);
 	rts			;
-	sec			;
++	sec			;
 	sbc	#$0a		;
-	pha			;
+	pha			; } else {
 	lda	#'1'		;
-	jsr	putchar		;
-	pla			;
-	jsr	putchar		;
-	rts			;
+	jsr	putchar		;  putchar('1');
+	pla			;  putchar(a-10 + 0x30);
+	jsr	putchar		; }
+	rts			;} // tempout()
 .endif
 
 toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
@@ -350,7 +350,14 @@ propag8	tya			;  register uint1_t c;
 	jmp	deadend		;  if ((HIDGRID[y] >> 4) & RUBOUT == 0) { // on
 +	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
 	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];//H nyb tint, L nyb shape
-	lsr			;
+.if 1
+       ldy @w  V1LOCAL ;//wavef;
+       jsrAPCS putwave         ;    y = putwave(wavef); // y preserved
+       lda     #','            ;
+       jsr     putchar         ;
+       lda @w  V3LOCAL ;//bump ;    bump = HIDGRID[y];//H nyb tint, L nyb shape
+.endif
+ 	lsr			;
 	lsr			;
 	lsr			;
 	lsr			;
@@ -388,6 +395,9 @@ propag8	tya			;  register uint1_t c;
 	sta @w	V1LOCAL	;//wavef;    wavef^=((bounces[bump&7]>>(oldir*2))&3)<<6;
 	tay			;
 	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
+.if 1
+       jsr     getchar         ;    getchar(); // dealing with infinite bounces	
+.endif
 	ldy @w	V2LOCAL	;//oldy	;    y = oldy;
 +	tya			;   }
 	lsr			;   c = y & 1;
