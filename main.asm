@@ -112,29 +112,6 @@ bounce5	.byte	(RABOUNC << TP) | (NOBOUNC << LT) | (RABOUNC << BT) | NOBOUNC;RT
 bounce6	.byte	(NOBOUNC << TP) | (RABOUNC << LT) | (NOBOUNC << BT) | RABOUNC;RT
 bounce7	.byte	RABOUNC x 4
 
-obstint	.byte	TINTRED,TINTYEL,TINTBLU,TINTWHT,TINTWHT
-obstacl
-rot0red
-rot0yel
-rot0blu
-rot0wht
-rot0wh2
-rot1red
-rot1yel
-rot1blu
-rot1wht
-rot1wh2
-rot2red
-rot2yel
-rot2blu
-rot2wht
-rot2wh2
-rot3red
-rot3yel
-rot3blu
-rot3wht
-rot3wh2
-
 ;;; lower nybble of a grid square affects incident beam path, indexing bounces[]
 ;;; 
 ;;; an X marker in TRYGRID (0x08) confirming no obstacle actually would block a
@@ -492,6 +469,75 @@ inigrid	lda	#0		;inline inigrid(uint1_t c) {
 	bne	-		; }
 	rts			;} // inigrid()
 
+placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
+	and	#$0f		;   uint8_t colnm /*A0*/, uint8_t rownm /*A1*/,
+	cmp @w	A0FUNCT	;//colnm;   uint8_t elems /*A2*/, uint8_t tint /*A3*/) {
+	bcs	+		;
+	ldy	#$ff		; if (colnm > obstcel[y] & 0x0f)
+	bcc	express		;  return y = -1;// tried to place too far right
++	lsr			;
+	lsr			;
+	lsr			;
+	lsr			;
+	cmp @w	A1FUNCT	;//rownm;
+	bcs	+		;
+	ldy	#$fe		; if (rownm > obstcel[y] >> 4)
+	bcc	express		;  return y = -2; // tried to place too far down
++	lda @w	A0FUNCT	;//colnm;
+	asl			;
+	asl			;
+	asl			;
+	clc			;
+	adc @w	A1FUNCT	;//rownm;
+	pha	;//V0LOCAL=ygrid; uint8_t ygrid = (colnm << 3) | rownm;
+	iny			;
+	tya			;
+	pha	;//V1LOCAL=head	; uint8_t head = ++y;
+	pha	;//V2LOCAL=yelem; uint8_t yelem;
+	clc			;
+	adc @w	A2FUNCT	;//elems;
+	pha	;//V3LOCAL=ovrbd; uint8_t ovrbd = head + elems;
+	pha	;//V4LOCAL=temp	; uint8_t temp;
+-	lda	obstcel,y	; for (yelem = head; yelem < ovrbd; y++) {
+	sta @w	V4LOCAL	;//temp	;  temp = obstcel[yelem];
+	and	#%0001 .. %1111 ;
+	clc			;
+	adc @w	V0LOCAL	;//ygrid;
+	tay			;  register uint8_t y = ygrid + (temp & 0x1f);
+	lda	HIDGRID,y	;  if (HIDGRID[y]) // conflicting object there!
+	bne	punwind		;   goto punwind;
+	lda @w	V4LOCAL	;//temp	;
+	rol			;
+	rol			;
+	rol			;
+	rol			;
+	and	#%0000 .. %0111 ;
+	ora @w	A3FUNCT	;//tint	;  else
+	sta	HIDGRID,y	;   HIDGRID[y_] = tint | (temp >> 5); // stamped
+	inc @w	V2LOCAL	;//yelem;
+	lda @w	V2LOCAL	;//yelem;
+	tay			;
+	cmp @w	V3LOCAL	;//ovrbd;
+	bcc	-		; }
+	ldy	#0		; return 0; // success
+preturn	POPVARS			;
+express	rts			;punwind:
+punwind	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
+	tya			;  register uint8_t y;
+	cmp @w	V1LOCAL	;//head	;
+	beq	preturn		;
+	dec @w	V2LOCAL	;//yelem;	
+	lda	obstcel-1,y	;
+	and	#%0001 .. %1111	;
+	clc			;
+	adc @w	V0LOCAL	;//ygrid;  y = ygrid + (obstcel[yelem - 1] & 0x1f);
+	tay			;  HIDGRID[y] = 0;
+	lda	#0		; }
+	sta	HIDGRID,y	; return y = head; // guaranteed nonzero
+	beq	punwind		;} // placeit()
+
+rotshap
+	
 .if 0;RNDLOC1 && RNDLOC2
 rndgrid	sec	;HIDGRID	;void rndgrid(void) { inigrid(1);
 	jsr	inigrid		;static uint8_t cangrid[80];
@@ -523,8 +569,6 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {
 	bne	-		; }
 .endif
 	rts			;} // rndgrid()
-
-rotshap				;} // rotshap (new x in a, new y in y)
 
 vis_cel	.byte	DRW_CEL		;
 vis_try	.byte	DRW_TRY		;
@@ -583,10 +627,12 @@ commodc	.byte	VIDTEXT		;0
 	.byte	VIDEOLG		;14
 	.byte	VIDEOGY		;15
 	.byte	VIDEOBK		;16
+.endif
 
 frozen
 
 ;;; putchar()-printable color codes for terminal-mode on color platforms (vic20)
+.if BKGRNDC
 petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
 	.byte	$1c		;/* annotations are UNMIXED */ 0x1c, // MIXTRED
 	.byte	$9e		;/* i.e. 0x98 = c16 blu-grn */ 0x9e, // MIXTYEL
@@ -1125,8 +1171,10 @@ tintltr	.byte	0,'r','y',0	;
 	.byte	'b',0,0,0,'w'	;
 .endif
 
+.include "obstacle.asm"
+
 pre_end
-.align $10
+.align	$10
 vararea
 .end
 
