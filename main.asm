@@ -241,8 +241,10 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	pha			;
 	jsr	putchar		;   putchar(a);
 	pla			;
-	sec			;   return a-'a' + 1 + ANSWERS);
-	sbc	#'a'-1-ANSWERS	;  }
+	sec			;
+	sbc	#'a'		;
+	clc			;
+	adc	#$21		;   return a-'a' + 0x21;
 	rts			; }
 +	lda	#0		; return 0;
 	rts			;} // tempinp()
@@ -256,9 +258,8 @@ toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
 	and	#%010 .. %11111	;                         a - 0x20 + 0x40; //A-I
 	rts			;} // toalpha()
 
-shinein	tya			;register uint8_t shinein(register uint8_t y) {
-	pha	;//iport	; uint8_t iport = y, i_idx, oport, o_idx;
-	jsr	bportal		;
+shinein	pha	;//iport	;register uint8_t shinein(register uint8_t a) {
+	jsr	bportal		; uint8_t iport = y, i_idx, oport, o_idx;
 	tya			;
 	pha	;//i_idx	; i_idx = bportal(y); //PORTINT[],PORTALS[]
 	lda	PORTALS,y   	; if (PORTALS[i_idx])
@@ -315,6 +316,7 @@ gotbeam	sta @w	V1LOCAL	;//wavef; }
 	pha	;//oldir	;  uint8_t oldy, bump, oldir;
 propag8	tya			;  register uint1_t c;
 	sta @w	V2LOCAL	;//oldy	;  oldy = y;
+	jsrAPCS	putcell		;  y = putcell(y); // y preserved
 	lda	HIDGRID,y	;
 	bpl	+		;
 	jmp	deadend		;  if ((HIDGRID[y] >> 4) & RUBOUT == 0) { // on
@@ -333,6 +335,9 @@ propag8	tya			;  register uint1_t c;
 	bne	-		;
 	ora @w	V1LOCAL	;//wavef;
 	sta @w	V1LOCAL	;//wavef;    wavef |= y ? (1 << (y-1)) : 0; // set tint
+	tay			;
+	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
+	tya			;
 	rol			;
 	rol			;
 	rol			;
@@ -656,6 +661,8 @@ getchar	txa			;inline uint8_t getchar(void) {
 	rts			;} // getchar()
 
 .if SCREENH && (SCREENW >= $50)
+putcell
+putwave
 hal_try
 hal_hid
 hal_msg
@@ -663,6 +670,8 @@ hal_lbl
 hal_msh
 hal_cel	rts
 .elsif SCREENH && (SCREENW >= $28)
+putcell
+putwave
 hal_try
 hal_hid
 hal_msg
@@ -670,6 +679,8 @@ hal_lbl
 hal_msh
 hal_cel	rts
 .elsif SCREENH && (SCREENW >= $16)
+putcell
+putwave
 hal_try
 hal_hid
 hal_msg
@@ -686,13 +697,60 @@ putchar	tay			;inline void putchar(register uint8_t a) {
 	tax			; // x restored from stack, by way of a
 	rts			;} // putchar()
 
+putcell	pha	;V0LOCAL;//oldy	;register uint8_t putcell(register uint8_t a) {
+	lda	#' '		; uint8_t oldy = a;
+	jsr	putchar		; putchar(' ');
+	lda @w	V0LOCAL	;//oldy	;
+	and	#%0000 .. %0111	;
+	clc			;
+	adc	#'a'		;
+	jsr	putchar		; putchar('a' + (0x07 & oldy)); // A~H
+	lda @w	V0LOCAL	;//oldy	;
+	lsr			;
+	lsr			;
+	lsr			;
+	clc			;
+	adc	#'1'		;
+	cmp	#'9'+1		;
+	bcc	+		; if (oldy >= (9 << 3)) {
+	lda	#'1'		;  putchar('1');
+	jsr	putchar		;  putchar('0');
+	lda	#'0'		; } else {
++	jsr	putchar		;  putchar('1' + (oldy >> 3)); // 1~9
+	lda	#':'		; }
+	jsr	putchar		; putchar(':');
+	ldy @w	V0LOCAL	;//oldy	;
+	POPVARS			; return y = oldy;
+	rts			;} // putcell()
+
+hexdig	.byte	'0','1','2','3'	;static uint8_t hexdig[] = {'0','1','2','3'
+	.byte	'4','5','6','7'	;                           '4','5','6','7'
+	.byte	'8','9','a','b'	;                           '8','9','a','b'
+	.byte	'c','d','e','f'	;                           'c','d','e','f'};
+putwave	pha	;V0LOCAL;//oldy	;register uint8_t putwave(register uint8_t a) {
+	lsr			; uint8_t oldy = a;
+	lsr			;
+	lsr			;
+	lsr			;
+	tay			;
+	lda	hexdig,y	;
+	jsr	putchar		; putchar(hexdig[a >> 4]);
+	lda @w	V0LOCAL	;//oldy	;
+	and	#%0000 .. %1111	;
+	tay			;
+	lda	hexdig,y	;
+	jsr	putchar		; putchar(hexdig[a & 0x0f]);
+	ldy @w	V0LOCAL	;//oldy	;
+	POPVARS			; return y = oldy;
+	rts			;} // putcell()
+	
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	lda	#$0d		;                                              \
 .if SCREENW > $16
 	jsr	putchar		; putchar('\n');                               \
 .endif
 	lda	#$20		;                                              \
-	jsr	putchar		; putchar(' ');                               \
+	jsr	putchar		; putchar(' ');                                \
 	lda	#\lj		;                                              \
 	jsr	putchar		; putchar(lj);                                 \
 	lda	#$60		;                                              \
@@ -828,7 +886,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	lda	#RVS_ON		;                                              \
 	jsr	putchar		;    putchar(RVS_ON);                          \
 	pla			;   }                                          \
-+	jsr	putchar		;   putchar(a);                                \ always $20!!!
++	jsr	putchar		;   putchar(a);                                \
 	lda	#RVS_OFF	;                                              \
 	jsr	putchar		;   putchar(RVS_OFF);                          \
 	ldy	#UNMIXED	;                                              \
