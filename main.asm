@@ -168,122 +168,6 @@ DRW_LBL	= 1<<6			;
 DRW_MSH	= 1<<7			;
 DRW_ALL	=DRW_MSH|DRW_LBL|DRW_MSG;
 
-main	tsx	;//req'd by APCS;int main(void) {
-.if BKGRNDC
-	lda	#VIDEOBG	; if (BKGRNDC) // addressable screen
-	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
-.endif
-	lda	#$00		; for (register uint8_t y = ANSWERS; y; y--) {
-	ldy	#ANSWERS	;  // bits 5~0 where a beam into this one exits
--	sta	PORTALS-1,y	;  PORTALS[y-1] = 0; // no beam entry/exit yet
-	sta	PORTINT-1,y	;  // bits 3~0 tint reflected, or bit 4 absorbed
-	dey			;  PORTINT[y-1] = 0; // no beam entry/exit yet
-	bne	-		; }
-	clc	;TRYGRID	;
-	jsr	inigrid		; inigrid(0);
-	jsrAPCS	rndgrid		; rndgrid();
--	ldy	#DRW_ALL|DRW_HID; do { register uint8_t a;
-	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_HID);
-	jsr	tempinp		;  a = tempinp();
-	beq	+		;  if (a)
-	tay			;
-	jsrAPCS	shinein		;  
-	tya			;
-	jsr	tempout		;   tempout(shinein(a));
-	jmp	-		; } while(a);
-+	rts			;} // main()
-
-.if SCREENW && SCREENH
-tempinp rts
-tempout rts
-.else
-tempinp	lda	#$0d		;uint8_t tempinp(void) {
-	jsr	putchar		; putchar('\n');
-	lda	#'?'		;
-	jsr	putchar		; putchar('?');
--	jsr	getchar		; while ((a = getchar()) != HOME) {
-	tya			;
-	cmp	#$13		;
-	beq	++++		;
-	cmp	#'1'		;
-	bcc	-		;
-	bne	++		;  if (a == '1') {
-	jsr	putchar		;   putchar(a);
--	jsr	getchar		;   do {
-	tya			;    a = getchar();
-	cmp	#$0d		;
-	bne	+		;    if (a == '\n')
-	lda	#1		;
-	rts			;     return 1; // only time a Return is needed
-+	cmp	#'0'		;
-	bcc	-		;    else if (a >= '0'
-	cmp	#'8'+1		;             &&
-	bcs	-		;             a <= '8') {
-	pha			;
-	jsr	putchar		;     putchar(a);
-	pla			;
-	sec			;     return a-'0' + 10;
-	sbc	#'0'-10		;    }
-	rts			;   } while (1);
-+	cmp	#'9'+1		;
-	bcs	+		;  } else if (a > '1' && a <= '9') {
-	pha			;
-	jsr	putchar		;   putchar(a);
-	pla			;
-	sec			;
-	sbc	#'0'		;
-	rts			;   return a-'0';
-+	and	#%0101 .. %1111	;
-	cmp	#'a'		;
-	bcc	--		;  } else if (toupper(a) >= 'a'
-	cmp	#'s'		;             &&
-	bcs	--		;             tolower(a) <= 'r') {
-	pha			;
-	jsr	putchar		;   putchar(a);
-	pla			;
-	sec			;
-	sbc	#'a'		;
-	clc			;
-	adc	#$21		;   return a-'a' + 0x21;
-	rts			; }
-+	lda	#0		; return 0;
-	rts			;} // tempinp()
-
-tempout
-	pha			;void tempout(uint8_t a) {
-	lda	#' '		;
-	jsr	putchar		; putchar(' ');
-	pla			;
-	clc			;
-	adc	#$20		;
-	and	#$5f		;
-	sta	OTHRVAR		;
-	bit	OTHRVAR		;
-	bvc	+		; if (a > 0x20) { // A~R
-	jsr	putchar		;  putchar(a + 0x20);
-	rts			;
-+	clc			;
-	adc	#$30		;
-	cmp	#$3a		;
-	bcs	+		; } else if (a < 10) { // 1-9
-	jsr	putchar		;  putchar(a + 0x30);
-	rts			;
-+	sec			;
-	sbc	#$0a		;
-	pha			; } else {
-	lda	#'1'		;
-	jsr	putchar		;  putchar('1');
-	pla			;  putchar(a-10 + 0x30);
-	jsr	putchar		; }
-	rts			;} // tempout()
-.endif
-
-toalpha	and	#%001 .. %11111	;inline register int8_t toalpha(
-	clc			; register int8_t a) {
-	adc	#%001 .. %00000	; return a = (a < 0x20) ? a :
-	and	#%010 .. %11111	;                         a - 0x20 + 0x40; //A-I
-	rts			;} // toalpha()
-
 shinein	pha	;//iport	;register uint8_t shinein(register uint8_t a) {
 	jsr	bportal		; uint8_t iport = y, i_idx, oport, o_idx;
 	tya			;
@@ -585,7 +469,77 @@ inigrid	lda	#0		;inline inigrid(uint1_t c) {
 	bne	-		; }
 	rts			;} // inigrid()
 
+.if 0;RNDLOC1 && RNDLOC2
+rndgrid	sec	;HIDGRID	;void rndgrid(void) { inigrid(1);
+	jsr	inigrid		;static uint8_t cangrid[80];
+.else
+cangrid	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		RUBWHT|CHAMFTL,	RUBWHT|CHAMFBL,	BLANK
+	.byte	BLANK,		RUBRED|CHAMFTR,	RUBRED|SQUARE,	RUBRED|CHAMFBL
+	.byte	RUBWHT|CHAMFTL,	RUBWHT|SQUARE,	RUBWHT|SQUARE,	RUBWHT|CHAMFBL
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	RUBWHT|CHAMFTL,	RUBWHT|CHAMFBL,	BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	RUBWHT|CHAMFTR,	RUBWHT|CHAMFBR,	BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		RUBBLU|CHAMFTL,	BLANK,		BLANK
+	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	RUBBLU|CHAMFTL,	RUBBLU|SQUARE,	BLANK,		BLANK
+	.byte	RUBYEL|CHAMFTR,	RUBYEL|SQUARE,	BLANK,		BLANK
+	.byte	RUBBLU|CHAMFTR,	RUBBLU|SQUARE,	BLANK,		BLANK
+	.byte	BLANK,		RUBYEL|CHAMFTR,	BLANK,		BLANK
+	.byte	BLANK,		RUBBLU|CHAMFTR,	BLANK,		BLANK
+rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {
+-	lda	cangrid-1,y	; for (register uint8_t y = GRIDSIZ; y; y--) {
+	sta	HIDGRID-1,y	;  // not very random, it turns out:
+	dey			;  HIDGRID[y-1] = cangrid[y-1];
+	bne	-		; }
+.endif
+	rts			;} // rndgrid()
+
 rotshap				;} // rotshap (new x in a, new y in y)
+
+vis_cel	.byte	DRW_CEL		;
+vis_try	.byte	DRW_TRY		;
+vis_hid	.byte	DRW_HID		;
+vis_msg	.byte	DRW_MSG		;
+vis_lbl	.byte	DRW_LBL		;
+vis_msh	.byte	DRW_MSH		;
+
+visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
+	bit	vis_msh		;                                 uint4_t y0) {
+	beq	+		; if (a & DRW_MSH) {
+	jsrAPCS	hal_msh		;  hal_msh(a);
+	lda @w	V0LOCAL		; }
++	bit	vis_lbl		;
+	beq	+		; if (a & DRW_LBL) {
+	jsrAPCS	hal_lbl		;  hal_lbl(a);
+	lda @w	V0LOCAL		; }
++	bit	vis_msg		;
+	beq	+		; if (a & DRW_MSG) {
+	jsrAPCS	hal_msg		;  hal_msg(a);
+	lda @w	V0LOCAL		; }
++	bit	vis_hid		;
+	beq	+		; if (a & DRW_HID) {
+	jsrAPCS	hal_hid		;  hal_hid(a);
+	lda @w	V0LOCAL		; }
++	bit	vis_try		;
+	beq	+		; if (a & DRW_TRY) {
+	jsrAPCS	hal_try		;  hal_try(a);
+	lda @w	V0LOCAL		; }
++	bit	vis_cel		;
+	beq	+		; if (a & DRW_CEL) {
+	lda	A1FUNCT		;
+	sta @w	V0LOCAL	;//y0	;
+	lda	A0FUNCT		;
+	pha	;//V1LOCAL=x0	;
+	jsrAPCS	hal_cel		;  hal_cel(x0, y0);
++	POPVARS			; }
+	rts			;} // visualz()
 
 ;;; color-memory codes for addressable screens
 .if BKGRNDC
@@ -606,6 +560,8 @@ commodc	.byte	VIDTEXT		;0
 	.byte	VIDEOLG		;14
 	.byte	VIDEOGY		;15
 	.byte	VIDEOBK		;16
+
+frozen
 
 ;;; putchar()-printable color codes for terminal-mode on color platforms (vic20)
 petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
@@ -646,44 +602,6 @@ petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
 	.byte	($71<<1)	;                     (0x71<<1)|0};// if SOFILLD
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
-
-vis_cel	.byte	DRW_CEL		;
-vis_try	.byte	DRW_TRY		;
-vis_hid	.byte	DRW_HID		;
-vis_msg	.byte	DRW_MSG		;
-vis_lbl	.byte	DRW_LBL		;
-vis_msh	.byte	DRW_MSH		;
-
-visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
-	bit	vis_msh		;                                 uint4_t y0) {
-	beq	+		; if (a & DRW_MSH) {
-	jsrAPCS	hal_msh		;  hal_msh(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_lbl		;
-	beq	+		; if (a & DRW_LBL) {
-	jsrAPCS	hal_lbl		;  hal_lbl(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_msg		;
-	beq	+		; if (a & DRW_MSG) {
-	jsrAPCS	hal_msg		;  hal_msg(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_hid		;
-	beq	+		; if (a & DRW_HID) {
-	jsrAPCS	hal_hid		;  hal_hid(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_try		;
-	beq	+		; if (a & DRW_TRY) {
-	jsrAPCS	hal_try		;  hal_try(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_cel		;
-	beq	+		; if (a & DRW_CEL) {
-	lda	A1FUNCT		;
-	sta @w	V0LOCAL	;//y0	;
-	lda	A0FUNCT		;
-	pha	;//V1LOCAL=x0	;
-	jsrAPCS	hal_cel		;  hal_cel(x0, y0);
-+	POPVARS			; }
-	rts			;} // visualz()
 
 getchar	txa			;inline uint8_t getchar(void) {
 	pha			; // x stashed on stack, by way of a
@@ -1030,37 +948,142 @@ inputkb
 
 hal_inp
 
-.if 0;RNDLOC1 && RNDLOC2
-rndgrid	sec	;HIDGRID	;void rndgrid(void) { inigrid(1);
-	jsr	inigrid		;static uint8_t cangrid[80];
-.else
-cangrid	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	BLANK,		RUBWHT|CHAMFTL,	RUBWHT|CHAMFBL,	BLANK
-	.byte	BLANK,		RUBRED|CHAMFTR,	RUBRED|SQUARE,	RUBRED|CHAMFBL
-	.byte	RUBWHT|CHAMFTL,	RUBWHT|SQUARE,	RUBWHT|SQUARE,	RUBWHT|CHAMFBL
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	RUBWHT|CHAMFTL,	RUBWHT|CHAMFBL,	BLANK,		BLANK
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	RUBWHT|CHAMFTR,	RUBWHT|CHAMFBR,	BLANK,		BLANK
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	BLANK,		RUBBLU|CHAMFTL,	BLANK,		BLANK
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	RUBBLU|CHAMFTL,	RUBBLU|SQUARE,	BLANK,		BLANK
-	.byte	RUBYEL|CHAMFTR,	RUBYEL|SQUARE,	BLANK,		BLANK
-	.byte	RUBBLU|CHAMFTR,	RUBBLU|SQUARE,	BLANK,		BLANK
-	.byte	BLANK,		RUBYEL|CHAMFTR,	BLANK,		BLANK
-	.byte	BLANK,		RUBBLU|CHAMFTR,	BLANK,		BLANK
-rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {
--	lda	cangrid-1,y	; for (register uint8_t y = GRIDSIZ; y; y--) {
-	sta	HIDGRID-1,y	;  // not very random, it turns out:
-	dey			;  HIDGRID[y-1] = cangrid[y-1];
-	bne	-		; }
+main	tsx	;//req'd by APCS;int main(void) {
+.if BKGRNDC
+	lda	#VIDEOBG	; if (BKGRNDC) // addressable screen
+	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
-	rts			;} // rndgrid()
+	lda	#$00		; for (register uint8_t y = ANSWERS; y; y--) {
+	ldy	#ANSWERS	;  // bits 5~0 where a beam into this one exits
+-	sta	PORTALS-1,y	;  PORTALS[y-1] = 0; // no beam entry/exit yet
+	sta	PORTINT-1,y	;  // bits 3~0 tint reflected, or bit 4 absorbed
+	dey			;  PORTINT[y-1] = 0; // no beam entry/exit yet
+	bne	-		; }
+	clc	;TRYGRID	;
+	jsr	inigrid		; inigrid(0);
+	jsrAPCS	rndgrid		; rndgrid();
+-	ldy	#DRW_ALL|DRW_HID; do { register uint8_t a;
+	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_HID);
+	jsr	tempinp		;  a = tempinp();
+	beq	+		;  if (a)
+	tay			;
+	jsrAPCS	shinein		;  
+	tya			;
+	jsr	tempout		;   tempout(shinein(a));
+	jmp	-		; } while(a);
++	rts			;} // main()
+
+.if SCREENW && SCREENH
+tempinp rts
+tempout rts
+.else
+tempinp	lda	#$0d		;uint8_t tempinp(void) {
+	jsr	putchar		; putchar('\n');
+	lda	#'?'		;
+	jsr	putchar		; putchar('?');
+-	jsr	getchar		; while ((a = getchar()) != HOME) {
+	tya			;
+	cmp	#$13		;
+	beq	++++		;
+	cmp	#'1'		;
+	bcc	-		;
+	bne	++		;  if (a == '1') {
+	jsr	putchar		;   putchar(a);
+-	jsr	getchar		;   do {
+	tya			;    a = getchar();
+	cmp	#$0d		;
+	bne	+		;    if (a == '\n')
+	lda	#1		;
+	rts			;     return 1; // only time a Return is needed
++	cmp	#'0'		;
+	bcc	-		;    else if (a >= '0'
+	cmp	#'8'+1		;             &&
+	bcs	-		;             a <= '8') {
+	pha			;
+	jsr	putchar		;     putchar(a);
+	pla			;
+	sec			;     return a-'0' + 10;
+	sbc	#'0'-10		;    }
+	rts			;   } while (1);
++	cmp	#'9'+1		;
+	bcs	+		;  } else if (a > '1' && a <= '9') {
+	pha			;
+	jsr	putchar		;   putchar(a);
+	pla			;
+	sec			;
+	sbc	#'0'		;
+	rts			;   return a-'0';
++	and	#%0101 .. %1111	;
+	cmp	#'a'		;
+	bcc	--		;  } else if (toupper(a) >= 'a'
+	cmp	#'s'		;             &&
+	bcs	--		;             tolower(a) <= 'r') {
+	pha			;
+	jsr	putchar		;   putchar(a);
+	pla			;
+	sec			;
+	sbc	#'a'		;
+	clc			;
+	adc	#$21		;   return a-'a' + 0x21;
+	rts			; }
++	lda	#0		; return 0;
+	rts			;} // tempinp()
+
+tempout	pha			;void tempout(uint8_t a) {
+	jsr	bportal		;
+	lda	PORTINT,y	;
+	sta	OTHRVAR		; OTHRVAR = PORTINT[bportal(a)];
+	beq	++		; if (OTHRVAR) {
+	lda	#%0000 .. %1000	;
+-	bit	OTHRVAR		;  for (a = 0x08; a; a >>= 1) {
+	beq	+		;   if  (OTHVAR & a) {
+	pha			;
+	lda	#RVS_ON		;
+	jsr	putchar		;    putchar(RVS_ON);
+	pla			;
+	pha			;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;    putchar(petscii[a]);
+	lda	#' '		;
+	jsr	putchar		;    putchar(' ');
+	pla			;   }
++	lsr			;
+	bne	-		;  }
+	beq	++		; } else {
++	lda	#' '		;  putchar(' ');
+	jsr	putchar		; }
++	lda	#RVS_OFF	;
+	jsr	putchar		; putchar(RVS_OFF);
+	lda	petscii+UNMIXED	;
+	jsr	putchar		; putchar(petscii[UNMIXED]);
+	pla			;
+	clc			;
+	adc	#$20		;
+	and	#$5f		;
+	sta	OTHRVAR		;
+	bit	OTHRVAR		;
+	bvc	+		; if (a > 0x20) { // A~R
+	jsr	putchar		;  putchar(a + 0x20);
+	rts			;
++	clc			;
+	adc	#$30		;
+	cmp	#$3a		;
+	bcs	+		; } else if (a < 10) { // 1-9
+	jsr	putchar		;  putchar(a + 0x30);
+	rts			;
++	sec			;
+	sbc	#$0a		;
+	pha			; } else {
+	lda	#'1'		;
+	jsr	putchar		;  putchar('1');
+	pla			;  putchar(a-10 + 0x30);
+	pha			;
+	jsr	putchar		; }
+	pla			;
+	rts			;} // tempout()
+compmsk	.byte	8,4,2,1
+.endif
 
 pre_end
 .align $10
