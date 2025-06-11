@@ -701,7 +701,7 @@ putwave	pha	;V0LOCAL;//oldy	;register uint8_t putwave(register uint8_t a) {
 	
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	lda	#$0d		;                                              \
-.if SCREENW > $16
+.if 1;SCREENW > $16
 	jsr	putchar		; putchar('\n');                               \
 .endif
 	lda	#$20		;                                              \
@@ -789,7 +789,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	sta @w	V0LOCAL	;//i	; i = 0;                                       \
 	sta @w	V1LOCAL	;//r	; for (r = 0; r < GRIDH; r++) {                \
 -	lda	#$0d		;  register uint8_t y;                         \
-.if SCREENW > $16
+.if 1;SCREENW > $16
 	jsr	putchar		;  putchar('\n');                              \
 .endif
 	lda @w	V1LOCAL	;//r	;                                              \
@@ -1043,10 +1043,12 @@ tempout	pha			;void tempout(uint8_t a) {
 	pla			;
 	pha			;
 	tay			;
+	lda	tintltr,y	;
+	pha			;
 	lda	petscii,y	;
 	jsr	putchar		;    putchar(petscii[a]);
-	lda	#' '		;
-	jsr	putchar		;    putchar(' ');
+	pla			;
+	jsr	putchar		;    putchar(tintltr[a]);
 	pla			;   }
 +	lsr			;
 	bne	-		;  }
@@ -1082,7 +1084,8 @@ tempout	pha			;void tempout(uint8_t a) {
 	jsr	putchar		; }
 	pla			;
 	rts			;} // tempout()
-compmsk	.byte	8,4,2,1
+tintltr	.byte	0,'r','y',0	;
+	.byte	'b',0,0,0,'w'	;
 .endif
 
 pre_end
