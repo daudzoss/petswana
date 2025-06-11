@@ -112,6 +112,29 @@ bounce5	.byte	(RABOUNC << TP) | (NOBOUNC << LT) | (RABOUNC << BT) | NOBOUNC;RT
 bounce6	.byte	(NOBOUNC << TP) | (RABOUNC << LT) | (NOBOUNC << BT) | RABOUNC;RT
 bounce7	.byte	RABOUNC x 4
 
+obstint	.byte	TINTRED,TINTYEL,TINTBLU,TINTWHT,TINTWHT
+obstacl
+rot0red
+rot0yel
+rot0blu
+rot0wht
+rot0wh2
+rot1red
+rot1yel
+rot1blu
+rot1wht
+rot1wh2
+rot2red
+rot2yel
+rot2blu
+rot2wht
+rot2wh2
+rot3red
+rot3yel
+rot3blu
+rot3wht
+rot3wh2
+
 ;;; lower nybble of a grid square affects incident beam path, indexing bounces[]
 ;;; 
 ;;; an X marker in TRYGRID (0x08) confirming no obstacle actually would block a
@@ -182,7 +205,7 @@ shinein	pha	;//iport	;register uint8_t shinein(register uint8_t a) {
 	ldy @w	V1LOCAL	;//i_idx; 
 	lda	#MIXTOFF	;
 	sta	PORTINT,y	;  PORTINT[i_idx] = MIXTOFF;
-	lda	#RUBOUT	;
+	lda	#RUBOUT		;
 	sta	PORTALS,y	;  PORTALS[i_idx] = RUBOUT;
 	jmp	++		; } else { // waybeam set PORTINT[o_idx] already
 +	jsr	bportal		;
@@ -474,7 +497,7 @@ rndgrid	sec	;HIDGRID	;void rndgrid(void) { inigrid(1);
 	jsr	inigrid		;static uint8_t cangrid[80];
 .else
 cangrid	.byte	BLANK,		BLANK,		BLANK,		BLANK
-	.byte	BLANK,		BLANK,		BLANK,		BLANK
+	.byte	BLANK,		BLANK,		RUBOUT|SQUARE,	RUBOUT|SQUARE
 	.byte	BLANK,		BLANK,		BLANK,		BLANK
 	.byte	BLANK,		BLANK,		BLANK,		BLANK
 	.byte	BLANK,		RUBWHT|CHAMFTL,	RUBWHT|CHAMFBL,	BLANK
@@ -817,8 +840,8 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	lda	\gridarr,y	;                                              \
 	sta @w	V2LOCAL	;//temp	;   temp = gridarr[y];                         \
 	bpl	+		;   if (temp < 0) { // absorber, drawn as black\
-	lda	petscii+MIXTOFF	;                                              \
-	jsr	putchar		;    putchar(petscii[MIXTOFF]);                \
+	lda	petscii+$10	;                                              \
+	jsr	putchar		;    putchar(petscii[16]);                     \
 	lda	#' '		;                                              \
 	jmp	++++		;    c = 1;                                    \
 +	lsr			;                                              \
@@ -949,6 +972,10 @@ inputkb
 hal_inp
 
 main	tsx	;//req'd by APCS;int main(void) {
+.if !BASIC
+	lda	#$0f		; // P500 has to start in bank 15
+	sta	$01		; static volatile int execute_bank = 15;
+.endif
 .if BKGRNDC
 	lda	#VIDEOBG	; if (BKGRNDC) // addressable screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
@@ -1033,7 +1060,17 @@ tempout	pha			;void tempout(uint8_t a) {
 	jsr	bportal		;
 	lda	PORTINT,y	;
 	sta	OTHRVAR		; OTHRVAR = PORTINT[bportal(a)];
-	beq	++		; if (OTHRVAR) {
+	bpl	+		; if (OTHERVAR & MIXTOFF) {
+	lda	#RVS_ON		;
+	jsr	putchar		;  putchar(RVS_ON);
+	lda	petscii+$10	;
+	jsr	putchar		;  putchar(petscii[16]);
+	lda	#' '		;
+	jsr	putchar		;
+	lda	#RVS_OFF	;
+	jsr	putchar		;  putchar(RVS_OFF);
+	jmp	+++++++		;
++	beq	++		; } else if (OTHRVAR) {
 	lda	#%0000 .. %1000	;
 -	bit	OTHRVAR		;  for (a = 0x08; a; a >>= 1) {
 	beq	+		;   if  (OTHVAR & a) {
@@ -1082,7 +1119,7 @@ tempout	pha			;void tempout(uint8_t a) {
 	pla			;  putchar(a-10 + 0x30);
 	pha			;
 	jsr	putchar		; }
-	pla			;
++	pla			;
 	rts			;} // tempout()
 tintltr	.byte	0,'r','y',0	;
 	.byte	'b',0,0,0,'w'	;
