@@ -92,9 +92,9 @@ MASK_TP	= (%11 << TP) | 0 | 0 | 0
 
 ;;; exclusive-or values to bounce an incident beam back perpendicularly or by 45
 NOBOUNC	= %00			; don't bounce off something that's not there
-EVBOUNC	= %01			; as if off a wall running top right,bottom left
+ODBOUNC	= %01			; as if off a wall running top left,bottom right
 RABOUNC	= %10			; whence ye came
-ODBOUNC	= %11			; as if off a wall running top left,bottom right
+EVBOUNC	= %11			; as if off a wall running top right,bottom left
 TWRD_RT	= RABOUNCE ^ FROM_RT
 TWRD_BT	= RABOUNCE ^ FROM_BT
 TWRD_LT	= RABOUNCE ^ FROM_LT
@@ -317,11 +317,16 @@ gotbeam	sta @w	V1LOCAL	;//wavef; }
 propag8	tya			;  register uint1_t c;
 	sta @w	V2LOCAL	;//oldy	;  oldy = y;
 	jsrAPCS	putcell		;  y = putcell(y); // y preserved
-	lda	HIDGRID,y	;
+	lda	HIDGRID,y	;  // imagine we're on the FROM_ edge of cell y
 	bpl	+		;
 	jmp	deadend		;  if ((HIDGRID[y] >> 4) & RUBOUT == 0) { // on
 +	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
 	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];//H nyb tint, L nyb shape
+	ldy @w	V1LOCAL	;//wavef;
+	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
+	lda	#','		;
+	jsr	putchar		;
+	lda @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];//H nyb tint, L nyb shape
 	lsr			;
 	lsr			;
 	lsr			;
@@ -335,9 +340,6 @@ propag8	tya			;  register uint1_t c;
 	bne	-		;
 	ora @w	V1LOCAL	;//wavef;
 	sta @w	V1LOCAL	;//wavef;    wavef |= y ? (1 << (y-1)) : 0; // set tint
-	tay			;
-	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
-	tya			;
 	rol			;
 	rol			;
 	rol			;
@@ -359,11 +361,11 @@ propag8	tya			;  register uint1_t c;
 	ror			;
 	ror			;
 	ror			;
-	sta @w	V3LOCAL	;//bump	;    bump = ((bounces[bump&7]>>(oldir*2))&3)<<6;
-	lda @w	V1LOCAL	;//wavef;
-	and	#%0011 .. %1111	;
-	ora @w	V3LOCAL	;//bump	;
-	sta @w	V1LOCAL	;//wavef;    wavef = bump | (wavef & 0x3f); // deflected
+	eor @w	V1LOCAL	;//wavef;    // deflected using xor of bounces[] element
+	sta @w	V1LOCAL	;//wavef;    wavef^=((bounces[bump&7]>>(oldir*2))&3)<<6;
+	tay			;
+	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
+	jsr	getchar		;    getchar(); // dealing with infinite bounces
 	ldy @w	V2LOCAL	;//oldy	;    y = oldy;
 +	tya			;   }
 	lsr			;   c = y & 1;
@@ -661,6 +663,7 @@ getchar	txa			;inline uint8_t getchar(void) {
 	rts			;} // getchar()
 
 .if SCREENH && (SCREENW >= $50)
+putchar
 putcell
 putwave
 hal_try
@@ -670,6 +673,7 @@ hal_lbl
 hal_msh
 hal_cel	rts
 .elsif SCREENH && (SCREENW >= $28)
+putchar
 putcell
 putwave
 hal_try
@@ -679,6 +683,7 @@ hal_lbl
 hal_msh
 hal_cel	rts
 .elsif SCREENH && (SCREENW >= $16)
+putchar
 putcell
 putwave
 hal_try
