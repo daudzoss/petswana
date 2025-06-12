@@ -1,4 +1,3 @@
-.align $100			;//FIXME:unnecessary for production
 obstlst	.byte	obstac2-obstlst	;
 	.byte	RUBBLU		;
 	.byte	tri6_0e-tri6_0	;
@@ -58,10 +57,10 @@ obstac7	.byte	obstend-obstlst	;
 obstend	.byte	0
 	
 
-.align $100			;//FIXME:unnecessary for production
 obstcel
 
-tri6_0	.byte	$6 .. $6	; // placement constraints for TL corner in A~H ($7=none), 1-10 ($9=none)
+;;;// placement constraints for TL corner in A~H ($7=none), 1-10 ($9=none)
+tri6_0	.byte	$6 .. $6
 	.byte	(CHAMFTL<<5)|$01
 	.byte	(CHAMFTL<<5)|$08
 	.byte	(SQUARE	<<5)|$09	
