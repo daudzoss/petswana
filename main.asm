@@ -522,7 +522,10 @@ placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
 	ldy	#0		; return 0; // success
 preturn	POPVARS			;
 express	rts			;punwind:
-punwind	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
+punwind
+ jsrAPCS hal_try
+ jsr	putchar
+	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
 	tya			;  register uint8_t y;
 	cmp @w	V1LOCAL	;//head	;
 	beq	preturn		;
@@ -704,10 +707,10 @@ petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
 	.byte	$90		; /* universally black */      0x90};// MIXTOFF
 .else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
-petscii	.byte	$,$,$,$		;static uint8_t petscii[] = {0, 0, 0, 0,
-	.byte	$,$,$,$		;                            0, 0, 0, 0,
-	.byte	$,$,$,$		;                            0, 0, 0, 0,
-	.byte	$,$,$,$		;                            0, 0, 0, 0};
+petscii	.byte	$,$,$,$		;static uint8_t petscii[17] = {0, 0, 0, 0,
+	.byte	$,$,$,$		;                              0, 0, 0, 0,
+	.byte	$,$,$,$		;                              0, 0, 0, 0,
+	.byte	$,$,$,$,$	;                              0, 0, 0, 0, 0};
 .endif
 
 ;;; putchar()-printable graphics symbols for terminal-mode on all platforms
