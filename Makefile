@@ -1,18 +1,18 @@
 all : petswana.prg petswana_vic20.prg petswana_p500.prg petswana_c64.prg petswana_c16.prg
 
-petswana.prg : 6502apcs.inc main.asm generic/header.inc
+petswana.prg : 6502apcs.inc obstacle.asm main.asm generic/header.inc
 	64tass -a -Wall -Wno-strict-bool -Wno-implied-reg generic/header.inc main.asm --verbose-list -L petswana.lst -o petswana.prg
 
-petswana_vic20.prg : 6502apcs.inc main.asm vic20/header.inc
+petswana_vic20.prg : 6502apcs.inc obstacle.asm main.asm vic20/header.inc
 	64tass -a -Wall -Wno-strict-bool -Wno-implied-reg vic20/header.inc main.asm --verbose-list -L petswana_vic20.lst -o petswana_vic20.prg
 
-petswana_p500.prg : 6502apcs.inc main.asm p500/header.inc
+petswana_p500.prg : 6502apcs.inc obstacle.asm main.asm p500/header.inc
 	64tass -a -Wall -Wno-strict-bool -Wno-implied-reg p500/header.inc main.asm --verbose-list -L petswana_p500.lst -o petswana_p500.prg
 
-petswana_c64.prg : 6502apcs.inc main.asm c64/header.inc
+petswana_c64.prg : 6502apcs.inc obstacle.asm main.asm c64/header.inc
 	64tass -a -Wall -Wno-strict-bool -Wno-implied-reg c64/header.inc main.asm --verbose-list -L petswana_c64.lst -o petswana_c64.prg
 
-petswana_c16.prg : 6502apcs.inc main.asm c16/header.inc
+petswana_c16.prg : 6502apcs.inc obstacle.asm main.asm c16/header.inc
 	64tass -a -Wall -Wno-strict-bool -Wno-implied-reg c16/header.inc main.asm --verbose-list -L petswana_c16.lst -o petswana_c16.prg
 
 clean :

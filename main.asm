@@ -475,7 +475,8 @@ placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
 	bcs	+		;
 	ldy	#$ff		; if (colnm > obstcel[y] & 0x0f)
 	bcc	express		;  return y = -1;// tried to place too far right
-+	lsr			;
++	lda	obstcel,y	;
+	lsr			;
 	lsr			;
 	lsr			;
 	lsr			;
@@ -487,8 +488,7 @@ placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
 	asl			;
 	asl			;
 	asl			;
-	clc			;
-	adc @w	A1FUNCT	;//rownm;
+	ora @w	A1FUNCT	;//rownm;
 	pha	;//V0LOCAL=ygrid; uint8_t ygrid = (colnm << 3) | rownm;
 	iny			;
 	tya			;
@@ -500,6 +500,12 @@ placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
 	pha	;//V4LOCAL=temp	; uint8_t temp;
 -	lda	obstcel,y	; for (yelem = head; yelem < ovrbd; y++) {
 	sta @w	V4LOCAL	;//temp	;  temp = obstcel[yelem];
+.if 0
+ jsrAPCS putwave
+ lda #','
+ jsr putchar
+ lda @w V4LOCAL
+.endif
 	and	#%0001 .. %1111 ;
 	clc			;
 	adc @w	V0LOCAL	;//ygrid;
@@ -523,8 +529,20 @@ placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
 preturn	POPVARS			;
 express	rts			;punwind:
 punwind
- jsrAPCS hal_try
- jsr	putchar
+.if 0
+ pha
+ jsrAPCS putwave
+ lda #':'
+ jsr putchar
+ pla
+ tay
+ jsrAPCS putwave
+ jsrAPCS hal_hid
+ lda #$55
+ pha
+ brk
+ jsr	getchar
+.endif
 	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
 	tya			;  register uint8_t y;
 	cmp @w	V1LOCAL	;//head	;
@@ -539,7 +557,7 @@ punwind
 	sta	HIDGRID,y	; return y = head; // guaranteed nonzero
 	beq	punwind		;} // placeit()
 
-.if 0;RNDLOC1 && RNDLOC2
+.if RNDLOC1 && RNDLOC2
 rotshap				;//try a new rotation of a shape in the linked list
 
 rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
@@ -565,34 +583,38 @@ rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
 	eor	RNDLOC2		;  // random starting rotation since grid blank
 	ora 	#%1000 .. %0000	;  // prevent infinite loop by eventual rollover
 	and 	#%1000 .. %0011	;
-	sta @w	V4LOCAL	;//rotn	;  for (rotn=0x80|(rand()&3);rotn&0x80;rotn++) {
+	sta @w	V1LOCAL	;//rotn	;  for (rotn=0x80|(rand()&3);rotn&0x80;rotn++) {
 -	and	#%0000 .. %0011	;
 	clc			;
 	adc @w	V2LOCAL	;//oldy	;
 	tay			;
 	lda	obstlst+3,y	;
 	pha			;   uint8_t temp = obstlst[+3+y + ((rotn++)&3)];
-	lda	RNDLOC1		;
+-	lda	RNDLOC1		;   do {
 	eor	RNDLOC2		;
-	and	#%0000 .. %0011 ;
-	sta @w	V5LOCAL	;//rownm;   rownm = rand() & 7;
+	and	#%0000 .. %0111 ;#%0000 .. %1111 ;
+;	cmp	#GRIDH		;
+;	bcs	-		;
+	sta @w	V5LOCAL	;//rownm;   } while ((rownm = rand() & 15) >= GRIDH);
 -	lda	RNDLOC1		;   do {
 	eor	RNDLOC2		;
 	and	#%0000 .. %1111	;
 	cmp	#GRIDW		;
 	bcs	-		;
-	sta @w	V6LOCAL ;//colnm;   } while ((colnm = rand() & 15) >= GRIDW);
+	sta @w	V6LOCAL	;//colnm;   } while ((colnm = rand() & 15) >= GRIDW);
 	pla			;
 	tay			;
 	jsrAPCS	placeit		;
 	tya			;   if (placeit(temp,colnm,rownm,elems,tint)==0)
 	beq	+		;    break;
-	inc @w	V4LOCAL	;//rotn	;
-	lda @w	V4LOCAL	;//rotn	;
-	bmi	--		;  }
+	inc @w	V1LOCAL	;//rotn	;
+	lda @w	V1LOCAL	;//rotn	;
+	bmi	---		;  }
+;	jsr	getchar		;
+	jsrAPCS hal_hid		;
 	brk			;
 +	ldy @w	V0LOCAL	;//next	;
-	bne	---		; }
+	bne	----		; }
 rnddone	POPVARS			;
 	rts			;} // rndgrid()
 
@@ -1244,7 +1266,7 @@ tintltr	.byte	0,'r','y',0	;
 .include "obstacle.asm"
 
 pre_end
-.align	$10
+.align $100			;//FIXME:unnecessary for production
 vararea
 .end
 
