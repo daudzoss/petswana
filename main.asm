@@ -846,8 +846,10 @@ putwave	pha	;V0LOCAL;//oldy	;register uint8_t putwave(register uint8_t a) {
 	rts			;} // putcell()
 
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
+.if SCREENW > $16
 	lda	#$0d		;                                              \
 	jsr	putchar		; putchar('\n');                               \
+.endif
 	lda	#$20		;                                              \
 	jsr	putchar		; putchar(' ');                                \
 	lda	#\lj		;                                              \
@@ -933,7 +935,9 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	sta @w	V0LOCAL	;//i	; i = 0;                                       \
 	sta @w	V1LOCAL	;//r	; for (r = 0; r < GRIDH; r++) {                \
 -	lda	#$0d		;  register uint8_t y;                         \
+.if SCREENW > $16
 	jsr	putchar		;  putchar('\n');                              \
+.endif
 	lda @w	V1LOCAL	;//r	;                                              \
 	adc	#GRIDW+GRIDH	;                                              \
 	tay			;                                              \
@@ -1060,8 +1064,10 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 .endif
 	jmp	----		; }                                            \
 +	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
+.if SCREENW > $16
 	lda	#$0d		;                                              \
 	jsr	putchar		; putchar('\n');                               \
+.endif
 	lda	#' '		;                                              \
 	jsr	putchar		; putchar(' ');                                \
 	lda	#' '		;                                              \
