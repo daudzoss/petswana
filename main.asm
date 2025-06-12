@@ -707,10 +707,10 @@ petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
 	.byte	$90		; /* universally black */      0x90};// MIXTOFF
 .else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
-petscii	.byte	$,$,$,$		;static uint8_t petscii[17] = {0, 0, 0, 0,
-	.byte	$,$,$,$		;                              0, 0, 0, 0,
-	.byte	$,$,$,$		;                              0, 0, 0, 0,
-	.byte	$,$,$,$,$	;                              0, 0, 0, 0, 0};
+petscii	.byte   $,$,$,$		;static uint8_t petscii[17] = {0, 0, 0, 0,
+	.byte   $,$,$,$		;                              0, 0, 0, 0,
+	.byte   $,$,$,$		;                              0, 0, 0, 0,
+	.byte   $,$,$,$,$	;                              0, 0, 0, 0, 0};
 .endif
 
 ;;; putchar()-printable graphics symbols for terminal-mode on all platforms
@@ -825,9 +825,7 @@ putwave	pha	;V0LOCAL;//oldy	;register uint8_t putwave(register uint8_t a) {
 
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	lda	#$0d		;                                              \
-.if 1;SCREENW > $16
 	jsr	putchar		; putchar('\n');                               \
-.endif
 	lda	#$20		;                                              \
 	jsr	putchar		; putchar(' ');                                \
 	lda	#\lj		;                                              \
@@ -935,7 +933,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	lda @w	V0LOCAL	;//i	;   register uint1_t c;                        \
 	tay			;                                              \
 	cmp	#GRIDSIZ	;   putchar('|');                              \
-	bcs	putgrin		;   c = 0;                                     \
+	bcs	+++++++		;   c = 0;                                     \
 	adc	#GRIDH		;   a = ' ';                                   \
 	sta @w	V0LOCAL	;//i	;                                              \
 	lda	\gridarr,y	;                                              \
@@ -944,7 +942,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	lda	petscii+$10	;                                              \
 	jsr	putchar		;    putchar(petscii[16]);                     \
 	lda	#' '		;                                              \
-	jmp	++++		;    c = 1;                                    \
+	jmp	+++++		;    c = 1;                                    \
 +	lsr			;                                              \
 	lsr			;                                              \
 	lsr			;                                              \
@@ -963,7 +961,26 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	and	#%0000 .. %1111	;                                              \
 	tay			;   c = petsyms[temp & 0x0f] & 1;              \
 	lda	petsyms,y	;   a = petsyms[temp & 0x0f] >> 1;             \
-	lsr			;   if (!a)                                    \
+.if !BKGRNDC
+	cpy	#SQUARE		;
+	bne	+		;
+	lda @w	V2LOCAL	;//temp	;
+	lsr			;
+	lsr			;
+	lsr			;
+	lsr			;
+	tay			;
+	lda	#0		;
+	sec			;
+-	rol			;
+	dey			;
+	bne	-		;
+	tay			;
+	lda	tintltr,y	;
+	sec			;
+	rol			;
+.endif
++	lsr			;   if (!a)                                    \
 	bne	+		;    a = 0xa9; // only 8-bit stored in petsyms \
 	lda	#$a9		;   }                                          \
 +	bcc	++		;   if (c) {                                   \
@@ -976,8 +993,12 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		;   putchar(RVS_OFF);                          \
 	lda	petscii+UNMIXED	;                                              \
 	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
+.if BKGRNDC
 	jmp	--		;  }putchar('|');                              \
-putgrin
+.else
+	jmp	---		;  }putchar('|');                              \
+.endif
++
 .if SCREENW > $17
 	lda	#' '		;                                              \
 	jsr	putchar		;  putchar(' '); // offset 1's digit diagonally\
@@ -1021,7 +1042,7 @@ putgrin
 	lda	petscii+UNMIXED	;                                              \
 	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
 .endif
-	jmp	---		; }                                            \
+	jmp	----		; }                                            \
 +	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
 	lda	#$0d		;                                              \
 	jsr	putchar		; putchar('\n');                               \
@@ -1109,9 +1130,9 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	jsr	putchar		; putchar('\n');
 	lda	#'?'		;
 	jsr	putchar		; putchar('?');
--	jsr	getchar		; while ((a = getchar()) != HOME) {
+-	jsr	getchar		; while ((a = getchar()) != DEL_KEY) {
 	tya			;
-	cmp	#$13		;
+	cmp	#$14		;
 	beq	++++		;
 	cmp	#'1'		;
 	bcc	-		;
