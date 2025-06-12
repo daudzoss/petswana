@@ -986,23 +986,27 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	tay			;   c = petsyms[temp & 0x0f] & 1;              \
 	lda	petsyms,y	;   a = petsyms[temp & 0x0f] >> 1;             \
 .if !BKGRNDC
-	cpy	#SQUARE		;
-	bne	+		;
-	lda @w	V2LOCAL	;//temp	;
-	lsr			;
-	lsr			;
-	lsr			;
-	lsr			;
-	tay			;
-	lda	#0		;
-	sec			;
--	rol			;
-	dey			;
-	bne	-		;
-	tay			;
-	lda	tintltr,y	;
-	sec			;
-	rol			;
+	cpy	#SQUARE		;                                              \
+	bne	+		;   if (y == 7) { // room for tintltr w/o color\
+	lda @w	V2LOCAL	;//temp	;                                              \
+	lsr			;                                              \
+	lsr			;                                              \
+	lsr			;                                              \
+	lsr			;                                              \
+	php			;                                              \
+	lda	petsyms,y	;                                              \
+	plp			;                                              \
+	beq	+		;    if (temp >> 4) { // not transparent       \
+	tay			;                                              \
+	lda	#0		;                                              \
+	sec			;                                              \
+-	rol			;                                              \
+	dey			;                                              \
+	bne	-		;                                              \
+	tay			;                                              \
+	lda	tintltr,y	;     a = tintltr[1 << (temp >> 4)]; //W/R/Y/B \
+	sec			;    }                                         \
+	rol			;   }                                          \
 .endif
 +	lsr			;   if (!a)                                    \
 	bne	+		;    a = 0xa9; // only 8-bit stored in petsyms \
