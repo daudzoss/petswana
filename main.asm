@@ -539,7 +539,7 @@ punwind
 	sta	HIDGRID,y	; return y = head; // guaranteed nonzero
 	beq	punwind		;} // placeit()
 
-.if RNDLOC1 && RNDLOC2
+.if 0;RNDLOC1 && RNDLOC2
 rotshap				;//try a new rotation of a shape in the linked list
 
 rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
@@ -911,9 +911,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	sta @w	V0LOCAL	;//i	; i = 0;                                       \
 	sta @w	V1LOCAL	;//r	; for (r = 0; r < GRIDH; r++) {                \
 -	lda	#$0d		;  register uint8_t y;                         \
-.if 1;SCREENW > $16
 	jsr	putchar		;  putchar('\n');                              \
-.endif
 	lda @w	V1LOCAL	;//r	;                                              \
 	adc	#GRIDW+GRIDH	;                                              \
 	tay			;                                              \
@@ -993,11 +991,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		;   putchar(RVS_OFF);                          \
 	lda	petscii+UNMIXED	;                                              \
 	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
-.if BKGRNDC
-	jmp	--		;  }putchar('|');                              \
-.else
 	jmp	---		;  }putchar('|');                              \
-.endif
 +
 .if SCREENW > $17
 	lda	#' '		;                                              \
