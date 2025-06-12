@@ -897,7 +897,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 	jsr	putchar		; putchar(petscii[UNMIXED]);                   \
 	rule V2LOCAL,$b0,$b2,$ae; rule(temp, 0xb0, 0xb2, 0xae) ;               \
 .if SCREENW > $16
-	lda	PORTINT+$0b	;                                              \
+	lda	PORTINT+$0a	;                                              \
 	and	#%0001 .. %1111	;                                              \
 	tay			;                                              \
 	lda	petscii,y	;                                              \
@@ -1024,7 +1024,7 @@ putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
 .if SCREENW > $16
 	lda @w	V1LOCAL	;//r	;                                              \
 	clc			;                                              \
-	adc	#$0b		;                                              \
+	adc	#$0a		;                                              \
 	tay			;                                              \
 	lda	PORTINT,y	;                                              \
 	and	#%0001 .. %1111	;                                              \
