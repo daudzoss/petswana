@@ -536,7 +536,7 @@ punwind	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
 	sta	HIDGRID,y	; return y = head; // guaranteed nonzero
 	beq	punwind		;} // placeit()
 
-.if 0;RNDLOC1 && RNDLOC2
+.if RNDLOC1 && RNDLOC2
 rotshap				;//try a new rotation of a shape in the linked list
 
 rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
