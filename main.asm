@@ -433,7 +433,7 @@ portal	pha	;//gridi	;register uint6_t portal(register uint9_t a){//!
 portala	tay			;  else return y = 0;
 portaly	POPVARS			; }
 	rts			;} // portal()
-	
+
 ;//1~18(1~0x12),A~R(0x21~0x32) to PORTALS[] or PORTINT[] index
 bportal	cmp	#$21		;inline register int6_t bportal(register int6_t
 	bcs	+		;                                           a) {
@@ -526,7 +526,7 @@ punwind	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
 	tya			;  register uint8_t y;
 	cmp @w	V1LOCAL	;//head	;
 	beq	preturn		;
-	dec @w	V2LOCAL	;//yelem;	
+	dec @w	V2LOCAL	;//yelem;
 	lda	obstcel-1,y	;
 	and	#%0001 .. %1111	;
 	clc			;
@@ -536,11 +536,63 @@ punwind	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
 	sta	HIDGRID,y	; return y = head; // guaranteed nonzero
 	beq	punwind		;} // placeit()
 
-rotshap
-	
 .if 0;RNDLOC1 && RNDLOC2
-rndgrid	sec	;HIDGRID	;void rndgrid(void) { inigrid(1);
-	jsr	inigrid		;static uint8_t cangrid[80];
+rotshap				;//try a new rotation of a shape in the linked list
+
+rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
+	pha	;V1LOCAL;//rotn	; uint8_t next, rotn, tint, elems, rownm, colnm;
+	pha	;V2LOCAL;//oldy	;
+	pha	;V3LOCAL;//tint	;
+	pha	;V4LOCAL;//elems;
+	pha	;V5LOCAL;//rownm;
+	pha	;V6LOCAL;//colnm;
+	sec	;HIDGRID	; inigrid(1); // start with HIDGRID blank
+	jsr	inigrid		;
+	ldy	#0		; register uint8_t y;
+-	tya			; for (y = 0; (next=obstlst[y]) != 0; y = next) {
+	sta @w	V2LOCAL	;//oldy	;
+	lda	obstlst,y	;
+	beq	rnddone		;
+	sta @w	V0LOCAL	;//next	;
+	lda	obstlst+1,y	;
+	sta @w	V3LOCAL	;//tint	;  tint = obstlst[+1+y];
+	lda	obstlst+2,y	;
+	sta @w	V4LOCAL	;//elems;  elems = obstlst[+2+y];
+	lda	RNDLOC1		;
+	eor	RNDLOC2		;  // random starting rotation since grid blank
+	ora 	#%1000 .. %0000	;  // prevent infinite loop by eventual rollover
+	and 	#%1000 .. %0011	;
+	sta @w	V4LOCAL	;//rotn	;  for (rotn=0x80|(rand()&3);rotn&0x80;rotn++) {
+-	and	#%0000 .. %0011	;
+	clc			;
+	adc @w	V2LOCAL	;//oldy	;
+	tay			;
+	lda	obstlst+3,y	;
+	pha			;   uint8_t temp = obstlst[+3+y + ((rotn++)&3)];
+	lda	RNDLOC1		;
+	eor	RNDLOC2		;
+	and	#%0000 .. %0011 ;
+	sta @w	V5LOCAL	;//rownm;   rownm = rand() & 7;
+-	lda	RNDLOC1		;   do {
+	eor	RNDLOC2		;
+	and	#%0000 .. %1111	;
+	cmp	#GRIDW		;
+	bcs	-		;
+	sta @w	V6LOCAL ;//colnm;   } while ((colnm = rand() & 15) >= GRIDW);
+	pla			;
+	tay			;
+	jsrAPCS	placeit		;
+	tya			;   if (placeit(temp,colnm,rownm,elems,tint)==0)
+	beq	+		;    break;
+	inc @w	V4LOCAL	;//rotn	;
+	lda @w	V4LOCAL	;//rotn	;
+	bmi	--		;  }
+	brk			;
++	ldy @w	V0LOCAL	;//next	;
+	bne	---		; }
+rnddone	POPVARS			;
+	rts			;} // rndgrid()
+
 .else
 cangrid	.byte	0|CHAMFTL,	0|SQUARE,	0|CHAMFBL,	BLANK
 	.byte	BLANK,		BLANK,		RUBOUT|SQUARE,	RUBOUT|SQUARE
@@ -562,7 +614,7 @@ cangrid	.byte	0|CHAMFTL,	0|SQUARE,	0|CHAMFBL,	BLANK
 	.byte	RUBBLU|CHAMFTR,	RUBBLU|SQUARE,	BLANK,		BLANK
 	.byte	BLANK,		RUBYEL|CHAMFTR,	BLANK,		BLANK
 	.byte	BLANK,		RUBBLU|CHAMFTR,	BLANK,		BLANK
-rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {
+rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 -	lda	cangrid-1,y	; for (register uint8_t y = GRIDSIZ; y; y--) {
 	sta	HIDGRID-1,y	;  // not very random, it turns out:
 	dey			;  HIDGRID[y-1] = cangrid[y-1];
@@ -767,7 +819,7 @@ putwave	pha	;V0LOCAL;//oldy	;register uint8_t putwave(register uint8_t a) {
 	ldy @w	V0LOCAL	;//oldy	;
 	POPVARS			; return y = oldy;
 	rts			;} // putcell()
-	
+
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	lda	#$0d		;                                              \
 .if 1;SCREENW > $16

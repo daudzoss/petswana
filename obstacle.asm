@@ -1,54 +1,54 @@
 obstlst	.byte	obstac2-obstlst	;
-	.byte	rot1blu-rot0blu	;
 	.byte	RUBBLU		;
+	.byte	rot1blu-rot0blu	;
 	.byte	rot0blu-obstcel	;
 	.byte	rot1blu-obstcel	;
 	.byte	rot2blu-obstcel	;
 	.byte	rot3blu-obstcel	;
 	
 obstac2	.byte	obstac3-obstlst	;
-	.byte	rot1wht-rot0wht	;
 	.byte	RUBWHT		;
+	.byte	rot1wht-rot0wht	;
 	.byte	rot0wht-obstcel	;
 	.byte	rot1wht-obstcel	;
 	.byte	rot2wht-obstcel	;
 	.byte	rot3wht-obstcel	;
 
 obstac3	.byte	obstac4-obstlst	;
-	.byte	rot1wh2-rot0wh2	;
 	.byte	RUBWHT		;
+	.byte	rot1wh2-rot0wh2	;
 	.byte	rot0wh2-obstcel	;
 	.byte	rot1wh2-obstcel	;
 	.byte	rot2wh2-obstcel	;
 	.byte	rot3wh2-obstcel	;
 	
 obstac4	.byte	obstac5-obstlst	;
-	.byte	rot1yel-rot0yel	;
 	.byte	RUBYEL		;
+	.byte	rot1yel-rot0yel	;
 	.byte	rot0yel-obstcel	;
 	.byte	rot1yel-obstcel	;
 	.byte	rot2yel-obstcel	;
 	.byte	rot3yel-obstcel	;
 	
 obstac5	.byte	obstac6-obstlst	;
-	.byte	rot1red-rot0red	;
 	.byte	RUBRED		;
+	.byte	rot1red-rot0red	;
 	.byte	rot0red-obstcel	;
 	.byte	rot1red-obstcel	;
 	.byte	rot2red-obstcel	;
 	.byte	rot3red-obstcel	;
 
 obstac6	.byte	obstac7-obstlst	;
-	.byte	rot1unt-rot0unt	;
 	.byte	UNTINTD		;
+	.byte	rot1unt-rot0unt	;
 	.byte	rot0unt-obstcel	;
 	.byte	rot1unt-obstcel	;
 	.byte	rot2unt-obstcel	;
 	.byte	rot3unt-obstcel	;
 	
 obstac7	.byte	obstend-obstlst	;
-	.byte	rot1abs-rot0abs	;
 	.byte	RUBOUT		;
+	.byte	rot1abs-rot0abs	;
 	.byte	rot0abs-obstcel	;
 	.byte	rot1abs-obstcel	;
 	.byte	rot2abs-obstcel	;
