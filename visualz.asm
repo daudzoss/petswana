@@ -102,6 +102,7 @@ RVS_OFF	= $92			;// done for good measure after printing a cell
 
 .if SCREENH && (SCREENW >= $50)
 putchar
+stckstr
 putcell
 putwave
 hal_try
@@ -112,6 +113,7 @@ hal_msh
 hal_cel	rts
 .elsif SCREENH && (SCREENW >= $28)
 putchar
+stckstr
 putcell
 putwave
 hal_try
@@ -122,6 +124,7 @@ hal_msh
 hal_cel	rts
 .elsif SCREENH && (SCREENW >= $16)
 putchar
+stckstr
 putcell
 putwave
 hal_try
@@ -140,42 +143,42 @@ putchar	tay			;inline void putchar(register uint8_t a) {
 	tax			; // x restored from stack, by way of a
 	rts			;} // putchar()
 
-stckstr	.macro	frstchr,lastchr	;#define stckstr(frstchr,lastchr) 
+stckstr	.macro	frstchr,lastchr	;#define stckstr(frstchr,lastchr) \
 ;;; any way to check also if user rememberd to make lastchr-1 a '\0'?
-.if lastchr-frstchr < $50
+.if \lastchr < \frstchr
+.error "negative-length string specified for stacking"
+.elsif \lastchr-\frstchr <= $50
 	lda	 #0		;
 	pha			;
-	ldy	#lastchr-frstchr;
--	lda	frstchr-1,y	;
+	ldy	#\lastchr-\frstchr;
+-	lda	\frstchr-1,y	;
 	pha			;
 	dey			;
 	bne	-		;
 .else
-.error "let's not burn that much of the system stack on one string"
+.error "let's not burn that much of the system stack on printing one string"
 .endif
 	.endm			;
 
 putstck	pha		;//start;void putstck(register uint8_t a, // usually $00
-	tya			;             register uint8_t y) {//usually $ff
-	adc	#4		; start = a;
-	bcs	putserr		;
-	adc @w	V0LOCAL	;//start;
-	pha		;//stop	; stop = x + y + 4 + start;
-	txa			;
+	txa			;             register uint8_t y) {//usually $ff
 	clc			;
-	adc	#4		;
-	bcs	putserr		;
 	adc @w	V0LOCAL	;//start;
-	sta @w	V0LOCAL	;//start; start = x + 0 + 4 + start;
+;	bcs	putserr		;
+	sta @w	V0LOCAL	;//start; start = x + a;
+	tya			;
+	clc			;
+	adc @w	V0LOCAL	;//start; stop = start + y;
+	bcc	+		;
+	lda	#$ff		; if (stop > 0x1ff)
++	pha		;//stop	;  stop = 0x01ff;
 -	ldy @w	V0LOCAL	;//start; for (y = start; y <= stop; y++) {
-	lda	$0100,y		;  a = ((uint8_t*)0x100)[y];
+	lda	$0102,y		;  a = ((uint8_t*)0x100)[y];
 	beq	+		;  if (a)
 	jsr	putchar		;   putchar(a);
-	ldy @w	V0LOCAL	;//start;  else
-	iny			;   return; // '\0' hit before requested # chars
-	tya			;
-	sta @w	V0LOCAL	;//start;
-	cmp @w	V1LOCAL	;//stop	;
+	inc @w	V0LOCAL	;//start;  else
+	lda @w	V0LOCAL	;//start;
+	cmp @w	V1LOCAL	;//stop	;   return; // '\0' hit before requested # chars
 	bcc	-		; }
 +	POPVARS			;
 	rts			;

@@ -175,7 +175,8 @@ DRW_LBL	= 1<<6			;no args
 DRW_MSH	= 1<<7			;no args; also draws screen decorations if any
 DRW_ALL	= DRW_MSH|DRW_LBL	;
 
-main	tsx	;//req'd by APCS;int main(void) {
+
+main	tsx	;//req'd by APCS;int main(
 .if !BASIC
 	lda	#$0f		; static volatile uint8_t execute_bank* = 0x01;
 	sta	$01		; *execute_bank = 15;// P500 runs in system bank

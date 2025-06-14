@@ -1,4 +1,4 @@
-all : petswana.prg petswana_vic20.prg petswana_p500.prg petswana_c64.prg petswana_c16.prg
+all : petswana.prg petswana_vic20.prg petswana_c64.prg petswana_c16.prg
 
 petswana.prg : 6502apcs.inc visualz.asm nteract.asm obstacle.asm main.asm generic/header.inc
 	64tass -a -Wall -Wno-strict-bool -Wno-implied-reg generic/header.inc main.asm --verbose-list -L petswana.lst -o petswana.prg

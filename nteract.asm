@@ -22,7 +22,11 @@ nteract	bit	ask_key		;void nteract(register uint8_t a, uint4_t arg0){
 	POPVARS			;
 	rts			;
 	
-confirm	ldy	#SAY_KEY	;void confirm(register uint8_t a) { // FIXME: add visualz DRW_MSG
+reallyq	.null	"really quit?"
+confirm	stckstr	reallyq,confirm	;
+	ldy	#$ff		;
+	jsrAPCS	putstck,lda,#0	;
+	ldy	#SAY_KEY	;void confirm(register uint8_t a) { // FIXME: add visualz DRW_MSG
 	jsrAPCS	nteract		;
 	cpy	#'y'		;
 	beq	+		;
