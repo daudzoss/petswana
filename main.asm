@@ -205,6 +205,7 @@ main	tsx	;//req'd by APCS;int main(void) {
 +	bpl	+		;  } else if (OTHRVAR & 0x80) { // cell check
 +	bvc	+		;  } else if (OTHRVAR & 0x40) { // special input  
 +	jsrAPCS	shinein		;  } else { // portal check
+	tya			;
 	jsr	tempout		;   tempout(shinein(a));
 	jmp	-		; } while(a);
 +	rts			;} // main()
