@@ -140,6 +140,47 @@ putchar	tay			;inline void putchar(register uint8_t a) {
 	tax			; // x restored from stack, by way of a
 	rts			;} // putchar()
 
+stckstr	.macro	frstchr,lastchr	;#define stckstr(frstchr,lastchr) 
+;;; any way to check also if user rememberd to make lastchr-1 a '\0'?
+.if lastchr-frstchr < $50
+	lda	 #0		;
+	pha			;
+	ldy	#lastchr-frstchr;
+-	lda	frstchr-1,y	;
+	pha			;
+	dey			;
+	bne	-		;
+.else
+.error "let's not burn that much of the system stack on one string"
+.endif
+	.endm			;
+
+putstck	pha		;//start;void putstck(register uint8_t a, // usually $00
+	tya			;             register uint8_t y) {//usually $ff
+	adc	#4		; start = a;
+	bcs	putserr		;
+	adc @w	V0LOCAL	;//start;
+	pha		;//stop	; stop = x + y + 4 + start;
+	txa			;
+	clc			;
+	adc	#4		;
+	bcs	putserr		;
+	adc @w	V0LOCAL	;//start;
+	sta @w	V0LOCAL	;//start; start = x + 0 + 4 + start;
+-	ldy @w	V0LOCAL	;//start; for (y = start; y <= stop; y++) {
+	lda	$0100,y		;  a = ((uint8_t*)0x100)[y];
+	beq	+		;  if (a)
+	jsr	putchar		;   putchar(a);
+	ldy @w	V0LOCAL	;//start;  else
+	iny			;   return; // '\0' hit before requested # chars
+	tya			;
+	sta @w	V0LOCAL	;//start;
+	cmp @w	V1LOCAL	;//stop	;
+	bcc	-		; }
++	POPVARS			;
+	rts			;
+putserr	brk			;}
+
 putcell	pha	;V0LOCAL;//oldy	;register uint8_t putcell(register uint8_t a) {
 	lda	#' '		; uint8_t oldy = a;
 	jsr	putchar		; putchar(' ');
