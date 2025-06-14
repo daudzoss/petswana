@@ -160,13 +160,72 @@ MIXT_LG	= MIXTWHT | MIXTBLU | MIXTYEL | 0	;14
 MIXTGRY	= MIXTRED | MIXTYEL | MIXTBLU | MIXTWHT ;15
 MIXTOFF	= $f << 4				;16
 
-DRW_CEL	= 1<<0			;
-DRW_TRY	= 1<<3			;
-DRW_HID	= 1<<4			;
-DRW_MSG	= 1<<5			;
-DRW_LBL	= 1<<6			;
-DRW_MSH	= 1<<7			;
-DRW_ALL	=DRW_MSH|DRW_LBL|DRW_MSG;
+SAY_KEY	= 1<<4		 	; returns the key value
+SAY_ANS	= 1<<5			; returns %01 .. special code %111111, or $00
+SAY_PRT	= 1<<6			; returns %00 .. portal_1~50, or $00 for quit
+SAY_PEK	= 1<<7			; returns %1 .. cell_0~79, or $00 for quit
+SAY_ANY = SAY_PEK|SAY_PRT|SAY_ANS
+
+DRW_CEL	= 1<<0			; // A0: object, A1: cell 0~79
+DRW_MSG	= 1<<1			; // A0: '\0'-terminated character string?!?
+DRW_MOV	= 1<<3			; // A0: first move index to draw
+DRW_TRY	= 1<<4			;no args
+DRW_HID	= 1<<5			;no args
+DRW_LBL	= 1<<6			;no args
+DRW_MSH	= 1<<7			;no args; also draws screen decorations if any
+DRW_ALL	= DRW_MSH|DRW_LBL	;
+
+main	tsx	;//req'd by APCS;int main(void) {
+.if !BASIC
+	lda	#$0f		; static volatile uint8_t execute_bank* = 0x01;
+	sta	$01		; *execute_bank = 15;// P500 runs in system bank
+.endif
+.if BKGRNDC
+	lda	#VIDEOBG	; if (BKGRNDC) // use available color screen
+	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
+.endif
+	jsr	iniport		; iniport();
+	clc			;
+	jsr	inigrid		; inigrid(0 /* TRYGRID */);
+	sec			;
+	jsr	inigrid		; inigrid(1 /* HIDGRID */);
+	jsrAPCS	rndgrid		; rndgrid();
+-	ldy	#DRW_ALL|DRW_HID; do {
+	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_HID);
+	ldy	#SAY_ANY	;
+	jsrAPCS	nteract		;  
+	sty	OTHRVAR		;  OTHRVAR = nteract(SAY_ANY);
+	lda	#$ff		;
+	bit	OTHRVAR		;   
+	bne	+		;  if (OTHRVAR == 0) { // user quit
+	jsrAPCS	confirm		;   register uint8_t y = confirm();
+	tya			;   if (y)
+	bne	++++		;    exit(y);
+	beq	-		;   else continue;
++	bpl	+		;  } else if (OTHRVAR & 0x80) { // cell check
++	bvc	+		;  } else if (OTHRVAR & 0x40) { // special input  
++	jsrAPCS	shinein		;  } else { // portal check
+	jsr	tempout		;   tempout(shinein(a));
+	jmp	-		; } while(a);
++	rts			;} // main()
+
+iniport	lda	#$00		;inline void iniport(void) {
+	ldy	#ANSWERS	; for (register uint8_t y = ANSWERS; y; y--) {
+-	sta	PORTALS-1,y	;  PORTINT[y-1] = PORTALS = 0; // no beam yet
+	sta	PORTINT-1,y	; //             // where a beam into here exits
+	dey			;// bits 3~0 tint reflected, or bit 4 absorbed
+	bne	-		; }
+	rts			;} // iniport()
+
+inigrid	lda	#0		;inline inigrid(uint1_t c) {
+	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
+-	bcc	+		;  if (c)
+	sta	HIDGRID-1,y	;   HIDGRID[y-1] = 0;
+	bcs	++		;  else
++	sta	TRYGRID-1,y	;   TRYGRID[y-1] = 0;
++	dey			;
+	bne	-		; }
+	rts			;} // inigrid()
 
 shinein	pha	;//iport	;register uint8_t shinein(register uint8_t a) {
 	jsr	bportal		; uint8_t iport = y, i_idx, oport, o_idx;
@@ -459,16 +518,6 @@ bindice	.byte	$00,$08,$10,$18	; {0x00,0x08,0x10,0x18, // topmost row of 10
 	.byte	$17,$1f,$27,$2f	;  0x17,0x1f,0x27,0x2f,
 	.byte	$37,$3f,$47,$4f	;  0x30,0x3f,0x47,0x4f}; return y = bindice[y];}
 
-inigrid	lda	#0		;inline inigrid(uint1_t c) {
-	ldy	#GRIDSIZ	; for (register uint8_t y = GRIDSIZ; y; y--) {
--	bcc	+		;  if (c)
-	sta	HIDGRID-1,y	;   HIDGRID[y-1] = 0;
-	bcs	++		;  else
-+	sta	TRYGRID-1,y	;   TRYGRID[y-1] = 0;
-+	dey			;
-	bne	-		; }
-	rts			;} // inigrid()
-
 placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
 	and	#$0f		;   uint8_t colnm /*A0*/, uint8_t rownm /*A1*/,
 	cmp @w	A0FUNCT	;//colnm;   uint8_t elems /*A2*/, uint8_t tint /*A3*/) {
@@ -616,7 +665,6 @@ rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
 +	ldy @w	V0LOCAL	;//next	;
 	bne	----		; }
 rnddone	POPVARS			;
-	rts			;} // rndgrid()
 
 .else
 cangrid	.byte	0|CHAMFTL,	0|SQUARE,	0|CHAMFBL,	BLANK
@@ -647,15 +695,42 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 .endif
 	rts			;} // rndgrid()
 
+ask_key	.byte	SAY_KEY		;
+ask_ans	.byte	SAY_ANS		;
+ask_prt	.byte	SAY_PRT		;
+ask_pek	.byte	SAY_PEK		;
+
+nteract	tay			;void nteract(register uint8_t a, uint4_t arg0){
+	bit	ask_key		;
+	bne	++		;
+	
++	jsrAPCS	hal_inp		;
++	POPVARS			;
+	rts			;
+	
+confirm	ldy	#SAY_KEY	;void confirm(register uint8_t a) {
+	jsr	getchar		; register uint8_t a = getchar();
+	cmp	#'y'		;
+	beq	+		;
+	cmp	#'y'+$20	;
+	beq	+		;
+	ldy	#0		;
+	beq	++		;
++	ldy	#1		; return y = (tolower(a) == 'y') ? 1 : 0;
+	POPVARS			;
+	rts			;} // confirm()
+
 vis_cel	.byte	DRW_CEL		;
+vis_msg	.byte	DRW_MSG		;
+	.byte	0
+vis_mov	.byte	DRW_MOV		;
 vis_try	.byte	DRW_TRY		;
 vis_hid	.byte	DRW_HID		;
-vis_msg	.byte	DRW_MSG		;
 vis_lbl	.byte	DRW_LBL		;
 vis_msh	.byte	DRW_MSH		;
 
-visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint4_t x0,
-	bit	vis_msh		;                                 uint4_t y0) {
+visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint8_t arg0,
+	bit	vis_msh		;                                 uint4_t arg1){
 	beq	+		; if (a & DRW_MSH) {
 	jsrAPCS	hal_msh		;  hal_msh(a);
 	lda @w	V0LOCAL		; }
@@ -1117,36 +1192,10 @@ inputkb
 	POPVARS
 	rts
 
-hal_inp
-
-main	tsx	;//req'd by APCS;int main(void) {
-.if !BASIC
-	lda	#$0f		; // P500 has to start in bank 15
-	sta	$01		; static volatile int execute_bank = 15;
-.endif
-.if BKGRNDC
-	lda	#VIDEOBG	; if (BKGRNDC) // addressable screen
-	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
-.endif
-	lda	#$00		; for (register uint8_t y = ANSWERS; y; y--) {
-	ldy	#ANSWERS	;  // bits 5~0 where a beam into this one exits
--	sta	PORTALS-1,y	;  PORTALS[y-1] = 0; // no beam entry/exit yet
-	sta	PORTINT-1,y	;  // bits 3~0 tint reflected, or bit 4 absorbed
-	dey			;  PORTINT[y-1] = 0; // no beam entry/exit yet
-	bne	-		; }
-	clc	;TRYGRID	;
-	jsr	inigrid		; inigrid(0);
-	jsrAPCS	rndgrid		; rndgrid();
--	ldy	#DRW_ALL|DRW_HID; do { register uint8_t a;
-	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_HID);
-	jsr	tempinp		;  a = tempinp();
-	beq	+		;  if (a)
+hal_inp	jsr	tempinp		;
 	tay			;
-	jsrAPCS	shinein		;  
-	tya			;
-	jsr	tempout		;   tempout(shinein(a));
-	jmp	-		; } while(a);
-+	rts			;} // main()
+	POPVARS			;
+	rts			;
 
 .if SCREENW && SCREENH
 tempinp rts
