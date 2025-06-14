@@ -700,26 +700,28 @@ ask_ans	.byte	SAY_ANS		;
 ask_prt	.byte	SAY_PRT		;
 ask_pek	.byte	SAY_PEK		;
 
-nteract	tay			;void nteract(register uint8_t a, uint4_t arg0){
-	bit	ask_key		;
-	bne	++		;
-	
-+	jsrAPCS	hal_inp		;
-+	POPVARS			;
+nteract	bit	ask_key		;void nteract(register uint8_t a, uint4_t arg0){
+	beq	+		;
+	jsrAPCS	hal_key		;
+	POPVARS			;
 	rts			;
 	
-confirm	ldy	#SAY_KEY	;void confirm(register uint8_t a) {
-	jsr	getchar		; register uint8_t a = getchar();
-	cmp	#'y'		;
++	jsrAPCS	hal_inp		;
+	POPVARS			;
+	rts			;
+	
+confirm	ldy	#SAY_KEY	;void confirm(register uint8_t a) { // FIXME: add visualz DRW_MSG
+	jsrAPCS	nteract		;
+	cpy	#'y'		;
 	beq	+		;
-	cmp	#'y'+$20	;
+	cpy	#'y'+$20	;
 	beq	+		;
 	ldy	#0		;
 	beq	++		;
 +	ldy	#1		; return y = (tolower(a) == 'y') ? 1 : 0;
-	POPVARS			;
++	POPVARS			;
 	rts			;} // confirm()
-
+	
 vis_cel	.byte	DRW_CEL		;
 vis_msg	.byte	DRW_MSG		;
 	.byte	0
@@ -1191,6 +1193,10 @@ hal_cel
 inputkb
 	POPVARS
 	rts
+
+hal_key	jsr	getchar		; register uint8_t a = getchar();
+	POPVARS			;
+	rts			;
 
 hal_inp	jsr	tempinp		;
 	tay			;
