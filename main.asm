@@ -204,6 +204,7 @@ main	tsx	;//req'd by APCS;int main(void) {
 	bne	++++		;    exit(y);
 	beq	-		;   else continue;
 +	bpl	+		;  } else if (OTHRVAR & 0x80) { // cell check
+
 +	bvc	+		;  } else if (OTHRVAR & 0x40) { // special input  
 +	jsrAPCS	shinein		;  } else { // portal check
 	tya			;
@@ -664,10 +665,10 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 .endif
 	rts			;} // rndgrid()
 
+.include "obstacle.asm"
 .include "stdlib.asm"
 .include "visualz.asm"
 .include "nteract.asm"
-.include "obstacle.asm"
 
 pre_end
 .align $10			;//FIXME:unnecessary for production

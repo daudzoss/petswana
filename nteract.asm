@@ -46,8 +46,7 @@ hal_key	jsr	getchar		; register uint8_t a = getchar();
 	POPVARS			;
 	rts			;
 
-hal_inp	jsr	tempinp		;
-	tay			;
+hal_inp	jsrAPCS	tempinp		;
 	POPVARS			;
 	rts			;
 
@@ -55,56 +54,120 @@ hal_inp	jsr	tempinp		;
 tempinp rts
 .else
 tempinp	lda	#$0d		;uint8_t tempinp(void) {
+	pha	;//VOLOCAL=prtal; uint8_t prtal;
+	pha	;//V1LOCAL=cella; uint8_t cella;
+	pha	;//V2LOCAL=celln; uint8_t celln;
 	jsr	putchar		; putchar('\n');
-	lda	#'?'		;
-	jsr	putchar		; putchar('?');
--	jsr	getchar		; while (toupper(a = getchar()) != 'x') {
+-	lda	#'?'		;
+	jsr	putchar		;
+	jsr	getchar		;
 	tya			;
 	cmp	#'x'		;
-	beq	++++		;
-	cmp	#'x'+$20	;
-	beq	++++		;
+	bne	+		;
+	jmp	tempinr		;
++	cmp	#'x'+$20	;
+	bne	+		;
+	jmp	tempinr		; while (putchar('?'), ((a=getchar()) != 'x')) {
++	cmp	#'@'		;
+	beq	++++		;  if (tolower(a) != '@') {// a~r or 1~18 portal
 	cmp	#'1'		;
 	bcc	-		;
-	bne	++		;  if (a == '1') {
-	jsr	putchar		;   putchar(a);
--	jsr	getchar		;   do {
+	bne	++		;   if (a == '1') {
+	jsr	putchar		;    putchar(a);
+	jsr	getchar		;
 	tya			;    a = getchar();
 	cmp	#$0d		;
 	bne	+		;    if (a == '\n')
-	lda	#1		;
-	rts			;     return 1; // only time a Return is needed
+	ldy	#1		;
+	jmp	tempinr		;     y = 1; // only time a Return needed
 +	cmp	#'0'		;
 	bcc	-		;    else if (a >= '0'
 	cmp	#'8'+1		;             &&
 	bcs	-		;             a <= '8') {
-	pha			;
+	sta @w	V0LOCAL	;//prtal;
 	jsr	putchar		;     putchar(a);
-	pla			;
-	sec			;     return a-'0' + 10;
-	sbc	#'0'-10		;    }
-	rts			;   } while (1);
+	lda @w	V0LOCAL	;//prtal;
+	sec			;
+	sbc	#'0'-$0a	;
+	tay			;
+	jmp	tempinr		;     return y = a-'0' + 10;
 +	cmp	#'9'+1		;
-	bcs	+		;  } else if (a > '1' && a <= '9') {
-	pha			;
-	jsr	putchar		;   putchar(a);
-	pla			;
+	bcs	+		;   } else if (a > '1' && a <= '9') {
+	sta @w	V0LOCAL	;//prtal;
+	jsr	putchar		;    putchar(a);
+	lda @w	V0LOCAL	;//prtal;
 	sec			;
 	sbc	#'0'		;
-	rts			;   return a-'0';
+	tay			;
+	jmp	tempinr		;    return y = a-'0';
 +	and	#%0101 .. %1111	;
 	cmp	#'a'		;
-	bcc	--		;  } else if (toupper(a) >= 'a'
-	cmp	#'s'		;             &&
-	bcs	--		;             tolower(a) <= 'r') {
-	pha			;
-	jsr	putchar		;   putchar(a);
-	pla			;
+	bcc	-		;   } else if (toupper(a) >= 'A'
+	cmp	#'r'+1		;              &&
+	bcs	-		;              toupper(a) <= 'R') {
+	sta @w	V0LOCAL	;//prtal;
+	jsr	putchar		;    putchar(a);
+	lda @w	V0LOCAL	;//prtal;
 	sec			;
 	sbc	#'a'		;
 	clc			;
-	adc	#$21		;   return a-'a' + 0x21;
-	rts			; }
-+	lda	#0		; return 0;
+	adc	#$21		;    return y = a-'A' + 0x21;
+	tay			;   }
+	bne	tempinr		;  } else { // @ precedes peek at a~h,1~10 cell
++	jsr	putchar		;   putchar('@');
+	jsr	getchar		;
+	tya			;   a = getchar();
+	cmp	#'a'		;
+	bcs	+		;
+	jmp	-		;
++	cmp	#'i'+$20	;
+	bcc	+		;   if ((a < 'A') || (a >= 'i'))
+	jmp	-		;    continue;
++	and	#%0101 .. %1111	;   a &= 0x5f; // toupper()
+	cmp	#'i'		;
+	bcc	+		;   if (toupper(a) >= 'I')
+	jmp	-		;    continue;
++	sta @w	V1LOCAL	;//cella;
+	jsr	putchar		;   putchar(a);
+	lda @w	V1LOCAL	;//cella;
+	sec			;
+	sbc	#'a'		;
+	sta @w	V1LOCAL	;//cella;   cella = a - 'a'; // now in range 0~7
+	jsr	getchar		;
+	tya			;   a = getchar();
+	cmp	#'9'+1		;
+	bcc	+		;
+	jmp	-		;
++	cmp	#'1'		;
+	bcs	+		;   if ((a < '1') || (a > '9'))
+	jmp	-		;    continue;
+	bne	++		;   else if (a == '1') {
+	jsr	putchar		;    putchar(a);
+	jsr	getchar		;    a = getchar();
+	tya			;
+	cmp	#$0d		;
+	beq	+		;    if (a != '\n') // indicates yes, play a one
+	cmp	#'0'		;     if (a != '0')
+	beq	+		;      continue;
+	jmp	-		;
++	lda	#'9'+1		;    a = '1'+9;
++	sta @w	V2LOCAL	;//celln;   }
+	jsr	putchar		;   putchar(a);
+	lda @w	V2LOCAL	;//celln;
+	sec			;
+	sbc	#'1'		;   a -= '1'; // now in range 0~9
+	ldy	#3		;
+-	asl			;
+	dey			;
+	bne	-		;   a <<= 3; // now 0,8,16,24,32,40,48,56,64,72
+	ora	#$80		;
+	ora @w	V1LOCAL	;//cella;   
+	sta @w	V2LOCAL	;//celln;   celln = 0x80 | a | cella;
+	jsr	putchar		;   putchar(a);
+	lda @w	V2LOCAL	;//celln;
+	tay			;
+	bne	tempinr		;
++	ldy	#0		;
+tempinr	POPVARS			;
 	rts			;} // tempinp()
 .endif
