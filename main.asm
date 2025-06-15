@@ -204,13 +204,26 @@ main	tsx	;//req'd by APCS;int main(void) {
 	bne	++++		;    exit(y);
 	beq	-		;   else continue;
 +	bpl	+		;  } else if (OTHRVAR & 0x80) { // cell check
-
+; jsrAPCS echomov
+ jmp -
 +	bvc	+		;  } else if (OTHRVAR & 0x40) { // special input  
+; jsrAPCS echomov
+ jmp -
 +	jsrAPCS	shinein		;  } else { // portal check
 	tya			;
 	jsr	tempout		;   tempout(shinein(a));
 	jmp	-		; } while(a);
 +	rts			;} // main()
+
+.if 0
+echomov	pha
+	lda	#$0d
+	jsr	putchar
+	ldy @w	V0LOCAL
+	jsrAPCS	puthexd
+	POPVARS
+	rts
+.endif
 
 iniport	lda	#$00		;inline void iniport(void) {
 	ldy	#ANSWERS	; for (register uint8_t y = ANSWERS; y; y--) {

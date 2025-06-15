@@ -77,7 +77,7 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	bne	++		;
 +	jmp	tempinr		; while (putchar('?'), ((a=getchar()) != 'x')) {
 +	cmp	#'@'		;
-	beq	++++		;  if (tolower(a) != '@') {// a~r or 1~18 portal
+	beq	++++		;  if (a != '@') { // portal of form a~r or 1~18
 	cmp	#'1'		;
 	bcc	-		;
 	bne	++		;   if (a == '1') {
@@ -149,21 +149,23 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 +	cmp	#'1'		;
 	bcs	+		;   if ((a < '1') || (a > '9'))
 	jmp	-		;    continue;
-	sta @w	V2LOCAL	;//celln;
++	sta @w	V2LOCAL	;//celln;
 	jsr	putchar		;   putchar(a);
 	lda @w	V2LOCAL	;//celln;
 	cmp	#'1'		;
-	bne	++		;   else if (a == '1') {
+	bne	+++		;   else if (a == '1') {
 	jsr	getchar		;    a = getchar();
 	tya			;
-	cmp	#$0d		;
-	beq	+		;    if (a != '\n') // indicates yes, play a one
-	cmp	#'0'		;     if (a != '0')
-	beq	+		;      continue;
-	jmp	-		;
-+	lda	#'0'		;
-	jsr	putchar		;    putchar('0');
-	lda	#'9'+1		;    a = '1'+9;
+	cmp	#'0'		;
+	bne	+		;    if (a == '0') {
+	lda	#'0'		;
+	jsr	putchar		;     putchar('0');
+	lda	#'9'+1		;     a = '1'+9;
+	bne	+++		;
++	cmp	#$0d		;
+	beq	+		;    } else if (a != '\n')
+	jmp	-		;     continue;
++	lda	#'1'		;    else a = '1';
 +	sec			;   }
 	sbc	#'1'		;   a -= '1'; // now in range 0~9
 	ldy	#3		;
@@ -172,11 +174,7 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	bne	-		;   a <<= 3; // now 0,8,16,24,32,40,48,56,64,72
 	ora	#$80		;
 	ora @w	V1LOCAL	;//cella;   
-	sta @w	V2LOCAL	;//celln;   celln = 0x80 | a | cella;
-	jsr	putchar		;   putchar(a);
-	lda @w	V2LOCAL	;//celln;
 	tay			;
-	bne	tempinr		;
 tempinr	POPVARS			;
 	rts			;} // tempinp()
 .endif
