@@ -62,12 +62,20 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	jsr	putchar		;
 	jsr	getchar		;
 	tya			;
+	ldy	#0		;
 	cmp	#'x'		;
-	bne	+		;
-	jmp	tempinr		;
-+	cmp	#'x'+$20	;
-	bne	+		;
-	jmp	tempinr		; while (putchar('?'), ((a=getchar()) != 'x')) {
+	beq	+		;
+	cmp	#'x'+$20	;
+	beq	+		;
+.if 1
+	cmp	#'x'+$40	;
+	beq	+		;
+	cmp	#'x'+$60	;
+	beq	+		;
+	cmp	#'x'+$80	; // why, c16, why is 'x' 0x58 but 'X' 0xd8?!?
+.endif
+	bne	++		;
++	jmp	tempinr		; while (putchar('?'), ((a=getchar()) != 'x')) {
 +	cmp	#'@'		;
 	beq	++++		;  if (tolower(a) != '@') {// a~r or 1~18 portal
 	cmp	#'1'		;
@@ -141,8 +149,11 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 +	cmp	#'1'		;
 	bcs	+		;   if ((a < '1') || (a > '9'))
 	jmp	-		;    continue;
+	sta @w	V2LOCAL	;//celln;
+	jsr	putchar		;   putchar(a);
+	lda @w	V2LOCAL	;//celln;
+	cmp	#'1'		;
 	bne	++		;   else if (a == '1') {
-	jsr	putchar		;    putchar(a);
 	jsr	getchar		;    a = getchar();
 	tya			;
 	cmp	#$0d		;
@@ -150,11 +161,10 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	cmp	#'0'		;     if (a != '0')
 	beq	+		;      continue;
 	jmp	-		;
-+	lda	#'9'+1		;    a = '1'+9;
-+	sta @w	V2LOCAL	;//celln;   }
-	jsr	putchar		;   putchar(a);
-	lda @w	V2LOCAL	;//celln;
-	sec			;
++	lda	#'0'		;
+	jsr	putchar		;    putchar('0');
+	lda	#'9'+1		;    a = '1'+9;
++	sec			;   }
 	sbc	#'1'		;   a -= '1'; // now in range 0~9
 	ldy	#3		;
 -	asl			;
@@ -167,7 +177,6 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	lda @w	V2LOCAL	;//celln;
 	tay			;
 	bne	tempinr		;
-+	ldy	#0		;
 tempinr	POPVARS			;
 	rts			;} // tempinp()
 .endif
