@@ -13,31 +13,39 @@ ask_prt	.byte	SAY_PRT		;
 ask_pek	.byte	SAY_PEK		;
 
 nteract	bit	ask_key		;void nteract(register uint8_t a, uint4_t arg0){
-	beq	+		;
+	beq	+		; if (ask_key & SAY_KEY) {
 	jsrAPCS	hal_key		;
-	POPVARS			;
-	rts			;
+	POPVARS			;  return hal_key();
+	rts			; } else {
++	jsrAPCS	hal_inp		;  return hal_inp();
+	POPVARS			; }
+	rts			;}
 	
-+	jsrAPCS	hal_inp		;
-	POPVARS			;
-	rts			;
+confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visualz DRW_MSG
+	POPVARS			; return hal_cnf(a);
+	rts			;} // confirm()
 	
-reallyq	.null	"really quit?"
-confirm	stckstr	reallyq,confirm	;
-	ldy	#$ff		;
-	jsrAPCS	putstck,lda,#0	;
-	ldy	#SAY_KEY	;void confirm(register uint8_t a) { // FIXME: add visualz DRW_MSG
+reallyq	.null	"really quit?"	;static char reallyq[] = "really quit?";
+hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
+	ldy	#$ff		; stckstr(reallyq, reallyq+sizeof(reallyq));
+	jsrAPCS	putstck,lda,#0	; putstck(0, 255, reallyq); // print from stack
+	POPVARS			;
+	DONTRTS			;
+	ldy	#SAY_KEY	;
 	jsrAPCS	nteract		;
-	cpy	#'y'		;
+	tya			;
+	pha			; uint8_t key = nteract(SAY_KEY);
+	jsr	putchar		; putchar(key);
+	lda @w	V0LOCAL	;//key	;
+	cmp	#'y'		;
 	beq	+		;
-	cpy	#'y'+$20	;
+	cmp	#'y'+$20	;
 	beq	+		;
 	ldy	#0		;
 	beq	++		;
-+	ldy	#1		; return y = (tolower(a) == 'y') ? 1 : 0;
++	ldy	#1		; return y = (tolower(key) == 'y') ? 1 : 0;
 +	POPVARS			;
-	rts			;} // confirm()
-	
+	rts			;} // hal_cnf()
 
 inputkb
 	POPVARS

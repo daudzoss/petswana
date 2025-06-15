@@ -148,21 +148,21 @@ stckstr	.macro	frstchr,lastchr	;#define stckstr(frstchr,lastchr) \
 .if \lastchr < \frstchr
 .error "negative-length string specified for stacking"
 .elsif \lastchr-\frstchr <= $50
-	lda	 #0		;
-	pha			;
-	ldy	#\lastchr-\frstchr;
--	lda	\frstchr-1,y	;
-	pha			;
-	dey			;
-	bne	-		;
+	lda	 #0		;#stckstr(frstchr,lastchr)                     \
+	pha			; uint8_t terminator = 0;                      \
+	ldy	#\lastchr-\frstchr;                                            \
+-	lda	\frstchr-1,y	;                                              \
+	pha			;                                              \
+	dey			;                                              \
+	bne	-		; uint8_t from_end = (char[]) frstchr;
 .else
 .error "let's not burn that much of the system stack on printing one string"
 .endif
-	.endm			;
+	.endm			;// stckstr // suggest caller do POPVARS:DONTRTN
 
 putstck	pha		;//start;void putstck(register uint8_t a, // usually $00
-	txa			;             register uint8_t y) {//usually $ff
-	clc			;
+	txa			;             register uint8_t y, // usually $ff
+	clc			;             const uint8_t stacked[]) {
 	adc @w	V0LOCAL	;//start;
 ;	bcs	putserr		;
 	sta @w	V0LOCAL	;//start; start = x + a;
@@ -173,7 +173,7 @@ putstck	pha		;//start;void putstck(register uint8_t a, // usually $00
 	lda	#$ff		; if (stop > 0x1ff)
 +	pha		;//stop	;  stop = 0x01ff;
 -	ldy @w	V0LOCAL	;//start; for (y = start; y <= stop; y++) {
-	lda	$0102,y		;  a = ((uint8_t*)0x100)[y];
+	lda	$0102,y		;  a = stacked[y];
 	beq	+		;  if (a)
 	jsr	putchar		;   putchar(a);
 	inc @w	V0LOCAL	;//start;  else
