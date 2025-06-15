@@ -191,8 +191,8 @@ main	tsx	;//req'd by APCS;int main(void) {
 	sec			;
 	jsr	inigrid		; inigrid(1 /* HIDGRID */);
 	jsrAPCS	rndgrid		; rndgrid();
--	ldy	#DRW_ALL|DRW_HID; do {
-	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_HID);
+-	ldy	#DRW_ALL|DRW_TRY|DRW_HID; do {
+	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_TRY|DRW_HID);
 	ldy	#SAY_ANY	;
 	jsrAPCS	nteract		;  
 	sty	OTHRVAR		;  OTHRVAR = nteract(SAY_ANY);
@@ -203,9 +203,10 @@ main	tsx	;//req'd by APCS;int main(void) {
 	tya			;   if (y)
 	bne	++++		;    exit(y);
 	beq	-		;   else continue;
-+	bpl	+		;  } else if (OTHRVAR & 0x80) { // cell check
++	bpl	+		;  } else if (OTHRVAR & SAY_PEK) { // cell check
 ; jsrAPCS echomov
- jmp -
+	jsrAPCS	peekcel		;
+	jmp	-		;
 +	bvc	+		;  } else if (OTHRVAR & 0x40) { // special input  
 ; jsrAPCS echomov
  jmp -
@@ -215,6 +216,13 @@ main	tsx	;//req'd by APCS;int main(void) {
 	jmp	-		; } while(a);
 +	rts			;} // main()
 
+peekcel	and	#%0111 .. %1111	;
+	tay			;
+	lda	TRYGRID,y	;
+	ora	#%0000 .. %1000	;
+	sta	TRYGRID,y	;
+	POPVARS			;
+	rts			;
 .if 0
 echomov	pha
 	lda	#$0d
