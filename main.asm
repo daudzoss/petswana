@@ -295,13 +295,6 @@ propag8	tya			;  register uint1_t c;
 	jmp	deadend		;  if ((HIDGRID[y] >> 4) & RUBOUT == 0) { // on
 +	beq	+		;   if (HIDGRID[y]) { // hit something in cell y
 	sta @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];//H nyb tint, L nyb shape
-.if 0
-	ldy @w	V1LOCAL	;//wavef;
-	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
-	lda	#','		;
-	jsr	putchar		;
-	lda @w	V3LOCAL	;//bump	;    bump = HIDGRID[y];//H nyb tint, L nyb shape
-.endif
 	lsr			;
 	lsr			;
 	lsr			;
@@ -338,11 +331,6 @@ propag8	tya			;  register uint1_t c;
 	ror			;
 	eor @w	V1LOCAL	;//wavef;    // deflected using xor of bounces[] element
 	sta @w	V1LOCAL	;//wavef;    wavef^=((bounces[bump&7]>>(oldir*2))&3)<<6;
-.if 0
-	tay			;
-	jsrAPCS	putwave		;    y = putwave(wavef); // y preserved
-	jsr	getchar		;    getchar(); // dealing with infinite bounces
-.endif
 	ldy @w	V2LOCAL	;//oldy	;    y = oldy;
 +	tya			;   }
 	lsr			;   c = y & 1;
@@ -551,12 +539,6 @@ placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
 	pha	;//V4LOCAL=temp	; uint8_t temp;
 -	lda	obstcel,y	; for (yelem = head; yelem < ovrbd; y++) {
 	sta @w	V4LOCAL	;//temp	;  temp = obstcel[yelem];
-.if 0
- jsrAPCS putwave
- lda #','
- jsr putchar
- lda @w V4LOCAL
-.endif
 	and	#%0001 .. %1111 ;
 	clc			;
 	adc @w	V0LOCAL	;//ygrid;
@@ -579,22 +561,7 @@ placeit	lda	obstcel,y	;register int8_t placeit(register uint8_t y,
 	ldy	#0		; return 0; // success
 preturn	POPVARS			;
 express	rts			;punwind:
-punwind
-.if 0
- pha
- jsrAPCS putwave
- lda #':'
- jsr putchar
- pla
- tay
- jsrAPCS putwave
- jsrAPCS hal_hid
- lda #$55
- pha
- brk
- jsr	getchar
-.endif
-	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
+punwind	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
 	tya			;  register uint8_t y;
 	cmp @w	V1LOCAL	;//head	;
 	beq	preturn		;
@@ -697,8 +664,9 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 .endif
 	rts			;} // rndgrid()
 
+.include "stdlib.asm"
 .include "visualz.asm"
-.include "nteract.asm"	
+.include "nteract.asm"
 .include "obstacle.asm"
 
 pre_end

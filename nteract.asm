@@ -1,12 +1,3 @@
-getchar	txa			;inline uint8_t getchar(void) {
-	pha			; // x stashed on stack, by way of a
--	jsr	$ffe4		; do {
-	beq	-		;  y = (* ((*)(void)) 0xffe4)();
-	tay			; } while (!y);
-	pla			; return y;
-	tax			; // x restored from stack, by way of a
-	rts			;} // getchar()
-
 ask_key	.byte	SAY_KEY		;
 ask_ans	.byte	SAY_ANS		;
 ask_prt	.byte	SAY_PRT		;
@@ -19,12 +10,12 @@ nteract	bit	ask_key		;void nteract(register uint8_t a, uint4_t arg0){
 	rts			; } else {
 +	jsrAPCS	hal_inp		;  return hal_inp();
 	POPVARS			; }
-	rts			;}
-	
+	rts			;} // nteract()
+
 confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visualz DRW_MSG
 	POPVARS			; return hal_cnf(a);
 	rts			;} // confirm()
-	
+
 reallyq	.null	"really quit?"	;static char reallyq[] = "really quit?";
 hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
 	ldy	#$ff		; stckstr(reallyq, reallyq+sizeof(reallyq));
@@ -67,9 +58,11 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	jsr	putchar		; putchar('\n');
 	lda	#'?'		;
 	jsr	putchar		; putchar('?');
--	jsr	getchar		; while ((a = getchar()) != DEL_KEY) {
+-	jsr	getchar		; while (toupper(a = getchar()) != 'x') {
 	tya			;
-	cmp	#$14		;
+	cmp	#'x'		;
+	beq	++++		;
+	cmp	#'x'+$20	;
 	beq	++++		;
 	cmp	#'1'		;
 	bcc	-		;
@@ -115,4 +108,3 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 +	lda	#0		; return 0;
 	rts			;} // tempinp()
 .endif
-	
