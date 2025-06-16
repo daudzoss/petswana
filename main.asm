@@ -165,7 +165,7 @@ SAY_ANS	= 1<<5			; returns %01 .. special code %111111, or $00
 SAY_PRT	= 1<<6			; returns %00 .. portal_1~50, or $00 for quit
 SAY_PEK	= 1<<7			; returns %1 .. cell_0~79, or $00 for quit
 SAY_ANY = SAY_PEK|SAY_PRT|SAY_ANS
-
+	;; special codes here
 SUBMITG	= %01 .. %111111	; turn in answer for grading, please
 
 DRW_CEL	= 1<<0			; // A0: object, A1: cell 0~79
@@ -177,6 +177,8 @@ DRW_LBL	= 1<<6			;no args
 DRW_MSH	= 1<<7			;no args; also draws screen decorations if any
 DRW_ALL	= DRW_MSH|DRW_LBL	;
 DRW_BTH	= DRW_HID|DRW_TRY	;
+
+.include "stdlib.asm"
 
 main	jsrAPCS	b2basic+1	;int main(void) {
 b2basic	rts			;
@@ -212,15 +214,19 @@ b2basic	rts			;
 	bne	++		;   case SUBMITG:
 	jsrAPCS	chkgrid		;
 	tya			;
-	bne	+		;    if (chkgrid(y) == 0)
-	;; guess-correct message
-	;lda	#1	    	;
-	jmp	mainend	    	;     exit(1);
-+	;; guess incorrect
-	dec @w V0LOCAL	;//remng;
-	bne	-		;    else if (--remnng == 0)
-	;lda	#0		;
-	jmp	mainend		;     exit(0);
+	bne	+		;    if (chkgrid(y) == 0) {
+	stckstr	youwin,youwon	;     stckstr(youwin, youwin+sizeof(youwin));
+	ldy	#DRW_MSG	;
+	jsrAPCS	visualz		;     visualz(DRW_MSG);
+	ldy	#1	    	;
+	jmp	mainend	    	;     exit(y = 1);
++	dec @w V0LOCAL	;//remng;
+	bne	-		;    } else if (--remnng == 0) {
+	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
+	ldy	#DRW_MSG	;
+	jsrAPCS	visualz		;     visualz(DRW_MSG);
+	ldy	#0		;     exit(y = 0);
+	jmp	mainend		;    }
 +	jmp	-		;   }
 +	jsrAPCS	shinein		;  } else { // portal check
 	tya			;   tempout(shinein(a)); // FIXME: add msg
@@ -229,6 +235,11 @@ b2basic	rts			;
 mainend	POPVARS			;
 	rts			;} // main()
 
+youwin	.null	"grid correct, you win!"
+youwon
+youlose	.null	"you lose after guess 2"
+youlost	
+	
 initize	jsr	iniport		;void initize(void) {
 	clc			; iniport();
 	jsr	inigrid		; inigrid(0 /* TRYGRID */);
@@ -719,7 +730,6 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 	rts			;} // rndgrid()
 
 .include "obstacle.asm"
-.include "stdlib.asm"
 .include "visualz.asm"
 .include "nteract.asm"
 

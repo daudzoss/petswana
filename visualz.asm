@@ -10,11 +10,6 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	beq	+		; if (what) {
 	jsrAPCS	hal_lbl		;  hal_lbl(what);
 +	lda @w	V0LOCAL		; }
-	and	#DRW_MSG	;
-	sta @w	V1LOCAL	;//what	; what = whata & DRW_MSG;
-	beq	+		; if (what) {
-	jsrAPCS	hal_msg		;  hal_msg(what);
-+	lda @w	V0LOCAL		; }
 	and	#DRW_HID	;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_HID;
 	beq	+		; if (what) {
@@ -33,6 +28,12 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	lda @w	A0FUNCT	;//arg0	;
 	sta @w	V1LOCAL	;//x0	;
 	jsrAPCS	hal_cel		;  hal_cel(y, x0, y0);
++	lda @w	V0LOCAL		; }
+	and	#DRW_MSG	; what = whata & DRW_MSG;
+	beq	+		; if (what) {
+	POPVARS			;
+	DONTRTS			;
+	jmp	hal_msg		;  hal_msg(what); // needs direct A0FUNCT access
 +	POPVARS			; }
 	rts			;} // visualz()
 
@@ -426,7 +427,10 @@ dendrow
 	POPVARS			;
 	rts			;} // putgrid
 	
-hal_msg
+hal_msg	ldy	#$ff		;void hal_msg(void) {
+	lda	#0		; putstck(0,255); // needs direct A0FUNCT access
+	jmp	putstck		;} // hal_msg()
+	
 hal_lbl
 hal_msh
 	rts			;
