@@ -94,7 +94,7 @@ petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
 	.byte	($7d<<1)|1	;                     (0x7d<<1)|1, // if BOREDTB
 	.byte	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
 	.byte	($76<<1)	;                     (0x76<<1)|0, // if SOBLANK
-	.byte	($71<<1)	;                     (0x71<<1)|0};// if SOFILLD
+	.text	x"e2" x 7	;                     (0x71<<1)|0,...};//SOFILLD
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
 
@@ -184,6 +184,7 @@ rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	jsr	putchar		; putchar(rj);                                 \
 	.endm			;} // rule
 
+pokthru	.byte	(SOBLANK&SOFILLD)
 hal_hid				;void hal_hid(uint8_t what) { hal_try(what); }
 hal_try	pha	;//V0LOCAL=i	;void hal_try(uint8_t what) { // DRW_HID,DRW_TRY
 	pha	;//V1LOCAL=r	;
@@ -268,16 +269,20 @@ dnxtcel	adc	#GRIDH		;   a = ' ';
 	sta @w	V0LOCAL	;//i	;
 	lda @w	A0FUNCT	;//what	;
 	and	#DRW_TRY	;
-	beq	dhidden		;   if (what & DRW_TRY)
+	beq	dhidden		;   if (what & DRW_TRY) {
 	lda	TRYGRID,y	;    temp = TRYGRID[y];
-	jmp	deither		;
+	bit	pokthru		;    // special cases are clue symbols SOBLANK,
+	beq	deither		;    // SOFILLD which hint at a HIDGRID secret
+	lda	HIDGRID,y	;    if (temp & pokthru)
+	ora	pokthru		;     temp = HIDGRID[y] | pokthru;
+	bne	deither		;
 dhidden	lda @w	A0FUNCT	;//what	b
 	and	#DRW_HID	;
-	beq	dgerror		;   else if (what & DRW_HID)
+	beq	dgerror		;   } else if (what & DRW_HID)
 	lda	HIDGRID,y	;    temp = HIDGRID[y];
 	jmp	deither		;
 dgerror	brk			;   else
-	brk			;    exit(err);
+	brk			;    exit(dgerror);
 deither	sta @w	V2LOCAL	;//temp	;
 	bpl	+		;   if (temp < 0) { // absorber, drawn as black
 	lda	petscii+$10	;
