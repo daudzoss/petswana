@@ -166,17 +166,22 @@ SAY_PRT	= 1<<6			; returns %00 .. portal_1~50, or $00 for quit
 SAY_PEK	= 1<<7			; returns %1 .. cell_0~79, or $00 for quit
 SAY_ANY = SAY_PEK|SAY_PRT|SAY_ANS
 
+SUBMITG	= %01 .. %111111	; turn in answer for grading, please
+
 DRW_CEL	= 1<<0			; // A0: object, A1: cell 0~79
 DRW_MSG	= 1<<1			; // A0: '\0'-terminated character string?!?
 DRW_MOV	= 1<<3			; // A0: first move index to draw
-DRW_TRY	= 1<<4			;no args
-DRW_HID	= 1<<5			;no args
+DRW_TRY	= 1<<4			;no args?
+DRW_HID	= 1<<5			;no args?
 DRW_LBL	= 1<<6			;no args
 DRW_MSH	= 1<<7			;no args; also draws screen decorations if any
 DRW_ALL	= DRW_MSH|DRW_LBL	;
+DRW_BTH	= DRW_HID|DRW_TRY	;
 
-
-main	tsx	;//req'd by APCS;int main(void) {
+main	jsrAPCS	b2basic+1	;int main(void) {
+b2basic	rts			;
+	lda	#2		;
+	pha	;//V0LOCAL	; uint8_t remng = 2; // guesses remaining
 .if !BASIC
 	lda	#$0f		; static volatile uint8_t execute_bank* = 0x01;
 	sta	$01		; *execute_bank = 15;// P500 runs in system bank
@@ -186,29 +191,43 @@ main	tsx	;//req'd by APCS;int main(void) {
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
 	jsrAPCS	initize		; initize(); // portals, grids
--	ldy	#DRW_ALL|DRW_TRY|DRW_HID; do {
-	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_TRY|DRW_HID);
+-	ldy	#DRW_ALL|DRW_BTH; do {
+	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY|DRW_HID);
 	ldy	#SAY_ANY	;
-	jsrAPCS	nteract		;  
-	sty	OTHRVAR		;  OTHRVAR = nteract(SAY_ANY);
+	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
+	sty	OTHRVAR		;
 	lda	#$ff		;
 	bit	OTHRVAR		;   
-	bne	+		;  if (OTHRVAR == 0) { // user quit
+	bne	+		;  if (y == 0) { // user quit
 	jsrAPCS	confirm		;   register uint8_t y = confirm();
-	tya			;   if (y)
-	bne	++++		;    exit(y);
-	beq	-		;   else continue;
-+	bpl	+		;  } else if (OTHRVAR & SAY_PEK) { // cell check
+	tya			;
+	beq	-		;   if (y)
+	lda	#0		;
+	beq	mainend		;    exit(0);
++	bpl	+		;  } else if (y & SAY_PEK) { // cell check
 	jsrAPCS	peekcel		;   peekcel(y); // FIXME: add msg
-	jmp	-		;   continue;
-+	bvc	+		;  } else if (OTHRVAR & 0x40) { // special input  
-	jsrAPCS	special		;   special(y);
-	jmp	-		;   continue;
+	jmp	-		;
++	bvc	+++		;  } else if (y & 0x40) { // special input  
+	cpy	#SUBMITG	;   switch (y) {
+	bne	++		;   case SUBMITG:
+	jsrAPCS	chkgrid		;
+	tya			;
+	bne	+		;    if (chkgrid(y) == 0)
+	;; guess-correct message
+	;lda	#1	    	;
+	jmp	mainend	    	;     exit(1);
++	;; guess incorrect
+	dec @w V0LOCAL	;//remng;
+	bne	-		;    else if (--remnng == 0)
+	;lda	#0		;
+	jmp	mainend		;     exit(0);
++	jmp	-		;   }
 +	jsrAPCS	shinein		;  } else { // portal check
 	tya			;   tempout(shinein(a)); // FIXME: add msg
 	jsr	tempout		;  }
 	jmp	-		; } while (a);
-+	rts			;} // main()
+mainend	POPVARS			;
+	rts			;} // main()
 
 initize	jsr	iniport		;void initize(void) {
 	clc			; iniport();
@@ -219,8 +238,15 @@ initize	jsr	iniport		;void initize(void) {
 	POPVARS			;
 	rts			;} // initize()
 
-special	POPVARS
-	rts
+chkgrid	ldy	#GRIDSIZ	;inline register unit8_t chkgrid(void) {
+-	lda	TRYGRID-1,y	; for (uint8_t y = GRIDSIZ; y; y--) {
+	and	#~(SOBLANK)	;  register uint8_t a = TRYGRID[y-1] & 0xf7;
+	cmp	HIDGRID-1,y	;  if (HIDGRID[y-1] != a) 
+	bne	+		;   break;
+	dey			;  // bit 3 was any hint revealed, not our guess
+	bne	-		; }
++	POPVARS			; return y; // 0 for perfect match
+	rts			;} // chkgrid()
 
 peekcel	and	#%0111 .. %1111	;
 	tay			;

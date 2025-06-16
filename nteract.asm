@@ -76,8 +76,22 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 .endif
 	bne	++		;
 +	jmp	tempinr		; while (putchar('?'), ((a=getchar()) != 'x')) {
++	cmp	#'s'		;
+	beq	+		;
+	cmp	#'s'+$20	;
+	beq	+		;
+.if 1
+	cmp	#'s'+$40	;
+	beq	+		;
+	cmp	#'s'+$60	;
+	beq	+		;
+	cmp	#'s'+$80	; // why, c16, why is 's' 0x53 but 'S' 0xd3?!?
+.endif
+	bne	++		;  if (tolower(a) == 's')
++	ldy	#SUBMITG	;
+	jmp	tempinr		;   return y = SUBMITG; // submit grid for grade
 +	cmp	#'@'		;
-	beq	++++		;  if (a != '@') { // portal of form a~r or 1~18
+	beq	tempina		;  else if (a != '@') { // portal as A~R or 1~18
 	cmp	#'1'		;
 	bcc	-		;
 	bne	++		;   if (a == '1') {
@@ -110,10 +124,12 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	jmp	tempinr		;    return y = a-'0';
 +	and	#%0101 .. %1111	;
 	cmp	#'a'		;
-	bcc	-		;   } else if (toupper(a) >= 'A'
-	cmp	#'r'+1		;              &&
-	bcs	-		;              toupper(a) <= 'R') {
-	sta @w	V0LOCAL	;//prtal;
+	bcs	+		;
+	jmp	-		;   } else if (toupper(a) >= 'A'
++	cmp	#'r'+1		;              &&
+	bcc	+		;
+	jmp	-		;              toupper(a) <= 'R') {
++	sta @w	V0LOCAL	;//prtal;
 	jsr	putchar		;    putchar(a);
 	lda @w	V0LOCAL	;//prtal;
 	sec			;
@@ -122,7 +138,7 @@ tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	adc	#$21		;    return y = a-'A' + 0x21;
 	tay			;   }
 	bne	tempinr		;  } else { // @ precedes peek at a~h,1~10 cell
-+	jsr	putchar		;   putchar('@');
+tempina	jsr	putchar		;   putchar('@');
 	jsr	getchar		;
 	tya			;   a = getchar();
 	cmp	#'a'		;
