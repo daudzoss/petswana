@@ -1,40 +1,38 @@
-vis_cel	.byte	DRW_CEL		;
-vis_msg	.byte	DRW_MSG		;
-	.byte	0
-vis_mov	.byte	DRW_MOV		;
-vis_try	.byte	DRW_TRY		;
-vis_hid	.byte	DRW_HID		;
-vis_lbl	.byte	DRW_LBL		;
-vis_msh	.byte	DRW_MSH		;
-
-visualz	pha	;//V0LOCAL=what	;void visualz(register uint8_t a, uint8_t arg0,
-	bit	vis_msh		;                                 uint4_t arg1){
-	beq	+		; if (a & DRW_MSH) {
-	jsrAPCS	hal_msh		;  hal_msh(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_lbl		;
-	beq	+		; if (a & DRW_LBL) {
-	jsrAPCS	hal_lbl		;  hal_lbl(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_msg		;
-	beq	+		; if (a & DRW_MSG) {
-	jsrAPCS	hal_msg		;  hal_msg(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_hid		;
-	beq	+		; if (a & DRW_HID) {
-	jsrAPCS	hal_hid		;  hal_hid(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_try		;
-	beq	+		; if (a & DRW_TRY) {
-	jsrAPCS	hal_try		;  hal_try(a);
-	lda @w	V0LOCAL		; }
-+	bit	vis_cel		;
-	beq	+		; if (a & DRW_CEL) {
-	lda	A1FUNCT		;
+visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
+	pha	;//V1LOCAL=what	;                                 uint4_t arg1){
+	and	#DRW_MSH	; uint8_t whata/*ll*/ = a, what;
+	sta @w	V1LOCAL	;//what	; what = whata & DRW_MSH;
+	beq	+		; if (what) {
+	jsrAPCS	hal_msh		;  hal_msh(what);
++	lda @w	V0LOCAL		; }
+	and	#DRW_LBL	;
+	sta @w	V1LOCAL	;//what	; what = whata & DRW_LBL;
+	beq	+		; if (what) {
+	jsrAPCS	hal_lbl		;  hal_lbl(what);
++	lda @w	V0LOCAL		; }
+	and	#DRW_MSG	;
+	sta @w	V1LOCAL	;//what	; what = whata & DRW_MSG;
+	beq	+		; if (what) {
+	jsrAPCS	hal_msg		;  hal_msg(what);
++	lda @w	V0LOCAL		; }
+	and	#DRW_HID	;
+	sta @w	V1LOCAL	;//what	; what = whata & DRW_HID;
+	beq	+		; if (what) {
+	jsrAPCS	hal_hid		;  hal_hid(what);
++	lda @w	V0LOCAL		; }
+	and	#DRW_TRY	;
+	sta @w	V1LOCAL	;//what	; what = whata & DRW_TRY;
+	beq	+		; if (what) {
+	jsrAPCS	hal_try		;  hal_try(what);
++	lda @w	V0LOCAL		; }
+	and	#DRW_CEL	;
+	beq	+		; if (what & DRW_CEL) {
+	tay			;
+	lda @w	A1FUNCT	;//arg1	;
 	sta @w	V0LOCAL	;//y0	;
-	lda	A0FUNCT		;
-	pha	;//V1LOCAL=x0	;
-	jsrAPCS	hal_cel		;  hal_cel(x0, y0);
+	lda @w	A0FUNCT	;//arg0	;
+	sta @w	V1LOCAL	;//x0	;
+	jsrAPCS	hal_cel		;  hal_cel(a = whata & DRW_CEL, x0, y0);
 +	POPVARS			; }
 	rts			;} // visualz()
 
@@ -186,232 +184,240 @@ rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	jsr	putchar		; putchar(rj);                                 \
 	.endm			;} // rule
 
-putgrid	.macro	gridarr,perimtr	;#define putgrid(gridarr,perimtr) {            \
-	pha	;//V0LOCAL=i	; uint8_t i;                                   \
-	pha	;//V1LOCAL=r	; uint8_t r;                                   \
-	pha	;//V2LOCAL=temp	; uint8_t temp;                                \
-	lda	petscii+UNMIXED	;                                              \
-	jsr	putchar		; putchar(petscii[UNMIXED]);                   \
-	lda	#$0d		;                                              \
-	jsr	putchar		; putchar('\n');                               \
-	lda	#' '		;                                              \
-	jsr	putchar		; putchar(' ');                                \
-	lda	#' '		;                                              \
-	jsr	putchar		; putchar(' ');                                \
-	lda	PORTINT		;                                              \
-	and	#%0001 .. %1111	;                                              \
-	tay			;                                              \
-	lda	petscii,y	;                                              \
-	jsr	putchar		; putchar(petscii[PORTINT[0] & 0x1f]);         \
-	lda	#0		;                                              \
-	sta @w	V0LOCAL	;//i	; for (i = 0; i < 9; i++) {                    \
--	clc			;                                              \
-	adc	#'1'		;                                              \
-	jsr	putchar		;  putchar('1' + i);                           \
-	lda	#' '		;                                              \
-	jsr	putchar		;  putchar(' ');                               \
-	inc @w	V0LOCAL	;//i	;                                              \
-	ldy @w	V0LOCAL	;//i	;                                              \
-	lda	PORTINT,y	;                                              \
-	and	#%0001 .. %1111	;                                              \
-	tay			;                                              \
-	lda	petscii,y	;                                              \
-	jsr	putchar		;  putchar(petscii[PORTINT[i+1] & 0x1f]);      \
-	lda @w	V0LOCAL	;//i	;                                              \
-	cmp	#9		;                                              \
-	bcc	-		; }                                            \
-	lda	#'1'		;                                              \
-	jsr	putchar		; putchar('1');                                \
-	lda	#'0'		;                                              \
-	jsr	putchar		; putchar('0');                                \
-	lda	petscii+UNMIXED	;                                              \
-	jsr	putchar		; putchar(petscii[UNMIXED]);                   \
-	rule V2LOCAL,$b0,$b2,$ae; rule(temp, 0xb0, 0xb2, 0xae) ;               \
+hal_hid				;void hal_hid(uint8_t what) { hal_try(what); }
+hal_try	pha	;//V0LOCAL=i	;void hal_try(uint8_t what) { // DRW_HID,DRW_TRY
+	pha	;//V1LOCAL=r	;
+	pha	;//V2LOCAL=temp	; uint8_t i, r, temp;
+	lda	petscii+UNMIXED	;
+	jsr	putchar		; putchar(petscii[UNMIXED]);
+	lda	#$0d		;
+	jsr	putchar		; putchar('\n');
+	lda	#' '		;
+	jsr	putchar		; putchar(' ');
+	lda	#' '		;
+	jsr	putchar		; putchar(' ');
+	lda	PORTINT		;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		; putchar(petscii[PORTINT[0] & 0x1f]);
+	lda	#0		;
+	sta @w	V0LOCAL	;//i	; for (i = 0; i < 9; i++) {
+-	clc			;
+	adc	#'1'		;
+	jsr	putchar		;  putchar('1' + i);
+	lda	#' '		;
+	jsr	putchar		;  putchar(' ');
+	inc @w	V0LOCAL	;//i	;
+	ldy @w	V0LOCAL	;//i	;
+	lda	PORTINT,y	;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;  putchar(petscii[PORTINT[i+1] & 0x1f]);
+	lda @w	V0LOCAL	;//i	;
+	cmp	#9		;
+	bcc	-		; }
+	lda	#'1'		;
+	jsr	putchar		; putchar('1');
+	lda	#'0'		;
+	jsr	putchar		; putchar('0');
+	lda	petscii+UNMIXED	;
+	jsr	putchar		; putchar(petscii[UNMIXED]);
+	rule V2LOCAL,$b0,$b2,$ae; rule(temp, 0xb0, 0xb2, 0xae) ;
 .if SCREENW > $16
-	lda	PORTINT+$0a	;                                              \
-	and	#%0001 .. %1111	;                                              \
-	tay			;                                              \
-	lda	petscii,y	;                                              \
-	jsr	putchar		;  putchar(petscii[PORTINT[i+1] & 0x1f]);      \
-	lda	#'1'		;                                              \
-	jsr 	putchar		; putchar('1'); //  right-edge label 10's digit\
-	lda	petscii+UNMIXED	;                                              \
-	jsr	putchar		;  putchar(petscii[UNMIXED]);                  \
+	lda	PORTINT+$0a	;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;  putchar(petscii[PORTINT[i+1] & 0x1f]);
+	lda	#'1'		;
+	jsr 	putchar		; putchar('1'); //  right-edge label 10's digit
+	lda	petscii+UNMIXED	;
+	jsr	putchar		;  putchar(petscii[UNMIXED]);
 .endif
-	lda	#0		;                                              \
-	sta @w	V0LOCAL	;//i	; i = 0;                                       \
-	sta @w	V1LOCAL	;//r	; for (r = 0; r < GRIDH; r++) {                \
--	lda	#$0d		;  register uint8_t y;                         \
+	lda	#0		;
+	sta @w	V0LOCAL	;//i	; i = 0;
+	sta @w	V1LOCAL	;//r	; for (r = 0; r < GRIDH; r++) {
+-	lda	#$0d		;  register uint8_t y;
 .if SCREENW != $16
-	jsr	putchar		;  putchar('\n');                              \
+	jsr	putchar		;  putchar('\n');
 .endif
-	lda @w	V1LOCAL	;//r	;                                              \
-	adc	#GRIDW+GRIDH	;                                              \
-	tay			;                                              \
-	lda	PORTINT,y	;                                              \
-	and	#%0001 .. %1111	;                                              \
-	tay			;                                              \
-	lda	petscii,y	;                                              \
-	jsr	putchar		;  putchar(petscii[PORTINT[r+GRIDH+GRIDY]]);   \
-	lda @w	V1LOCAL	;//r	;                                              \
-	clc			;                                              \
-	adc	#'a'		;                                              \
-	jsr	putchar		;  putchar('a' + r); // A~H down left side     \
-	lda	petscii+UNMIXED	;                                              \
-	jsr	putchar		;  putchar(petscii[UNMIXED]);                  \
--	lda	#$7d		;  for (; (y=i) < GRIDSIZ; i+=GRIDH) {         \
-	jsr	putchar		;   register uint8_t a;                        \
-	lda @w	V0LOCAL	;//i	;   register uint1_t c;                        \
-	tay			;                                              \
-	cmp	#GRIDSIZ	;   putchar('|');                              \
-	bcs	+++++++		;   c = 0;                                     \
-	adc	#GRIDH		;   a = ' ';                                   \
-	sta @w	V0LOCAL	;//i	;                                              \
-	lda	\gridarr,y	;                                              \
-	sta @w	V2LOCAL	;//temp	;   temp = gridarr[y];                         \
-	bpl	+		;   if (temp < 0) { // absorber, drawn as black\
-	lda	petscii+$10	;                                              \
-	jsr	putchar		;    putchar(petscii[16]);                     \
-	lda	#' '		;                                              \
-	jmp	+++++		;    c = 1;                                    \
-+	lsr			;                                              \
-	lsr			;                                              \
-	lsr			;                                              \
-	lsr			;                                              \
-	tay			;                                              \
-	beq	+		;   } else if (temp >= 0x10) {// nontransparent\
-	sec			;    // 0x1_ => 0x01 => 1<<(1-1) == 1==MIXTRED \
-	lda	#0		;    // 0x2_ => 0x02 => 1<<(2-1) == 2==MIXTYEL \
--	rol			;    // 0x3_ => 0x03 => 1<<(3-1) == 4==MIXTBLU \
-	dey			;    // 0x4_ => 0x04 => 1<<(4-1) == 8==MIXTWHT \
-	bne	-		;                                              \
-	tay			;                                              \
-	lda	petscii,y	;                                              \
-	jsr	putchar		;    putchar(petscii[1<<(((temp&0x70)>>4)-1)]);\
-+	lda @w	V2LOCAL	;//temp	;   }                                          \
-	and	#%0000 .. %1111	;                                              \
-	tay			;   c = petsyms[temp & 0x0f] & 1;              \
-	lda	petsyms,y	;   a = petsyms[temp & 0x0f] >> 1;             \
+	lda @w	V1LOCAL	;//r	;
+	adc	#GRIDW+GRIDH	;
+	tay			;
+	lda	PORTINT,y	;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;  putchar(petscii[PORTINT[r+GRIDH+GRIDY]]);
+	lda @w	V1LOCAL	;//r	;
+	clc			;
+	adc	#'a'		;
+	jsr	putchar		;  putchar('a' + r); // A~H down left side
+	lda	petscii+UNMIXED	;
+	jsr	putchar		;  putchar(petscii[UNMIXED]);
+-	lda	#$7d		;  for (; (y=i) < GRIDSIZ; i+=GRIDH) {
+	jsr	putchar		;   register uint8_t a;
+	lda @w	V0LOCAL	;//i	;   register uint1_t c;
+	tay			;
+	cmp	#GRIDSIZ	;   putchar('|');
+	bcc	dnxtcel		;   c = 0;
+	jmp	dendrow		;
+dnxtcel	adc	#GRIDH		;   a = ' ';
+	sta @w	V0LOCAL	;//i	;
+	lda @w	A0FUNCT	;//what	;
+	and	#DRW_TRY	;
+	beq	dhidden		;   if (what & DRW_TRY)
+	lda	TRYGRID,y	;    temp = TRYGRID[y];
+	jmp	deither		;
+dhidden	lda @w	A0FUNCT	;//what	b
+	and	#DRW_HID	;
+	beq	dgerror		;   else if (what & DRW_HID)
+	lda	HIDGRID,y	;    temp = HIDGRID[y];
+	jmp	deither		;
+dgerror	brk			;   else
+	brk			;    exit(err);
+deither	sta @w	V2LOCAL	;//temp	;
+	bpl	+		;   if (temp < 0) { // absorber, drawn as black
+	lda	petscii+$10	;
+	jsr	putchar		;    putchar(petscii[16]);
+	lda	#' '		;
+	jmp	+++++		;    c = 1;
++	lsr			;
+	lsr			;
+	lsr			;
+	lsr			;
+	tay			;
+	beq	+		;   } else if (temp >= 0x10) {// nontransparent
+	sec			;    // 0x1_ => 0x01 => 1<<(1-1) == 1==MIXTRED
+	lda	#0		;    // 0x2_ => 0x02 => 1<<(2-1) == 2==MIXTYEL
+-	rol			;    // 0x3_ => 0x03 => 1<<(3-1) == 4==MIXTBLU
+	dey			;    // 0x4_ => 0x04 => 1<<(4-1) == 8==MIXTWHT
+	bne	-		;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;    putchar(petscii[1<<(((temp&0x70)>>4)-1)]);
++	lda @w	V2LOCAL	;//temp	;   }
+	and	#%0000 .. %1111	;
+	tay			;   c = petsyms[temp & 0x0f] & 1;
+	lda	petsyms,y	;   a = petsyms[temp & 0x0f] >> 1;
 .if !BKGRNDC
-	cpy	#SQUARE		;                                              \
-	bne	+		;   if (y == 7) { // room for tintltr w/o color\
-	lda @w	V2LOCAL	;//temp	;                                              \
-	lsr			;                                              \
-	lsr			;                                              \
-	lsr			;                                              \
-	lsr			;                                              \
-	php			;                                              \
-	lda	petsyms,y	;                                              \
-	plp			;                                              \
-	beq	+		;    if (temp >> 4) { // not transparent       \
-	tay			;                                              \
-	lda	#0		;                                              \
-	sec			;                                              \
--	rol			;                                              \
-	dey			;                                              \
-	bne	-		;                                              \
-	tay			;                                              \
-	lda	tintltr,y	;     a = tintltr[1 << (temp >> 4)]; //W/R/Y/B \
-	sec			;    }                                         \
-	rol			;   }                                          \
+	cpy	#SQUARE		;
+	bne	+		;   if (y == 7) { // room for tintltr w/o color
+	lda @w	V2LOCAL	;//temp	;
+	lsr			;
+	lsr			;
+	lsr			;
+	lsr			;
+	php			;
+	lda	petsyms,y	;
+	plp			;
+	beq	+		;    if (temp >> 4) { // not transparent
+	tay			;
+	lda	#0		;
+	sec			;
+-	rol			;
+	dey			;
+	bne	-		;
+	tay			;
+	lda	tintltr,y	;     a = tintltr[1 << (temp >> 4)]; //W/R/Y/B
+	sec			;    }
+	rol			;   }
 .endif
-+	lsr			;   if (!a)                                    \
-	bne	+		;    a = 0xa9; // only 8-bit stored in petsyms \
-	lda	#$a9		;   }                                          \
-+	bcc	++		;   if (c) {                                   \
-+	pha			;                                              \
-	lda	#RVS_ON		;                                              \
-	jsr	putchar		;    putchar(RVS_ON);                          \
-	pla			;   }                                          \
-+	jsr	putchar		;   putchar(a);                                \
-	lda	#RVS_OFF	;                                              \
-	jsr	putchar		;   putchar(RVS_OFF);                          \
-	lda	petscii+UNMIXED	;                                              \
-	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
-	jmp	---		;  }putchar('|');                              \
-+
++	lsr			;   if (!a)
+	bne	+		;    a = 0xa9; // only 8-bit stored in petsyms
+	lda	#$a9		;   }
++	bcc	++		;   if (c) {
++	pha			;
+	lda	#RVS_ON		;
+	jsr	putchar		;    putchar(RVS_ON);
+	pla			;   }
++	jsr	putchar		;   putchar(a);
+	lda	#RVS_OFF	;
+	jsr	putchar		;   putchar(RVS_OFF);
+	lda	petscii+UNMIXED	;
+	jsr	putchar		;   putchar(petscii[UNMIXED]);
+	jmp	---		;  }putchar('|');
+dendrow
 .if SCREENW > $17
-	lda	#' '		;                                              \
-	jsr	putchar		;  putchar(' '); // offset 1's digit diagonally\
-	lda @w	V1LOCAL	;//r	;                                              \
-	clc			;                                              \
-	adc	#$0a		;                                              \
-	tay			;                                              \
-	lda	PORTINT,y	;                                              \
-	and	#%0001 .. %1111	;                                              \
-	tay			;                                              \
-	lda	petscii,y	;                                              \
-	jsr	putchar		;                                              \
-	lda @w	V1LOCAL	;//r	;                                              \
-	clc			;                                              \
-	adc	#'1'		;                                              \
-	jsr	putchar		;  putchar(r + '1'); // 11~18                  \
-	lda	petscii+UNMIXED	;                                              \
-	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
+	lda	#' '		;
+	jsr	putchar		;  putchar(' '); // offset 1's digit diagonally
+	lda @w	V1LOCAL	;//r	;
+	clc			;
+	adc	#$0a		;
+	tay			;
+	lda	PORTINT,y	;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;
+	lda @w	V1LOCAL	;//r	;
+	clc			;
+	adc	#'1'		;
+	jsr	putchar		;  putchar(r + '1'); // 11~18
+	lda	petscii+UNMIXED	;
+	jsr	putchar		;   putchar(petscii[UNMIXED]);
 .endif
-	lda @w	V0LOCAL	;//i	;                                              \
-	and	#GRIDH-1	;                                              \
-	clc			;                                              \
-	adc	#1		;                                              \
-	sta @w	V0LOCAL	;//i	;  i = (i & (GRIDH-1)) + 1;                    \
-	inc @w	V1LOCAL	;//r	;  if (r == GRIDH) // no interior joints at bot\
-	cmp	#GRIDH		;                                              \
-	bcs	+		;   break;                                     \
-	rule V2LOCAL,$ab,$7b,$b3;  rule(temp, 0xab, 0x7b, 0xb3);               \
+	lda @w	V0LOCAL	;//i	;
+	and	#GRIDH-1	;
+	clc			;
+	adc	#1		;
+	sta @w	V0LOCAL	;//i	;  i = (i & (GRIDH-1)) + 1;
+	inc @w	V1LOCAL	;//r	;  if (r == GRIDH) // no interior joints at bot
+	cmp	#GRIDH		;
+	bcs	+		;   break;
+	rule V2LOCAL,$ab,$7b,$b3;  rule(temp, 0xab, 0x7b, 0xb3);
 .if SCREENW > $16
-	lda @w	V1LOCAL	;//r	;                                              \
-	clc			;                                              \
-	adc	#$0a		;                                              \
-	tay			;                                              \
-	lda	PORTINT,y	;                                              \
-	and	#%0001 .. %1111	;                                              \
-	tay			;                                              \
-	lda	petscii,y	;                                              \
-	jsr	putchar		;                                              \
-	lda	#'1'		;                                              \
-	jsr 	putchar		; putchar('1'); //  right-edge label 10's digit\
-	lda	petscii+UNMIXED	;                                              \
-	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
+	lda @w	V1LOCAL	;//r	;
+	clc			;
+	adc	#$0a		;
+	tay			;
+	lda	PORTINT,y	;
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;
+	lda	#'1'		;
+	jsr 	putchar		; putchar('1'); //  right-edge label 10's digit
+	lda	petscii+UNMIXED	;
+	jsr	putchar		;   putchar(petscii[UNMIXED]);
 .endif
-	jmp	----		; }                                            \
-+	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);                \
+	jmp	----		; }
++	rule V2LOCAL,$ad,$b1,$bd; rule(temp, 0xad, 0xb1, 0xb3);
 .if SCREENW != $16
-	lda	#$0d		;                                              \
-	jsr	putchar		; putchar('\n');                               \
+	lda	#$0d		;
+	jsr	putchar		; putchar('\n');
 .endif
-	lda	#' '		;                                              \
-	jsr	putchar		; putchar(' ');                                \
-	lda	#' '		;                                              \
-	jsr	putchar		; putchar(' ');                                \
-	lda	#0		;                                              \
-	sta @w	V0LOCAL	;//i	; for (i = 0; i < 10; i++) {                   \
+	lda	#' '		;
+	jsr	putchar		; putchar(' ');
+	lda	#' '		;
+	jsr	putchar		; putchar(' ');
+	lda	#0		;
+	sta @w	V0LOCAL	;//i	; for (i = 0; i < 10; i++) {
 -	clc			;
 	adc	#GRIDH*2+GRIDW	;
 	tay			;
 	lda	PORTINT,y	;
-	and	#%0001 .. %1111	;                                              \
-	tay			;                                              \
-	lda	petscii,y	;                                              \
-	jsr	putchar		;                                              \
+	and	#%0001 .. %1111	;
+	tay			;
+	lda	petscii,y	;
+	jsr	putchar		;
 	lda @w	V0LOCAL	;//i	;
 	clc			;
 	adc	#'i'		;
-	jsr	putchar		;  putchar(i);                                 \
-	lda	#' '		;                                              \
-	jsr	putchar		;  putchar(' ');                               \
-	inc @w	V0LOCAL	;//i	;                                              \
-	lda @w	V0LOCAL	;//i	;                                              \
-	cmp	#$a		;                                              \
-	bcc	-		; }                                            \
-	lda	petscii+UNMIXED	;                                              \
-	jsr	putchar		;   putchar(petscii[UNMIXED]);                 \
-	POPVARS			;                                              \
-	.endm			;} // putgrid
-
-hal_try putgrid	TRYGRID		;
-	rts			;
-hal_hid putgrid	HIDGRID		;
-	rts			;
+	jsr	putchar		;  putchar(i);
+	lda	#' '		;
+	jsr	putchar		;  putchar(' ');
+	inc @w	V0LOCAL	;//i	;
+	lda @w	V0LOCAL	;//i	;
+	cmp	#$a		;
+	bcc	-		; }
+	lda	petscii+UNMIXED	;
+	jsr	putchar		;   putchar(petscii[UNMIXED]);
+	POPVARS			;
+	rts			;} // putgrid
+	
 hal_msg
 hal_lbl
 hal_msh
