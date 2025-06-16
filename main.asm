@@ -185,12 +185,7 @@ main	tsx	;//req'd by APCS;int main(void) {
 	lda	#VIDEOBG	; if (BKGRNDC) // use available color screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
-	jsr	iniport		; iniport();
-	clc			;
-	jsr	inigrid		; inigrid(0 /* TRYGRID */);
-	sec			;
-	jsr	inigrid		; inigrid(1 /* HIDGRID */);
-	jsrAPCS	rndgrid		; rndgrid();
+	jsrAPCS	initize		; initize(); // portals, grids
 -	ldy	#DRW_ALL|DRW_TRY|DRW_HID; do {
 	jsrAPCS	visualz		;  visualz(DRW_ALL|DRW_TRY|DRW_HID);
 	ldy	#SAY_ANY	;
@@ -204,17 +199,28 @@ main	tsx	;//req'd by APCS;int main(void) {
 	bne	++++		;    exit(y);
 	beq	-		;   else continue;
 +	bpl	+		;  } else if (OTHRVAR & SAY_PEK) { // cell check
-; jsrAPCS echomov
-	jsrAPCS	peekcel		;
-	jmp	-		;
+	jsrAPCS	peekcel		;   peekcel(y); // FIXME: add msg
+	jmp	-		;   continue;
 +	bvc	+		;  } else if (OTHRVAR & 0x40) { // special input  
-; jsrAPCS echomov
- jmp -
+	jsrAPCS	special		;   special(y);
+	jmp	-		;   continue;
 +	jsrAPCS	shinein		;  } else { // portal check
-	tya			;
-	jsr	tempout		;   tempout(shinein(a));
-	jmp	-		; } while(a);
+	tya			;   tempout(shinein(a)); // FIXME: add msg
+	jsr	tempout		;  }
+	jmp	-		; } while (a);
 +	rts			;} // main()
+
+initize	jsr	iniport		;void initize(void) {
+	clc			; iniport();
+	jsr	inigrid		; inigrid(0 /* TRYGRID */);
+	sec			;
+	jsr	inigrid		; inigrid(1 /* HIDGRID */);
+	jsrAPCS	rndgrid		; rndgrid();
+	POPVARS			;
+	rts			;} // initize()
+
+special	POPVARS
+	rts
 
 peekcel	and	#%0111 .. %1111	;
 	tay			;

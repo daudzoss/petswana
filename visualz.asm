@@ -184,7 +184,8 @@ rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	jsr	putchar		; putchar(rj);                                 \
 	.endm			;} // rule
 
-pokthru	.byte	(SOBLANK&SOFILLD)
+pokthru	.byte	(SOBLANK & SOFILLD)
+guessed	.byte	(CHAMFBR|CHAMFBL|CHAMFTL|CHAMFTR|SQUARE)
 hal_hid				;void hal_hid(uint8_t what) { hal_try(what); }
 hal_try	pha	;//V0LOCAL=i	;void hal_try(uint8_t what) { // DRW_HID,DRW_TRY
 	pha	;//V1LOCAL=r	;
@@ -271,11 +272,13 @@ dnxtcel	adc	#GRIDH		;   a = ' ';
 	and	#DRW_TRY	;
 	beq	dhidden		;   if (what & DRW_TRY) {
 	lda	TRYGRID,y	;    temp = TRYGRID[y];
-	bit	pokthru		;    // special cases are clue symbols SOBLANK,
-	beq	deither		;    // SOFILLD which hint at a HIDGRID secret
-	lda	HIDGRID,y	;    if (temp & pokthru)
-	ora	pokthru		;     temp = HIDGRID[y] | pokthru;
-	bne	deither		;
+	bit	guessed		;
+	bne	deither		;    if (temp & guessed == 0) { // don't clobber
+	bit	pokthru		;     // special cases are clue symbols SOBLANK,
+	beq	deither		;     // SOFILLD which hint at a HIDGRID secret
+	lda	HIDGRID,y	;     if (temp & pokthru)
+	ora	pokthru		;      temp = HIDGRID[y] | pokthru;
+	bne	deither		;    }
 dhidden	lda @w	A0FUNCT	;//what	b
 	and	#DRW_HID	;
 	beq	dgerror		;   } else if (what & DRW_HID)
