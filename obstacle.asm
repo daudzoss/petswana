@@ -1,4 +1,5 @@
-obstlst	.byte	obstac2-obstlst	;
+obstlst
+	.byte	obstac2-obstlst	;
 	.byte	RUBBLU		;
 	.byte	tri6_0e-tri6_0	;
 	.byte	tri6_0-obstcel	;
@@ -6,7 +7,8 @@ obstlst	.byte	obstac2-obstlst	;
 	.byte	tri6_2-obstcel	;
 	.byte	tri6_3-obstcel	;
 	
-obstac2	.byte	obstac3-obstlst	;
+obstac2
+	.byte	obstac3-obstlst	;
 	.byte	RUBWHT		;
 	.byte	tri6_0e-tri6_0	;
 	.byte	tri6_0-obstcel	;
@@ -14,7 +16,8 @@ obstac2	.byte	obstac3-obstlst	;
 	.byte	tri6_2-obstcel	;
 	.byte	tri6_3-obstcel	;
 
-obstac3	.byte	obstac4-obstlst	;
+obstac3
+	.byte	obstac4-obstlst	;
 	.byte	RUBWHT		;
 	.byte	diamo4e-diamo4	;
 	.byte	diamo4-obstcel	;
@@ -22,7 +25,8 @@ obstac3	.byte	obstac4-obstlst	;
 	.byte	diamo4-obstcel	;
 	.byte	diamo4-obstcel	;
 	
-obstac4	.byte	obstac5-obstlst	;
+obstac4
+	.byte	obstac5-obstlst	;
 	.byte	RUBYEL		;
 	.byte	tri3_0e-tri3_0	;
 	.byte	tri3_0-obstcel	;
@@ -30,7 +34,8 @@ obstac4	.byte	obstac5-obstlst	;
 	.byte	tri3_2-obstcel	;
 	.byte	tri3_3-obstcel	;
 	
-obstac5	.byte	obstac6-obstlst	;
+obstac5
+	.byte	obstac6-obstlst	;
 	.byte	RUBRED		;
 	.byte	rpar_0e-rpar_0
 	.byte	rpar_0-obstcel	;
@@ -38,7 +43,9 @@ obstac5	.byte	obstac6-obstlst	;
 	.byte	lpar_0-obstcel	;
 	.byte	lpar_1-obstcel	;
 
-obstac6	.byte	obstac7-obstlst	;
+obstac6
+.if 0
+	.byte	obstac7-obstlst	;
 	.byte	UNTINTD		;
 	.byte	tra3_0e-tra3_0	;
 	.byte	tra3_0-obstcel	;
@@ -46,7 +53,8 @@ obstac6	.byte	obstac7-obstlst	;
 	.byte	tra3_2-obstcel	;
 	.byte	tra3_3-obstcel	;
 	
-obstac7	.byte	obstend-obstlst	;
+obstac7
+	.byte	obstend-obstlst	;
 	.byte	RUBOUT		;
 	.byte	rct2_0e-rct2_0	;
 	.byte	rct2_0-obstcel	;
@@ -54,7 +62,9 @@ obstac7	.byte	obstend-obstlst	;
 	.byte	rct2_0-obstcel	;
 	.byte	rct2_1-obstcel	;
 	
-obstend	.byte	0
+obstend
+.endif
+	.byte	0
 	
 
 obstcel

@@ -24,10 +24,10 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	beq	+		; if (y) {
 	tay			;
 	lda @w	A1FUNCT	;//arg1	;
-	sta @w	V0LOCAL	;//y0	;
+	sta @w	V0LOCAL	;//cntnt;
 	lda @w	A0FUNCT	;//arg0	;
-	sta @w	V1LOCAL	;//x0	;
-	jsrAPCS	hal_cel		;  hal_cel(y, x0, y0);
+	sta @w	V1LOCAL	;//index;
+	jsrAPCS	hal_cel		;  hal_cel(y, arg0, arg1);
 +	lda @w	V0LOCAL		; }
 	and	#DRW_MSG	; what = whata & DRW_MSG;
 	beq	+		; if (what) {

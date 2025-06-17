@@ -122,9 +122,9 @@ CHAMFBR	= $1			; triangular reflector, chamfer at bottom right
 CHAMFBL	= $2			;      "        "     , chamfer at bottom left
 CHAMFTL	= $3			;      "        "     , chamfer at top left
 CHAMFTR = $4			;      "        "     , chamfer at top right
-BOREDLR	= $5			; transmits left-right but rebounds top-bottom
-BOREDTB	= $6			; transmits top-bottom but rebounds left-right
-SQUARE	= $7			; cell filled in so all four sides will rebound
+SQUARE	= $5			; cell filled in so all four sides will rebound
+BOREDLR	= $6			; transmits left-right but rebounds top-bottom
+BOREDTB	= $7			; transmits top-bottom but rebounds left-right
 SOBLANK	= $8			; marker (in TRYGRID only) that blank confirmed
 SOFILLD	= $9			; marker (in TRYGRID only) that object confirmed
 
@@ -168,14 +168,14 @@ SAY_ANY = SAY_PEK|SAY_PRT|SAY_ANS
 	;; special codes here
 SUBMITG	= %01 .. %111111	; turn in answer for grading, please
 
-DRW_CEL	= 1<<0			; // A0: object, A1: cell 0~79
+DRW_CEL	= 1<<0			; // A0: cell 0~79, A1: object
 DRW_MSG	= 1<<1			; // A0: '\0'-terminated character string?!?
 DRW_MOV	= 1<<3			; // A0: first move index to draw
 DRW_TRY	= 1<<4			;no args?
 DRW_HID	= 1<<5			;no args?
 DRW_LBL	= 1<<6			;no args
 DRW_MSH	= 1<<7			;no args; also draws screen decorations if any
-DRW_ALL	= DRW_MSH|DRW_LBL	;
+DRW_DEC	= DRW_MSH|DRW_LBL	;
 DRW_BTH	= DRW_HID|DRW_TRY	;
 
 .include "stdlib.asm"
@@ -193,7 +193,7 @@ b2basic	rts			;
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
 	jsrAPCS	initize		; initize(); // portals, grids
--	ldy	#DRW_ALL|DRW_BTH; do {
+-	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY|DRW_HID);
 	ldy	#SAY_ANY	;
 	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
