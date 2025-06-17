@@ -324,7 +324,7 @@ deither	sta @w	V2LOCAL	;//temp	;
 	lda	petsyms,y	;   a = petsyms[temp & 0x0f] >> 1;
 .if !BKGRNDC
 	cpy	#SQUARE		;
-	bne	+		;   if (y == 7) { // room for tintltr w/o color
+	bne	+		;   if (y == 5) { // room for tintltr w/o color
 	lda @w	V2LOCAL	;//temp	;
 	lsr			;
 	lsr			;

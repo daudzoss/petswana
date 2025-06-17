@@ -127,6 +127,7 @@ BOREDLR	= $6			; transmits left-right but rebounds top-bottom
 BOREDTB	= $7			; transmits top-bottom but rebounds left-right
 SOBLANK	= $8			; marker (in TRYGRID only) that blank confirmed
 SOFILLD	= $9			; marker (in TRYGRID only) that object confirmed
+MAXSHAP	= SQUARE;BOREDTB
 
 ;;; upper nybble of grid square absorbs/reflects beam, optionally imparting tint
 UNTINTD	= $0			; no tint change: blank cell or transparent refl
@@ -213,19 +214,22 @@ b2basic	rts			;
 +	bvc	+++		;  } else if (y & 0x40) { // special input  
 	cpy	#SUBMITG	;   switch (y) {
 	bne	++		;   case SUBMITG:
+	jsrAPCS	confirm		;
+	tya			;    if (!confirm())
+	beq	-		;     break /*switch*/;
 	jsrAPCS	chkgrid		;
 	tya			;
 	bne	+		;    if (chkgrid(y) == 0) {
 	stckstr	youwin,youwon	;     stckstr(youwin, youwin+sizeof(youwin));
 	ldy	#DRW_MSG	;
 	jsrAPCS	visualz		;     visualz(DRW_MSG);
-	ldy	#1	    	;
-	jmp	mainend	    	;     exit(y = 1);
-+	dec @w V0LOCAL	;//remng;
+	ldy @w	V0LOCAL	;//remng;
+	jmp	mainend	    	;     exit(y = remng);
++	dec @w	V0LOCAL	;//remng;
 	bne	-		;    } else if (--remnng == 0) {
 	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
-	ldy	#DRW_MSG	;
-	jsrAPCS	visualz		;     visualz(DRW_MSG);
+	ldy #DRW_HID;	#DRW_HID|DRW_MSG;
+	jsrAPCS	visualz		;     visualz(DRW_HID|DRW_MSG);
 	ldy	#0		;     exit(y = 0);
 	jmp	mainend		;    }
 +	jmp	-		;   }
@@ -236,9 +240,9 @@ b2basic	rts			;
 mainend	POPVARS			;
 	rts			;} // main()
 
-youwin	.null	"grid correct, you win!"
+youwin	.null	$0d,"grid correct, you win!"
 youwon
-youlose	.null	"you lose after guess 2"
+youlose	.null	$0d,"you lose after guess 2"
 youlost	
 	
 initize	jsr	iniport		;void initize(void) {

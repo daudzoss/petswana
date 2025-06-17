@@ -16,7 +16,7 @@ confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visua
 	POPVARS			; return hal_cnf(a);
 	rts			;} // confirm()
 
-reallyq	.null	"really quit?"	;static char reallyq[] = "really quit?";
+reallyq	.null $14,"are you sure?";static char reallyq[] = "\bare you sure?";
 hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
 	ldy	#$ff		; stckstr(reallyq, reallyq+sizeof(reallyq));
 	jsrAPCS	putstck,lda,#0	; putstck(0, 255, reallyq); // print from stack
@@ -150,8 +150,8 @@ tempins	jsr	putchar		;   putchar(' ');
 	and	#%0000 .. %0111	;
 	clc			;
 	adc	#1		;   a = (TRYGRID[ycopy]&0x07) + 1; // next shape
-	cmp	#SQUARE+1	;
-	bcc	+		;   if (a > SQUARE)
+	cmp	#MAXSHAP+1	;
+	bcc	+		;   if (a > MAXSHAP)
 	lda	#BLANK		;    a = BLANK;
 +	ora @w	V0LOCAL	;//rtval;
 	sta @w	V0LOCAL	;//rtval;   rtval |= a; // bit 3 has been left untouched
