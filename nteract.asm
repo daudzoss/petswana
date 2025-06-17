@@ -155,19 +155,17 @@ tempins	jsr	putchar		;   putchar(' ');
 	lda	#BLANK		;    a = BLANK;
 +	ora @w	V0LOCAL	;//rtval;
 	sta @w	V0LOCAL	;//rtval;   rtval |= a; // bit 3 has been left untouched
-	and	#SOBLANK&SOFILLD;
-	php			;
-	lda	#$40		;   // skip redundant color keys if @ exposed it
-	plp			;
-	beq	colorky		;   if (rtval & pokthru)
-	jmp	tempinr		;    return 0x40; // fall thru main()'s switch{}
+	bit	pokthru		;   if (rtval & pokthru) {// we've bought a hint
+	beq	colorky		;    if (HIDGRID[y]) // which confirmed obstacle
+	lda	HIDGRID,y	;     goto colornc; // so don't need to ask tint
+	bne	colornc		;   }
 colorky	jsr	getchar		;   while ((a = y = toupper(getchar())) != 'X'){
 	tya			;
 	ldy @w	V1LOCAL	;//ycopy;
 	and	#%0101 .. %1111	;    switch (a) {
 	cmp	#$0d		;    case '\n': // leave existing tint unchanged
 	bne	+		;
-	lda @w	V0LOCAL	;//rtval;
+colornc	lda @w	V0LOCAL	;//rtval;    colornc:
 .if 1
 	cmp	#%0001 .. %0000	;     if (rtval < RUBRED) // no tint already set
 	bcc	colorky		;      continue; // don't allow transparents yet

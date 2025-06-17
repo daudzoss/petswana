@@ -58,7 +58,7 @@ OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS
 ;;; HIDGRID[] and TRYGRID[]:
 ;;; a cell in a grid has a 7-bit state, representing the residing object portion
 ;;;	7	6	5	4	|	3	2	1	0
-;;; {UNTINTD=0;TINT*=1,2,3,4;ABSORBD=8}	{marker in TRY}	{BLANK=0;CHAMF;SQUARE=7}
+;;; {UNTINTD=0;TINT*=1,2,3,4;ABSORBD=8}	{marker in TRY}	{BLANK=0;CHAMF;SQUARE=5}
 
 ;;; PORTALS[]:
 ;;; each of the ANSWERS indices indicates which index a beam shone into the grid
@@ -108,9 +108,9 @@ bounce1	.byte	(RABOUNC << TP) | (RABOUNC << LT) | (EVBOUNC << BT) | EVBOUNC;RT
 bounce2	.byte	(RABOUNC << TP) | (ODBOUNC << LT) | (ODBOUNC << BT) | RABOUNC;RT
 bounce3	.byte	(EVBOUNC << TP) | (EVBOUNC << LT) | (RABOUNC << BT) | RABOUNC;RT
 bounce4	.byte	(ODBOUNC << TP) | (RABOUNC << LT) | (RABOUNC << BT) | ODBOUNC;RT
-bounce5	.byte	(RABOUNC << TP) | (NOBOUNC << LT) | (RABOUNC << BT) | NOBOUNC;RT
-bounce6	.byte	(NOBOUNC << TP) | (RABOUNC << LT) | (NOBOUNC << BT) | RABOUNC;RT
-bounce7	.byte	RABOUNC x 4
+bounce5	.byte	RABOUNC x 4
+bounce6	.byte	(RABOUNC << TP) | (NOBOUNC << LT) | (RABOUNC << BT) | NOBOUNC;RT
+bounce7	.byte	(NOBOUNC << TP) | (RABOUNC << LT) | (NOBOUNC << BT) | RABOUNC;RT
 
 ;;; lower nybble of a grid square affects incident beam path, indexing bounces[]
 ;;; 

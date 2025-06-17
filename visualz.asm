@@ -28,6 +28,7 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	lda @w	A0FUNCT	;//arg0	;
 	sta @w	V1LOCAL	;//index;
 	jsrAPCS	hal_cel		;  hal_cel(y, arg0, arg1);
+	jmp	++		;
 +	lda @w	V0LOCAL		; }
 	and	#DRW_MSG	; what = whata & DRW_MSG;
 	beq	+		; if (what) {
@@ -188,6 +189,7 @@ rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	jsr	putchar		; putchar(rj);                                 \
 	.endm			;} // rule
 
+tinted	.byte	(RUBRED|RUBYEL|RUBBLU|RUBWHT|RUBOUT)
 pokthru	.byte	(SOBLANK & SOFILLD)
 guessed	.byte	(CHAMFBR|CHAMFBL|CHAMFTL|CHAMFTR|SQUARE)
 hal_hid				;void hal_hid(uint8_t what) { hal_try(what); }
@@ -278,9 +280,13 @@ dnxtcel	adc	#GRIDH		;   a = ' ';
 	lda	TRYGRID,y	;    temp = TRYGRID[y];
 	bit	pokthru		;
 	beq	deither		;    if (temp & pokthru) { // if unknown, hint
+.if 0
+ brk
+ brk
+.endif
 	bit	guessed		;
 	beq	+		;     if (temp & guessed) // we placed block so
-	and #~(SOBLANK&SOFILLD)	;      temp &= pokthru; // show guess, not hint
+	and #~(SOBLANK&SOFILLD)	;      temp &= ~pokthru;// show guess, not hint
 	bne	deither		;     else // no guess placed here so
 +	lda	HIDGRID,y	;      // set flag to show either tinted circle
 	ora	#SOBLANK&SOFILLD;      temp = HIDGRID[y] | pokthru; // or X
