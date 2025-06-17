@@ -180,7 +180,8 @@ DRW_BTH	= DRW_HID|DRW_TRY	;
 
 .include "stdlib.asm"
 
-main	jsrAPCS	b2basic+1	;int main(void) {
+main	jsr	wipescr		;int main(void) {
+	jsrAPCS	b2basic+1	; wipescr();
 b2basic	rts			;
 	lda	#2		;
 	pha	;//V0LOCAL	; uint8_t remng = 2; // guesses remaining
@@ -729,6 +730,29 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 .endif
 	rts			;} // rndgrid()
 
+modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
+.if SCREENH
+	.text	$13,$13		; clear any BASIC 3.5/4 subwindows on the screen
+.endif
+wipescr	ldx	#wipescr-modekey;inline void wipescr(void) { // APCS uncompliant
+-	lda	modekey,x	;                             // for performance
+	jsr	$ffd2		;
+	dex			;
+	bne	-		; printf("%c%c%c%c%c%c", 9, 147, 8, 19, 19);
+.if SCREENH && SCREENW
+	ldy	#SCREENH	; for (register int8_t y = SCREENH; y > 0; y--)
+
+-	ldx	#SCREENW	;  for (register int8_t x = SCREENH; x > 0; x--)
+-	lda	#$20		;
+	jsr	$ffd2		;   printf(" ");
+	dex			;
+	bne	-		;
+	dey			;
+	bne	--		;
+	lda	#$13		;
+	jsr	$ffd2		; printf("%c", 19); // back to home corner
+.endif
+	rts			;}
 .include "obstacle.asm"
 .include "visualz.asm"
 .include "nteract.asm"

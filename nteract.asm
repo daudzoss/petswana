@@ -155,7 +155,13 @@ tempins	jsr	putchar		;   putchar(' ');
 	lda	#BLANK		;    a = BLANK;
 +	ora @w	V0LOCAL	;//rtval;
 	sta @w	V0LOCAL	;//rtval;   rtval |= a; // bit 3 has been left untouched
--	jsr	getchar		;   while ((a = y = toupper(getchar())) != 'X'){
+	and	#SOBLANK&SOFILLD;
+	php			;
+	lda	#$40		;   // skip redundant color keys if @ exposed it
+	plp			;
+	beq	colorky		;   if (rtval & pokthru)
+	jmp	tempinr		;    return 0x40; // fall thru main()'s switch{}
+colorky	jsr	getchar		;   while ((a = y = toupper(getchar())) != 'X'){
 	tya			;
 	ldy @w	V1LOCAL	;//ycopy;
 	and	#%0101 .. %1111	;    switch (a) {
@@ -164,10 +170,10 @@ tempins	jsr	putchar		;   putchar(' ');
 	lda @w	V0LOCAL	;//rtval;
 .if 1
 	cmp	#%0001 .. %0000	;     if (rtval < RUBRED) // no tint already set
-	bcc	-		;      continue; // don't allow transparents yet
+	bcc	colorky		;      continue; // don't allow transparents yet
 .endif
 	sta	TRYGRID,y	;     TRYGRID[ycopy] = rtval; // if no hal_cel()
-	lda	#DRW_CEL	;
+	ldy	#DRW_CEL	;
 	jsrAPCS	visualz		;     visualz(DRW_CEL, ycopy, rtval); // show it
 	lda	#$40		;
 	jmp	tempinr		;     return 0x40;// fall thru main()'s switch{}
@@ -198,7 +204,7 @@ tempins	jsr	putchar		;   putchar(' ');
 	lda	#'r'		;
 	jsr	putchar		;     putchar('R');
 	lda	#$40		;
-	bne	tempinr		;
+	bne	tempinr		;     return 0x40;// fall thru main()'s switch{}
 +	cmp	#'w'		;    case 'W':
 	bne	+		;
 	lda @w	V0LOCAL	;//rtval;
@@ -212,7 +218,7 @@ tempins	jsr	putchar		;   putchar(' ');
 	lda	#'w'		;
 	jsr	putchar		;     putchar('W');
 	lda	#$40		;
-	bne	tempinr		;
+	bne	tempinr		;     return 0x40;// fall thru main()'s switch{}
 +	cmp	#'y'		;    case 'Y':
 	bne	+		;
 	lda @w	V0LOCAL	;//rtval;
@@ -225,11 +231,11 @@ tempins	jsr	putchar		;   putchar(' ');
 	jsr	putchar		;     putchar(RVS_ON);
 	lda	#'y'		;
 	jsr	putchar		;     putchar('Y');
-	lda	#$40		;
+	lda	#$40		;     return 0x40;// fall thru main()'s switch{}
 	bne	tempinr		;    }
 +	eor	#'x'		;   }
 	beq	tempinr		;   return 0; // request to quit instead of tint
-	jmp	-		;  } else if (a == '@') { // peek @cell a~h,1~10
+	jmp	colorky		;  } else if (a == '@') { // peek @cell a~h,1~10
 tempina	jsr	putchar		;   putchar('@');
 	jsrAPCS	getcell		;   y = getcell();
 	tya			;   return 0x80 | y;
@@ -294,5 +300,5 @@ getcell	pha	;//V0LOCAL=cella;register uint8_t getcell(void) {
 	jmp	getcelr		;
 getcele	ldy	#$ff		;
 getcelr	POPVARS			;
-	rts			;} // tempinp()
+	rts			;} // getcell()
 .endif

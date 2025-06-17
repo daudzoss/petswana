@@ -91,9 +91,9 @@ petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
 	.byte	($7f<<1)	;                     (0x7f<<1)|1, // if CHAMFBL
 	.byte	($00<<1)|1	;                   (0*0xa9<<1)|1, // if CHAMFTL
 	.byte	($7f<<1)|1	;                     (0x7f<<1)|0, // if CHAMFTR
+	.byte	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
 	.byte	($60<<1)|1	;                     (0x60<<1)|1, // if BOREDLR
 	.byte	($7d<<1)|1	;                     (0x7d<<1)|1, // if BOREDTB
-	.byte	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
 	.byte	($76<<1)	;                     (0x76<<1)|0, // if SOBLANK
 	.text	x"e2" x 7	;                     (0x71<<1)|0,...};//SOFILLD
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
@@ -106,7 +106,8 @@ hal_hid
 hal_msg
 hal_lbl
 hal_msh
-hal_cel	rts
+hal_cel	POPVARS
+	rts
 .elsif SCREENH && (SCREENW >= $28)
 putcell
 hal_try
@@ -114,7 +115,8 @@ hal_hid
 hal_msg
 hal_lbl
 hal_msh
-hal_cel	rts
+hal_cel	POPVARS
+	rts
 .elsif SCREENH && (SCREENW >= $16)
 putcell
 hal_try
@@ -122,7 +124,8 @@ hal_hid
 hal_msg
 hal_lbl
 hal_msh
-hal_cel	rts
+hal_cel	POPVARS
+	rts
 .else
 
 putcell	pha	;V0LOCAL;//oldy	;register uint8_t putcell(register uint8_t a) {
@@ -271,16 +274,18 @@ dnxtcel	adc	#GRIDH		;   a = ' ';
 	sta @w	V0LOCAL	;//i	;
 	lda @w	A0FUNCT	;//what	;
 	and	#DRW_TRY	;
-	beq	dhidden		;   if (what & DRW_TRY) {
+	beq	dhidden		;   if (what & DRW_TRY) { // DRW_HID has no SO*
 	lda	TRYGRID,y	;    temp = TRYGRID[y];
+	bit	pokthru		;
+	beq	deither		;    if (temp & pokthru) { // if unknown, hint
 	bit	guessed		;
-	bne	deither		;    if (temp & guessed == 0) { // don't clobber
-	bit	pokthru		;     // special cases are clue symbols SOBLANK,
-	beq	deither		;     // SOFILLD which hint at a HIDGRID secret
-	lda	HIDGRID,y	;     if (temp & pokthru)
-	ora	pokthru		;      temp = HIDGRID[y] | pokthru;
+	beq	+		;     if (temp & guessed) // we placed block so
+	and #~(SOBLANK&SOFILLD)	;      temp &= pokthru; // show guess, not hint
+	bne	deither		;     else // no guess placed here so
++	lda	HIDGRID,y	;      // set flag to show either tinted circle
+	ora	#SOBLANK&SOFILLD;      temp = HIDGRID[y] | pokthru; // or X
 	bne	deither		;    }
-dhidden	lda @w	A0FUNCT	;//what	b
+dhidden	lda @w	A0FUNCT	;//what	;
 	and	#DRW_HID	;
 	beq	dgerror		;   } else if (what & DRW_HID)
 	lda	HIDGRID,y	;    temp = HIDGRID[y];
@@ -433,8 +438,7 @@ hal_msg	ldy	#$ff		;void hal_msg(void) {
 	
 hal_lbl
 hal_msh
-	rts			;
-hal_cel
+hal_cel	POPVARS
 	rts
 .endif
 
