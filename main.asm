@@ -706,7 +706,7 @@ rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
 rnddone	POPVARS			;
 
 .else
-cangrid	.byte	0|CHAMFTL,	0|SQUARE,	0|CHAMFBL,	BLANK
+cangrid	.byte	0|CHAMFTL,	0|BOREDLR,	0|CHAMFBL,	BLANK
 	.byte	BLANK,		BLANK,		RUBOUT|SQUARE,	RUBOUT|SQUARE
 	.byte	BLANK,		BLANK,		BLANK,		BLANK
 	.byte	BLANK,		BLANK,		BLANK,		BLANK

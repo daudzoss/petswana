@@ -330,22 +330,19 @@ deither	sta @w	V2LOCAL	;//temp	;
 	lsr			;
 	lsr			;
 	lsr			;
-	php			;
-	lda	petsyms,y	;
-	plp			;
 	beq	+		;    if (temp >> 4) { // not transparent
 	tay			;
-	lda	#0		;
 	sec			;
+	lda	#0		;
 -	rol			;
 	dey			;
-	bne	-		;
-	tay			;
-	lda	tintltr,y	;     a = tintltr[1 << (temp >> 4)]; //W/R/Y/B
+	bne	-		;     // set a to 'R'/'Y'/'B'/'W' (left-shifted)
+	tay			;     a = tintltr[1<<(((temp&0x70)>>4)-1)] << 1;
+	lda	tintltr,y	;     c = 1; // reverse video
 	sec			;    }
 	rol			;   }
 .endif
-+	lsr			;   if (!a)
++	lsr			;   if ((a >>= 1) == 0) {
 	bne	+		;    a = 0xa9; // only 8-bit stored in petsyms
 	lda	#$a9		;   }
 +	bcc	++		;   if (c) {
