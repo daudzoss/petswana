@@ -228,7 +228,7 @@ b2basic	rts			;
 +	dec @w	V0LOCAL	;//remng;
 	bne	-		;    } else if (--remnng == 0) {
 	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
-	ldy #DRW_HID;	#DRW_HID|DRW_MSG;
+	ldy	#DRW_HID|DRW_MSG;
 	jsrAPCS	visualz		;     visualz(DRW_HID|DRW_MSG);
 	ldy	#0		;     exit(y = 0);
 	jmp	mainend		;    }
