@@ -127,7 +127,6 @@ BOREDLR	= $6			; transmits left-right but rebounds top-bottom
 BOREDTB	= $7			; transmits top-bottom but rebounds left-right
 SOBLANK	= $8			; marker (in TRYGRID only) that blank confirmed
 SOFILLD	= $9			; marker (in TRYGRID only) that object confirmed
-MAXSHAP	= SQUARE;BOREDTB
 
 ;;; upper nybble of grid square absorbs/reflects beam, optionally imparting tint
 UNTINTD	= $0			; no tint change: blank cell or transparent refl
@@ -634,7 +633,7 @@ punwind	ldy @w	V2LOCAL	;//yelem; for (yelem; yelem != head; yelem--) {
 	beq	punwind		;} // placeit()
 
 .if RNDLOC1 && RNDLOC2
-rotshap				;//try a new rotation of a shape in the linked list
+MAXSHAP	= SQUARE
 
 rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
 	pha	;V1LOCAL;//rotn	; uint8_t next, rotn, tint, elems, rownm, colnm;
@@ -694,6 +693,7 @@ rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
 rnddone	POPVARS			;
 
 .else
+MAXSHAP	= BOREDTB
 cangrid	.byte	0|CHAMFTL,	0|BOREDLR,	0|CHAMFBL,	BLANK
 	.byte	BLANK,		BLANK,		RUBOUT|SQUARE,	RUBOUT|SQUARE
 	.byte	BLANK,		BLANK,		BLANK,		BLANK

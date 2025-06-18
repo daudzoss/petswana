@@ -89,7 +89,7 @@ petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
 	.byte	$9f		; /* cyan; no l. p. PETSCII */ 0x9f, // MIXT_LP
 	.byte	$99		; /* on c16 this is l. blue */ 0x99, // MIXT_LG
 	.byte	$97		; /* on c16 this is l. red */  0x97, // MIXTGRY
-	.byte	$90		; /* universally black */      0x90};// MIXTOFF
+	.byte	$90		; /* universally black */      0x90};// 16
 .else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
 petscii	.byte   $,$,$,$		;static uint8_t petscii[17] = {0, 0, 0, 0,
@@ -610,4 +610,5 @@ tempout	pha			;void tempout(uint8_t a) {
 	rts			;} // tempout()
 tintltr	.byte	0,'r','y',0	;
 	.byte	'b',0,0,0,'w'	;
+	.byte	0,0,0,0,0,0,0,'a'
 .endif

@@ -167,7 +167,7 @@ tempins	jsr	putchar		;   putchar(' ');
 	cmp	#MAXSHAP+1	;
 	bcc	+		;   if (a > MAXSHAP)
 	lda	#BLANK		;    rtval = BLANK; // must clear tint to blank
-	beq	+		;
+	beq	++		;
 +	ora @w	V0LOCAL	;//rtval;   else
 +	sta @w	V0LOCAL	;//rtval;    rtval |= a;// bit 3 has been left untouched
 	bit	pokthru		;   if (rtval & pokthru) {// we've bought a hint
@@ -252,6 +252,38 @@ colornc	lda @w	V0LOCAL	;//rtval;    colornc:
 	jsr	putchar		;     putchar(RVS_ON);
 	lda	#'y'		;
 	jsr	putchar		;     putchar('Y');
+	lda	#$40		;     return 0x40;// fall thru main()'s switch{}
+	jmp	tempinr		;    }
++	cmp	#'t'		;    case 'T':
+	bne	+		;
+	lda @w	V0LOCAL	;//rtval;
+	and	#%0000 .. %1111	;
+	ora	#0		;
+	sta	TRYGRID,y	;     TRYGRID[ycopy] = 0 | (rtval &0x0f);
+	ldy	#DRW_CEL	;
+	jsrAPCS	visualz		;     visualz(DRW_CEL, col, row); // show it
+	lda	petscii+UNMIXED	;
+	jsr	putchar		;     putchar(petscii[UNMIXED]);
+	lda	#RVS_ON		;
+	jsr	putchar		;     putchar(RVS_ON);
+	lda	#' '		;
+	jsr	putchar		;     putchar(' ');
+	lda	#$40		;     return 0x40;// fall thru main()'s switch{}
+	jmp	tempinr		;    }
++	cmp	#'a'		;    case 'A':
+	bne	+		;
+	lda @w	V0LOCAL	;//rtval;
+	and	#%0000 .. %1111	;
+	ora	#RUBOUT		;
+	sta	TRYGRID,y	;     TRYGRID[ycopy] = RUBOUT | (rtval &0x0f);
+	ldy	#DRW_CEL	;
+	jsrAPCS	visualz		;     visualz(DRW_CEL, col, row); // show it
+	lda	petscii+16	;
+	jsr	putchar		;     putchar(petscii[16]);
+	lda	#RVS_ON		;
+	jsr	putchar		;     putchar(RVS_ON);
+	lda	#'a'		;
+	jsr	putchar		;     putchar('A');
 	lda	#$40		;     return 0x40;// fall thru main()'s switch{}
 	jmp	tempinr		;    }
 +	eor	#'x'		;   }
