@@ -112,24 +112,6 @@ petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
 
-gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
-	adc	#GRIDSIZ	; uint8_t savey = GRIDSIZ + a; // +0=TRY,+80=HID
-	pha	;//savey=V0LOCAL;
-	lda	#GRIDSIZ/8	;
-	pha	;//row=V1LOCAL	;
-	pha	;//col=V2LOCAL	; uint8_t row, col;
--	lda	#8		; for (col = 10; col; col--) {
-	sta @w	V1LOCAL	;//row	;  for(row = 8; row; row--) {
--	dec @w	V0LOCAL	;//savey;
-	ldy @w	V0LOCAL	;//savey;
-	jsrAPCS	hal_cel		;   hal_cel(--savey, col, row);
-	dec @w	V1LOCAL	;//row	;
-	bne	-		;  }
-	dec @w	V2LOCAL	;//col	;
-	bne	--		; }
-	POPVARS			;
-	rts			;} // gridsho()
-
 .if SCREENH && (SCREENW >= $50)
 hal_try
 hal_hid
@@ -139,33 +121,44 @@ hal_msh
 hal_cel	POPVARS
 	rts
 .elsif SCREENH && (SCREENW >= $28)
+LABLULM	= SCREENM
+LABLUL2	= SCREENM + 
+GRIDULM	= SCREENM + SCREENW + 1
+
+hal_cel	POPVARS
+	rts
 hal_try
 hal_hid
 hal_msg
 hal_lbl
-hal_msh
-hal_cel	POPVARS
+hal_msh	POPVARS
 	rts
 .elsif SCREENH && (SCREENW >= $16)
+CIRCLC	= VIDEOR
+CELLPIT	= 2
+LABLULM	= SCREENM
+LABLUL2	= SCREENM + 2*CELLPIT*SCREENW
+LABLUL4	= SCREENM + 4*CELLPIT*SCREENW
+LABLUL6	= SCREENM + 6*CELLPIT*SCREENW
+GRIDULM	= 0			; no VIC20 real estate for inter-cell grid lines
+GRIDUL2	= 0
+GRIDUL4	= 0
+GRIDUL6	= 0
+CELLULM	= SCREENM + SCREENW + 1
+CELLUL2	= CELLULM + 2*CELLPIT*SCREENW
+CELLUL4	= CELLULM + 4*CELLPIT*SCREENW
+CELLUL6	= CELLULM + 6*CELLPIT*SCREENW
+GRDLINC	= 0
+
 gridlbl
-gridcir
 
-hal_try	ldy	#0		;void hal_try(uint8_t
-	jsrAPCS gridsho		; gridsho(0);
-	jsrAPCS	gridlbl		;
-	POPVARS			;
-	rts			;} // hal_try()
-
-hal_hid	ldy	#$50		;
-	jsrAPCS gridsho		;
-	jsrAPCS	gridcir		;
-	POPVARS			;
-	rts			;} // hal_hid()
+hal_cel
+	POPVARS
+	rts
 
 hal_msg
 hal_lbl
-hal_msh
-hal_cel	POPVARS
+hal_msh	POPVARS
 	rts
 .else
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
@@ -455,6 +448,99 @@ hal_cel	POPVARS
 .endif
 
 .if SCREENW && SCREENH
+;;; functions for addressable screens, able to draw randomly accessed characters
+gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
+	adc	#GRIDSIZ	; uint8_t savey = GRIDSIZ + a; // +0=TRY,+80=HID
+	pha	;//savey=V0LOCAL;
+	lda	#GRIDSIZ/8	;
+	pha	;//row=V1LOCAL	;
+	pha	;//col=V2LOCAL	; uint8_t row, col;
+-	lda	#8		; for (col = 10; col; col--) {
+	sta @w	V1LOCAL	;//row	;  for(row = 8; row; row--) {
+-	dec @w	V0LOCAL	;//savey;
+	ldy @w	V0LOCAL	;//savey;
+	jsrAPCS	hal_cel		;   hal_cel(--savey, col, row);
+	dec @w	V1LOCAL	;//row	;
+	bne	-		;  }
+	dec @w	V2LOCAL	;//col	;
+	bne	--		; }
+	POPVARS			;
+	rts			;} // gridsho()
+
+hal_try	ldy	#0		;void hal_try(void) {
+	jsrAPCS gridsho		; gridsho(0);
+	jsrAPCS	gridlbl		; gridlbl();
+	POPVARS			;
+	rts			;} // hal_try()
+
+hal_hid	ldy	#$50		;void hal_try(void) {
+	jsrAPCS gridsho		; gridsho(80);
+	jsrAPCS	gridcir		; gridcir();
+	POPVARS			;
+	rts			;} // hal_hid()
+
+.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
+GRIDPIT	= CELLPIT+1
+.else
+GRIDPIT = CELLPIT
+.endif
+
+CGRIDTL	= $
+CGRIDH	= $
+CGRIDHB	= $
+CGRIDTR	= $
+CGRIDV	= $
+CGRIDHV	= $
+CGRIDVR	= $
+CGRIDVL	= $
+CGRIDBL	= $
+CGRIDHT	= $
+CGRIDBR	= $
+
+CIRCLTL	= $
+CIRCLH	= $
+CIRCLTR	= $
+CIRCLV	= $
+CIRCLBL	= $
+CIRCLTR	= $
+
+SCREEND	= SCREENC-SCREENM
+
+gridcir	ldy	#1+CELLPIT*GRIDW;void gridcir(void) {
+	lda	#CIRCLTR	; register uint8_t y = 1+CELLPIT*GRIDW;
+	sta	LABLULM,y	; LABULM[y] = CIRCLTR;
+	lda	#CIRCLBR	;
+	sta	LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
+	lda	#CIRCLC		;
+	sta	SCREEND+LABULM,y; LABULM[y + SCREEND] = CIRCLC;
+	lda	#CIRCLBL	;
+	sta	SCREEND+LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
+-	lda	#CIRCLH		; for (; y; --y) {
+	sta	LABLULM,y	;  LABULM[y] = CIRCLH;
+	sta	LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
+	lda	#CIRCLC		;
+	sta	SCREEND+LABULM,y;  LABULM[y + SCREEND] = CIRCLC;
+	sta	SCREEND+LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
+	dey			;
+	bne	-		; }
+	lda	#CIRCLTL	;
+	sta	LABLULM,y	; LABULM[0] = CIRCLTR;
+	lda	#CIRCLBL	;
+	sta	LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
+	lda	#CIRCLC		;
+	sta	SCREEND+LABULM,y; LABULM[0 + SCREEND] = CIRCLC;
+	lda	#CIRCLV		; for (r = 0; y; --y) {
+.for r := 1, r <= GRIDPIT*GRIDH, r += 1
+	sta LABLULM+r*SCREENW	;
+	sta LABULM+r*SCREENW+GRIDPIT*GRIDW
+.next
+	lda	#CIRCLC		;
+.for r := 1, r <= GRIDPIT*GRIDH, r += 1
+	sta SCREEND+LABLULM+r*SCREENW
+	sta SCREEND+LABLULM+r*SCREENW+GRIDPIT*GRIDW
+.next
+	rts			;} // gridcir()
+
 tempout rts
 .else
 tempout	pha			;void tempout(uint8_t a) {
