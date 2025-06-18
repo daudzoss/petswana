@@ -196,7 +196,7 @@ b2basic	rts			;
 .endif
 	jsrAPCS	initize		; initize(); // portals, grids
 -	ldy	#DRW_DEC|DRW_TRY; do {
-	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY|DRW_HID);
+	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
 	ldy	#SAY_ANY	;
 	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
 	sty	OTHRVAR		;
@@ -271,15 +271,6 @@ peekcel	and	#%0111 .. %1111	;
 	sta	TRYGRID,y	;
 	POPVARS			;
 	rts			;
-.if 0
-echomov	pha
-	lda	#$0d
-	jsr	putchar
-	ldy @w	V0LOCAL
-	jsrAPCS	puthexd
-	POPVARS
-	rts
-.endif
 
 iniport	lda	#$00		;inline void iniport(void) {
 	ldy	#ANSWERS	; for (register uint8_t y = ANSWERS; y; y--) {
@@ -357,9 +348,6 @@ gotbeam	sta @w	V1LOCAL	;//wavef; }
 	pha	;//oldir	;  uint8_t oldy, bump, oldir;
 propag8	tya			;  register uint1_t c;
 	sta @w	V2LOCAL	;//oldy	;  oldy = y;
-.if 0
-	jsrAPCS	putcell		;  y = putcell(y); // y preserved
-.endif
 	lda	HIDGRID,y	;  // imagine we're on the FROM_ edge of cell y
 	bpl	+		;
 	jmp	deadend		;  if ((HIDGRID[y] >> 4) & RUBOUT == 0) { // on

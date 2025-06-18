@@ -101,7 +101,6 @@ RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
 
 .if SCREENH && (SCREENW >= $50)
-putcell
 hal_try
 hal_hid
 hal_msg
@@ -110,7 +109,6 @@ hal_msh
 hal_cel	POPVARS
 	rts
 .elsif SCREENH && (SCREENW >= $28)
-putcell
 hal_try
 hal_hid
 hal_msg
@@ -119,7 +117,6 @@ hal_msh
 hal_cel	POPVARS
 	rts
 .elsif SCREENH && (SCREENW >= $16)
-putcell
 hal_try
 hal_hid
 hal_msg
@@ -128,32 +125,6 @@ hal_msh
 hal_cel	POPVARS
 	rts
 .else
-
-putcell	pha	;V0LOCAL;//oldy	;register uint8_t putcell(register uint8_t a) {
-	lda	#' '		; uint8_t oldy = a;
-	jsr	putchar		; putchar(' ');
-	lda @w	V0LOCAL	;//oldy	;
-	and	#%0000 .. %0111	;
-	clc			;
-	adc	#'a'		;
-	jsr	putchar		; putchar('a' + (0x07 & oldy)); // A~H
-	lda @w	V0LOCAL	;//oldy	;
-	lsr			;
-	lsr			;
-	lsr			;
-	clc			;
-	adc	#'1'		;
-	cmp	#'9'+1		;
-	bcc	+		; if (oldy >= (9 << 3)) {
-	lda	#'1'		;  putchar('1');
-	jsr	putchar		;  putchar('0');
-	lda	#'0'		; } else {
-+	jsr	putchar		;  putchar('1' + (oldy >> 3)); // 1~9
-	lda	#':'		; }
-	jsr	putchar		; putchar(':');
-	ldy @w	V0LOCAL	;//oldy	;
-	POPVARS			; return y = oldy;
-	rts			;} // putcell()
 
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 .if SCREENW != $16
@@ -280,10 +251,6 @@ dnxtcel	adc	#GRIDH		;   a = ' ';
 	lda	TRYGRID,y	;    temp = TRYGRID[y];
 	bit	pokthru		;
 	beq	deither		;    if (temp & pokthru) { // if unknown, hint
-.if 0
- brk
- brk
-.endif
 	bit	guessed		;
 	beq	+		;     if (temp & guessed) // we placed block so
 	and #~(SOBLANK&SOFILLD)	;      temp &= ~pokthru;// show guess, not hint
