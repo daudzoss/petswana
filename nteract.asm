@@ -166,9 +166,10 @@ tempins	jsr	putchar		;   putchar(' ');
 	adc	#1		;   a = (TRYGRID[ycopy]&0x07) + 1; // next shape
 	cmp	#MAXSHAP+1	;
 	bcc	+		;   if (a > MAXSHAP)
-	lda	#BLANK		;    a = BLANK;
-+	ora @w	V0LOCAL	;//rtval;
-	sta @w	V0LOCAL	;//rtval;   rtval |= a; // bit 3 has been left untouched
+	lda	#BLANK		;    rtval = BLANK; // must clear tint to blank
+	beq	+		;
++	ora @w	V0LOCAL	;//rtval;   else
++	sta @w	V0LOCAL	;//rtval;    rtval |= a;// bit 3 has been left untouched
 	bit	pokthru		;   if (rtval & pokthru) {// we've bought a hint
 	beq	colorky		;    if (HIDGRID[y]) // which confirmed obstacle
 	lda	HIDGRID,y	;     goto colornc; // so don't need to ask tint
