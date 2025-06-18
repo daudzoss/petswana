@@ -3,38 +3,50 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	and	#DRW_MSH	; uint8_t whata/*ll*/ = a, what;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_MSH;
 	beq	+		; if (what) {
+	tay			;
 	jsrAPCS	hal_msh		;  hal_msh(what);
 +	lda @w	V0LOCAL		; }
 	and	#DRW_LBL	;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_LBL;
 	beq	+		; if (what) {
+	tay			;
 	jsrAPCS	hal_lbl		;  hal_lbl(what);
 +	lda @w	V0LOCAL		; }
 	and	#DRW_HID	;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_HID;
 	beq	+		; if (what) {
+	tay			;
 	jsrAPCS	hal_hid		;  hal_hid(what);
 +	lda @w	V0LOCAL		; }
 	and	#DRW_TRY	;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_TRY;
 	beq	+		; if (what) {
+	tay			;
 	jsrAPCS	hal_try		;  hal_try(what);
 +	lda @w	V0LOCAL		; }
-	and	#DRW_CEL	; y = whata & DRW_CEL;
-	beq	+		; if (y) {
-	tay			;
+	and	#DRW_CEL	; a = whata & DRW_CEL;
+	beq	+		; if (a) { // can only draw cell in TRYGRID here
 	lda @w	A1FUNCT	;//arg1	;
-	sta @w	V0LOCAL	;//cntnt;
+	sta @w	V0LOCAL	;//whata;  whata = arg1; // row, 1~8 (screen destination)
 	lda @w	A0FUNCT	;//arg0	;
-	sta @w	V1LOCAL	;//index;
-	jsrAPCS	hal_cel		;  hal_cel(y, arg0, arg1);
+	sta @w	V1LOCAL	;//what	;  what = arg0; // col, 1~10 (screen destination)
+	sec			;
+	sbc	#1		;
+	asl			;
+	asl			;
+	asl			;
+	adc @w	V0LOCAL	;//arg0	;
+	sec			;
+	sbc	#1		;  // contents to show get fetched from TRYGRID
+	tay			;  y = ((what/*col*/-1)<<3) + (whata/*row*/-1);
+	jsrAPCS	hal_cel		;  hal_cel(y/*index*/,what/*col*/,whata/*row*/);
 	jmp	++		;
 +	lda @w	V0LOCAL		; }
 	and	#DRW_MSG	; what = whata & DRW_MSG;
 	beq	+		; if (what) {
 	POPVARS			;
 	DONTRTS			;
-	jmp	hal_msg		;  hal_msg(what); // needs direct A0FUNCT access
+	jmp	hal_msg		;  hal_msg(); // needs direct A0FUNCT access
 +	POPVARS			; }
 	rts			;} // visualz()
 
@@ -100,6 +112,24 @@ petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
 
+gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
+	adc	#GRIDSIZ	; uint8_t savey = GRIDSIZ + a; // +0=TRY,+80=HID
+	pha	;//savey=V0LOCAL;
+	lda	#GRIDSIZ/8	;
+	pha	;//row=V1LOCAL	;
+	pha	;//col=V2LOCAL	; uint8_t row, col;
+-	lda	#8		; for (col = 10; col; col--) {
+	sta @w	V1LOCAL	;//row	;  for(row = 8; row; row--) {
+-	dec @w	V0LOCAL	;//savey;
+	ldy @w	V0LOCAL	;//savey;
+	jsrAPCS	hal_cel		;   hal_cel(--savey, col, row);
+	dec @w	V1LOCAL	;//row	;
+	bne	-		;  }
+	dec @w	V2LOCAL	;//col	;
+	bne	--		; }
+	POPVARS			;
+	rts			;} // gridsho()
+
 .if SCREENH && (SCREENW >= $50)
 hal_try
 hal_hid
@@ -117,15 +147,27 @@ hal_msh
 hal_cel	POPVARS
 	rts
 .elsif SCREENH && (SCREENW >= $16)
-hal_try
-hal_hid
+gridlbl
+gridcir
+
+hal_try	ldy	#0		;void hal_try(uint8_t
+	jsrAPCS gridsho		; gridsho(0);
+	jsrAPCS	gridlbl		;
+	POPVARS			;
+	rts			;} // hal_try()
+
+hal_hid	ldy	#$50		;
+	jsrAPCS gridsho		;
+	jsrAPCS	gridcir		;
+	POPVARS			;
+	rts			;} // hal_hid()
+
 hal_msg
 hal_lbl
 hal_msh
 hal_cel	POPVARS
 	rts
 .else
-
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 .if SCREENW != $16
 	lda	#$0d		;                                              \
@@ -401,11 +443,11 @@ dendrow
 	jsr	putchar		;   putchar(petscii[UNMIXED]);
 	POPVARS			;
 	rts			;} // putgrid
-	
+
 hal_msg	ldy	#$ff		;void hal_msg(void) {
 	lda	#0		; putstck(0,255); // needs direct A0FUNCT access
 	jmp	putstck		;} // hal_msg()
-	
+
 hal_lbl
 hal_msh
 hal_cel	POPVARS

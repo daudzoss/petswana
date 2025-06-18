@@ -141,11 +141,25 @@ tempins	jsr	putchar		;   putchar(' ');
 	jsrAPCS	getcell		;   // for 1, need Return to distinguish from 10
 	tya			;   y = getcell();
 	bpl	+		;   if (y < 0)
-	jmp	-		;    continue;//FIXME:could get here repeatedly?
-+	pha	;//ycopy	;   uint8_t ycopy = y;
+	jmp	-		;    continue; // note: 1x, won't flow back here
++	pha	;//V1LOCAL=ycopy;   uint8_t ycopy = y;
+	pha	;//V2LOCAL=row	;
+	pha	;//V3LOCAL=col	;   uint8_t row, col;
 	lda	TRYGRID,y	;
 	and	#%1111 .. %1000	;
 	sta @w	V0LOCAL	;//rtval;   rtval = TRYGRID[ycopy] & 0xf8;
+	tya			;
+	and	#%0000 .. %0111	;
+	clc			;
+	adc	#1		;
+	sta @w	V2LOCAL	;//row	;   row = (ycopy & 0x07) + 1; // for DRW_CEL
+	tya			;
+	lsr			;
+	lsr			;
+	lsr			;
+	clc			;
+	adc	#1		;
+	sta @w	V3LOCAL	;//col	;   col = (ycopy >> 3)  + 1; // for DRW_CEL
 	lda	TRYGRID,y	;
 	and	#%0000 .. %0111	;
 	clc			;
@@ -170,9 +184,9 @@ colornc	lda @w	V0LOCAL	;//rtval;    colornc:
 	cmp	#%0001 .. %0000	;     if (rtval < RUBRED) // no tint already set
 	bcc	colorky		;      continue; // don't allow transparents yet
 .endif
-	sta	TRYGRID,y	;     TRYGRID[ycopy] = rtval; // if no hal_cel()
+	sta	TRYGRID,y	;     TRYGRID[ycopy] = rtval; // hal_cel() reads
 	ldy	#DRW_CEL	;
-	jsrAPCS	visualz		;     visualz(DRW_CEL, ycopy, rtval); // show it
+	jsrAPCS	visualz		;     visualz(DRW_CEL, col, row); // show it
 	lda	#$40		;
 	jmp	tempinr		;     return 0x40;// fall thru main()'s switch{}
 +	cmp	#'b'		;    case 'B':
@@ -181,6 +195,8 @@ colornc	lda @w	V0LOCAL	;//rtval;    colornc:
 	and	#%0000 .. %1111	;
 	ora	#RUBBLU		;
 	sta	TRYGRID,y	;     TRYGRID[ycopy] = RUBBLU | (rtval &0x0f);
+	ldy	#DRW_CEL	;
+	jsrAPCS	visualz		;     visualz(DRW_CEL, col, row); // show it
 	lda	petscii+MIXTBLU	;
 	jsr	putchar		;     putchar(petscii[MIXTBLU]);
 	lda	#RVS_ON		;
@@ -188,13 +204,15 @@ colornc	lda @w	V0LOCAL	;//rtval;    colornc:
 	lda	#'b'		;
 	jsr	putchar		;     putchar('B');
 	lda	#$40		;
-	bne	tempinr		;     return 0x40;// fall thru main()'s switch{}
+	jmp	tempinr		;     return 0x40;// fall thru main()'s switch{}
 +	cmp	#'r'		;    case 'R':
 	bne	+		;
 	lda @w	V0LOCAL	;//rtval;
 	and	#%0000 .. %1111	;
 	ora	#RUBRED		;
 	sta	TRYGRID,y	;     TRYGRID[ycopy] = RUBBLU | (rtval &0x0f);
+	ldy	#DRW_CEL	;
+	jsrAPCS	visualz		;     visualz(DRW_CEL, col, row); // show it
 	lda	petscii+MIXTRED	;
 	jsr	putchar		;     putchar(petscii[MIXTRED]);
 	lda	#RVS_ON		;
@@ -202,13 +220,15 @@ colornc	lda @w	V0LOCAL	;//rtval;    colornc:
 	lda	#'r'		;
 	jsr	putchar		;     putchar('R');
 	lda	#$40		;
-	bne	tempinr		;     return 0x40;// fall thru main()'s switch{}
+	jmp	tempinr		;     return 0x40;// fall thru main()'s switch{}
 +	cmp	#'w'		;    case 'W':
 	bne	+		;
 	lda @w	V0LOCAL	;//rtval;
 	and	#%0000 .. %1111	;
 	ora	#RUBWHT		;
 	sta	TRYGRID,y	;     TRYGRID[ycopy] = RUBBLU | (rtval &0x0f);
+	ldy	#DRW_CEL	;
+	jsrAPCS	visualz		;     visualz(DRW_CEL, col, row); // show it
 	lda	petscii+MIXTWHT	;
 	jsr	putchar		;     putchar(petscii[MIXTWHT]);
 	lda	#RVS_ON		;
@@ -216,13 +236,15 @@ colornc	lda @w	V0LOCAL	;//rtval;    colornc:
 	lda	#'w'		;
 	jsr	putchar		;     putchar('W');
 	lda	#$40		;
-	bne	tempinr		;     return 0x40;// fall thru main()'s switch{}
+	jmp	tempinr		;     return 0x40;// fall thru main()'s switch{}
 +	cmp	#'y'		;    case 'Y':
 	bne	+		;
 	lda @w	V0LOCAL	;//rtval;
 	and	#%0000 .. %1111	;
 	ora	#RUBYEL		;
 	sta	TRYGRID,y	;     TRYGRID[ycopy] = RUBBLU | (rtval &0x0f);
+	ldy	#DRW_CEL	;
+	jsrAPCS	visualz		;     visualz(DRW_CEL, col, row); // show it
 	lda	petscii+MIXTYEL	;
 	jsr	putchar		;     putchar(petscii[MIXTYEL]);
 	lda	#RVS_ON		;
@@ -230,7 +252,7 @@ colornc	lda @w	V0LOCAL	;//rtval;    colornc:
 	lda	#'y'		;
 	jsr	putchar		;     putchar('Y');
 	lda	#$40		;     return 0x40;// fall thru main()'s switch{}
-	bne	tempinr		;    }
+	jmp	tempinr		;    }
 +	eor	#'x'		;   }
 	beq	tempinr		;   return 0; // request to quit instead of tint
 	jmp	colorky		;  } else if (a == '@') { // peek @cell a~h,1~10

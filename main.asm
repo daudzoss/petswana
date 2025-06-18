@@ -49,8 +49,8 @@ GRIDH	= $08
 GRIDSIZ	= GRIDW*GRIDH		; sizeof(HIDGRID); sizeof(TRYGRID);
 ANSWERS	= 2*GRIDH + 2*GRIDW	; sizeof(PORTALS); sizeof(PORTINT);
 
-HIDGRID	= vararea + $00
-TRYGRID	= vararea + GRIDSIZ
+TRYGRID	= vararea + $00
+HIDGRID	= vararea + GRIDSIZ
 PORTALS	= vararea + 2*GRIDSIZ
 PORTINT	= vararea + 2*GRIDSIZ + ANSWERS
 OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS
@@ -169,7 +169,7 @@ SAY_ANY = SAY_PEK|SAY_PRT|SAY_ANS
 	;; special codes here
 SUBMITG	= %01 .. %111111	; turn in answer for grading, please
 
-DRW_CEL	= 1<<0			; // A0: cell 0~79, A1: object
+DRW_CEL	= 1<<0			; // A0: col#1~10, A1: row#1-8
 DRW_MSG	= 1<<1			; // A0: '\0'-terminated character string?!?
 DRW_MOV	= 1<<3			; // A0: first move index to draw
 DRW_TRY	= 1<<4			;no args?
@@ -243,8 +243,8 @@ mainend	POPVARS			;
 youwin	.null	$0d,"grid correct, you win!"
 youwon
 youlose	.null	$0d,"you lose after guess 2"
-youlost	
-	
+youlost
+
 initize	jsr	iniport		;void initize(void) {
 	clc			; iniport();
 	jsr	inigrid		; inigrid(0 /* TRYGRID */);
