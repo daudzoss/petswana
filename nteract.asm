@@ -165,10 +165,13 @@ tempins	jsr	putchar		;   putchar(' ');
 	clc			;
 	adc	#1		;   a = (TRYGRID[ycopy]&0x07) + 1; // next shape
 	cmp	#MAXSHAP+1	;
-	bcc	+		;   if (a > MAXSHAP)
-	lda	#BLANK		;    rtval = BLANK; // must clear tint to blank
-	beq	++		;
-+	ora @w	V0LOCAL	;//rtval;   else
+	bcc	+		;   if (a > MAXSHAP) { // roll around to BLANK
+	lda @w	V0LOCAL	;//rtval;
+	bit	pokthru		;
+	bne	++		;    if (rtval & pokthru == 0) // if not a hint
+	lda	#BLANK		;     rtval = BLANK; // must clear tint to blank
+	beq	++		;  //else rtval &= 0xf8; // unchanged
++	ora @w	V0LOCAL	;//rtval;   } else
 +	sta @w	V0LOCAL	;//rtval;    rtval |= a;// bit 3 has been left untouched
 	bit	pokthru		;   if (rtval & pokthru) {// we've bought a hint
 	beq	colorky		;    if (HIDGRID[y]) // which confirmed obstacle
