@@ -180,8 +180,7 @@ DRW_BTH	= DRW_HID|DRW_TRY	;
 
 .include "stdlib.asm"
 
-main	jsr	wipescr		;int main(void) {
-	jsrAPCS	b2basic+1	; wipescr();
+main	jsrAPCS	b2basic+1	;int main(void) {
 b2basic	rts			;
 	lda	#2		;
 	pha	;//V0LOCAL	; uint8_t remng = 2; // guesses remaining
@@ -189,11 +188,8 @@ b2basic	rts			;
 	lda	#$0f		; static volatile uint8_t execute_bank* = 0x01;
 	sta	$01		; *execute_bank = 15;// P500 runs in system bank
 .endif
-.if BKGRNDC
-	lda	#VIDEOBG	; if (BKGRNDC) // use available color screen
-	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
-.endif
-	jsrAPCS	initize		; initize(); // portals, grids
+	jsrAPCS	initize		; initize(); // screen, portals, grids
+ brk
 -	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
 	ldy	#SAY_ANY	;
@@ -244,12 +240,32 @@ youwon
 youlose	.null	$0d,"you lose after guess 2"
 youlost
 
-initize	jsr	iniport		;void initize(void) {
+modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
+.if SCREENH
+	.text	$13,$13		; clear any BASIC 3.5/4 subwindows on the screen
+.endif
+initize	lda	#0		;void initize(void) {
+	pha	;//V0LOCAL	; uint8_t y;
+-	sta @w	V0LOCAL	;//y	; for (y = 0; y < strlen(modekey); y++) {
+	tay			;
+	lda	modekey,y	;
+	jsr	putchar		;  putchar(modekey[y]);            
+	ldy @w	V0LOCAL	;//y	;
+	iny			;                      
+	tya			;
+	cmp	#initize-modekey;
+	bcc	-		; }
+.if BKGRNDC
+	lda	#VIDEOBG	; if (BKGRNDC) // use available color screen
+	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
+.endif
+	jsr	iniport		;
 	clc			; iniport();
 	jsr	inigrid		; inigrid(0 /* TRYGRID */);
 	sec			;
 	jsr	inigrid		; inigrid(1 /* HIDGRID */);
 	jsrAPCS	rndgrid		; rndgrid();
+	jsrAPCS	wipescr		; wipescr();
 	POPVARS			;
 	rts			;} // initize()
 
@@ -671,7 +687,9 @@ rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
 ;	cmp	#GRIDH		;
 ;	bcs	-		;
 	sta @w	V5LOCAL	;//rownm;   } while ((rownm = rand() & 15) >= GRIDH);
--	lda	RNDLOC1		;   do {
+- lda #' '
+ jsr putchar
+	lda	RNDLOC1		;   do {
 	eor	RNDLOC2		;
 	and	#%0000 .. %1111	;
 	cmp	#GRIDW		;
@@ -722,29 +740,25 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 .endif
 	rts			;} // rndgrid()
 
-modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
-.if SCREENH
-	.text	$13,$13		; clear any BASIC 3.5/4 subwindows on the screen
-.endif
-wipescr	ldx	#wipescr-modekey;inline void wipescr(void) { // APCS uncompliant
--	lda	modekey,x	;                             // for performance
-	jsr	$ffd2		;
-	dex			;
-	bne	-		; printf("%c%c%c%c%c%c", 9, 147, 8, 19, 19);
 .if SCREENH && SCREENW
-	ldy	#SCREENH	; for (register int8_t y = SCREENH; y > 0; y--)
-
--	ldx	#SCREENW	;  for (register int8_t x = SCREENH; x > 0; x--)
--	lda	#$20		;
-	jsr	$ffd2		;   printf(" ");
-	dex			;
+wipescr	lda #>(SCREENW*SCREENH)	;void wipescr(void) {
+	pha	;//>i=V0LOCAL	;
+	lda #<(SCREENW*SCREENH)	;
+	pha	;//<i=V1LOCAL	; for (uint16_t i = SCREENW*SCREENH; i; --i)
+-	lda	#' '	  	;
+	jsr	putchar	  	;   printf(" ");
+	dec @w	V1LOCAL	;//<i	;
 	bne	-		;
-	dey			;
-	bne	--		;
+	dec @w	V0LOCAL	;//>i	;
+	bpl	-		;
 	lda	#$13		;
-	jsr	$ffd2		; printf("%c", 19); // back to home corner
+	jsr	putchar		; printf("%c", 19); // back to home corner
+	POPVARS			;
+	rts			;} // wipescr()
+.else
+wipescr	rts			;void wipescr(void) {} // wipescr()
 .endif
-	rts			;}
+
 .include "obstacle.asm"
 .include "visualz.asm"
 .include "nteract.asm"
