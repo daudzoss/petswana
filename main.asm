@@ -189,7 +189,6 @@ b2basic	rts			;
 	sta	$01		; *execute_bank = 15;// P500 runs in system bank
 .endif
 	jsrAPCS	initize		; initize(); // screen, portals, grids
- brk
 -	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
 	ldy	#SAY_ANY	;
