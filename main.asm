@@ -191,6 +191,7 @@ b2basic	rts			;
 	jsrAPCS	initize		; initize(); // screen, portals, grids
 -	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
+.if 0
 	ldy	#SAY_ANY	;
 	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
 	sty	OTHRVAR		;
@@ -222,6 +223,7 @@ b2basic	rts			;
 +	dec @w	V0LOCAL	;//remng;
 	bne	-		;    } else if (--remnng == 0) {
 	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
+.endif
 	ldy	#DRW_HID|DRW_MSG;
 	jsrAPCS	visualz		;     visualz(DRW_HID|DRW_MSG);
 	ldy	#0		;     exit(y = 0);

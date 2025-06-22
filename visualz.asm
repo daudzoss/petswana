@@ -27,9 +27,9 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	and	#DRW_CEL	; a = whata & DRW_CEL;
 	beq	+		; if (a) { // can only draw cell in TRYGRID here
 	lda @w	A1FUNCT	;//arg1	;
-	sta @w	V0LOCAL	;//whata;  whata = arg1; // row, 1~8 (screen destination)
+	sta @w	V0LOCAL	;//whata;  whata = arg1; // row 1~8 (screen destination)
 	lda @w	A0FUNCT	;//arg0	;
-	sta @w	V1LOCAL	;//what	;  what = arg0; // col, 1~10 (screen destination)
+	sta @w	V1LOCAL	;//what	;  what = arg0; // col 1~10 (screen destination)
 	sec			;
 	sbc	#1		;
 	asl			;
@@ -49,6 +49,10 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	jmp	hal_msg		;  hal_msg(); // needs direct A0FUNCT access
 +	POPVARS			; }
 	rts			;} // visualz()
+
+tinted	.byte	(RUBRED|RUBYEL|RUBBLU|RUBWHT|RUBOUT)
+pokthru	.byte	(SOBLANK & SOFILLD)
+guessed	.byte	(CHAMFBR|CHAMFBL|CHAMFTL|CHAMFTR|SQUARE)
 
 ;;; color-memory codes for addressable screens
 .if BKGRNDC
@@ -73,41 +77,41 @@ commodc	.byte	VIDTEXT		;0
 
 ;;; putchar()-printable color codes for terminal-mode on color platforms (vic20)
 .if BKGRNDC
-petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
-	.byte	$1c		;/* annotations are UNMIXED */ 0x1c, // MIXTRED
-	.byte	$9e		;/* i.e. 0x98 = c16 blu-grn */ 0x9e, // MIXTYEL
-	.byte	$81		;/*  and 0x98 = c64 med-gry */ 0x81, // MIXTORN
-	.byte	$1f		;                              0x1f, // MIXTBLU
-	.byte	$9c		;                              0x9c, // MIXTPUR
-	.byte	$1e		;                              0x1e, // MIXTGRN
-	.byte	$95		;                              0x95, // MIXTBRN
-	.byte	$05		;                              0x05, // MIXTWHT
-	.byte	$96		; /* on c16 this is yel-grn */ 0x96, // MIXT_LR
-	.byte	$9b		; /* l. g; no l. y. PETSCII */ 0x9b, // MIXT_LY
-	.byte	$9f		; /* cyan; no l. o. PETSCII */ 0x9f, // MIXT_LO
-	.byte	$9a		; /* on c16 this is d. blue */ 0x9a, // MIXT_LB
-	.byte	$9f		; /* cyan; no l. p. PETSCII */ 0x9f, // MIXT_LP
-	.byte	$99		; /* on c16 this is l. blue */ 0x99, // MIXT_LG
-	.byte	$97		; /* on c16 this is l. red */  0x97, // MIXTGRY
-	.byte	$90		; /* universally black */      0x90};// 16
+petscii	.text	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
+	.text	$1c		;/* annotations are UNMIXED */ 0x1c, // MIXTRED
+	.text	$9e		;/* i.e. 0x98 = c16 blu-grn */ 0x9e, // MIXTYEL
+	.text	$81		;/*  and 0x98 = c64 med-gry */ 0x81, // MIXTORN
+	.text	$1f		;                              0x1f, // MIXTBLU
+	.text	$9c		;                              0x9c, // MIXTPUR
+	.text	$1e		;                              0x1e, // MIXTGRN
+	.text	$95		;                              0x95, // MIXTBRN
+	.text	$05		;                              0x05, // MIXTWHT
+	.text	$96		; /* on c16 this is yel-grn */ 0x96, // MIXT_LR
+	.text	$9b		; /* l. g; no l. y. PETSCII */ 0x9b, // MIXT_LY
+	.text	$9f		; /* cyan; no l. o. PETSCII */ 0x9f, // MIXT_LO
+	.text	$9a		; /* on c16 this is d. blue */ 0x9a, // MIXT_LB
+	.text	$9f		; /* cyan; no l. p. PETSCII */ 0x9f, // MIXT_LP
+	.text	$99		; /* on c16 this is l. blue */ 0x99, // MIXT_LG
+	.text	$97		; /* on c16 this is l. red */  0x97, // MIXTGRY
+	.text	$90		; /* universally black */      0x90};// 16
 .else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
-petscii	.byte   $,$,$,$		;static uint8_t petscii[17] = {0, 0, 0, 0,
-	.byte   $,$,$,$		;                              0, 0, 0, 0,
-	.byte   $,$,$,$		;                              0, 0, 0, 0,
-	.byte   $,$,$,$,$	;                              0, 0, 0, 0, 0};
+petscii	.text   $,$,$,$		;static uint8_t petscii[17] = {0, 0, 0, 0,
+	.text   $,$,$,$		;                              0, 0, 0, 0,
+	.text   $,$,$,$		;                              0, 0, 0, 0,
+	.text   $,$,$,$,$	;                              0, 0, 0, 0, 0};
 .endif
 
 ;;; putchar()-printable graphics symbols for terminal-mode on all platforms
-petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
-	.byte	($00<<1)	;                   (0*0xa9<<1)|0, // if CHAMFBR
-	.byte	($7f<<1)	;                     (0x7f<<1)|1, // if CHAMFBL
-	.byte	($00<<1)|1	;                   (0*0xa9<<1)|1, // if CHAMFTL
-	.byte	($7f<<1)|1	;                     (0x7f<<1)|0, // if CHAMFTR
-	.byte	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
-	.byte	($60<<1)|1	;                     (0x60<<1)|1, // if BOREDLR
-	.byte	($7d<<1)|1	;                     (0x7d<<1)|1, // if BOREDTB
-	.byte	($76<<1)	;                     (0x76<<1)|0, // if SOBLANK
+petsyms	.text	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
+	.text	($00<<1)	;                   (0*0xa9<<1)|0, // if CHAMFBR
+	.text	($7f<<1)	;                     (0x7f<<1)|1, // if CHAMFBL
+	.text	($00<<1)|1	;                   (0*0xa9<<1)|1, // if CHAMFTL
+	.text	($7f<<1)|1	;                     (0x7f<<1)|0, // if CHAMFTR
+	.text	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
+	.text	($60<<1)|1	;                     (0x60<<1)|1, // if BOREDLR
+	.text	($7d<<1)|1	;                     (0x7d<<1)|1, // if BOREDTB
+	.text	($76<<1)	;                     (0x76<<1)|0, // if SOBLANK
 	.text	x"e2" x 7	;                     (0x71<<1)|0,...};//SOFILLD
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
@@ -122,7 +126,7 @@ hal_cel	POPVARS
 	rts
 .elsif SCREENH && (SCREENW >= $28)
 LABLULM	= SCREENM
-LABLUL2	= SCREENM + 
+LABLUL2	= SCREENM + ...
 GRIDULM	= SCREENM + SCREENW + 1
 
 hal_cel	POPVARS
@@ -135,26 +139,27 @@ hal_msh	POPVARS
 	rts
 .elsif SCREENH && (SCREENW >= $16)
 CIRCLC	= VIDEOR
-CELLPIT	= 2
+CELLDIM	= 2
+.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
+GRIDPIT	= CELLDIM+1
+.else
+GRIDPIT = CELLDIM
+.endif
 LABLULM	= SCREENM
-LABLUL2	= SCREENM + 2*CELLPIT*SCREENW
-LABLUL4	= SCREENM + 4*CELLPIT*SCREENW
-LABLUL6	= SCREENM + 6*CELLPIT*SCREENW
+LABLUL2	= SCREENM + 2*GRIDPIT*SCREENW
+LABLUL4	= SCREENM + 4*GRIDPIT*SCREENW
+LABLUL6	= SCREENM + 6*GRIDPIT*SCREENW
 GRIDULM	= 0			; no VIC20 real estate for inter-cell grid lines
 GRIDUL2	= 0
 GRIDUL4	= 0
 GRIDUL6	= 0
 CELLULM	= SCREENM + SCREENW + 1
-CELLUL2	= CELLULM + 2*CELLPIT*SCREENW
-CELLUL4	= CELLULM + 4*CELLPIT*SCREENW
-CELLUL6	= CELLULM + 6*CELLPIT*SCREENW
+CELLUL0	= CELLULM + 0*GRIDPIT*SCREENW
+CELLUL2	= CELLULM + 2*GRIDPIT*SCREENW
+CELLUL4	= CELLULM + 4*GRIDPIT*SCREENW
+CELLUL6	= CELLULM + 6*GRIDPIT*SCREENW
 GRDLINC	= 0
 
-gridlbl
-
-hal_cel
-	POPVARS
-	rts
 
 hal_msg
 hal_lbl
@@ -195,9 +200,6 @@ rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 	jsr	putchar		; putchar(rj);                                 \
 	.endm			;} // rule
 
-tinted	.byte	(RUBRED|RUBYEL|RUBBLU|RUBWHT|RUBOUT)
-pokthru	.byte	(SOBLANK & SOFILLD)
-guessed	.byte	(CHAMFBR|CHAMFBL|CHAMFTL|CHAMFTR|SQUARE)
 hal_hid				;void hal_hid(uint8_t what) { hal_try(what); }
 hal_try	pha	;//V0LOCAL=i	;void hal_try(uint8_t what) { // DRW_HID,DRW_TRY
 	pha	;//V1LOCAL=r	;
@@ -448,10 +450,143 @@ hal_cel	POPVARS
 .endif
 
 .if SCREENW && SCREENH
-;;; functions for addressable screens, able to draw randomly accessed characters
+;;; functions for addressable screens, able to draw randomly accessed 
+symartl	.byte	$20		; // BLANK
+	.byte	$a0		; // CHAMFBR
+	.byte	$5f		; // CHAMFBL
+	.byte	$df		; // CHAMFTR
+	.byte	$20		; // CHAMFTL
+	.byte	$a0		; // SQUARE
+	.byte	$f9		; // BOREDLR
+	.byte	$f6		; // BOREDTB
+	.byte	$4d		; // SOBLANK
+	.byte	$55		; // SOFILLED
+	;.byte	0,0,0,0,0,0
+
+symartr	.byte	$20		; // BLANK
+	.byte	$69		; // CHAMFBR
+	.byte	$a0		; // CHAMFBL
+	.byte	$20		; // CHAMFTR
+	.byte	$e9		; // CHAMFTL
+	.byte	$a0		; // SQUARE
+	.byte	$f9		; // BOREDLR
+	.byte	$f5		; // BOREDTB
+	.byte	$4e		; // SOBLANK
+	.byte	$49		; // SOFILLED
+	;.byte	0,0,0,0,0,0
+
+symarbl	.byte	$20		; // BLANK
+	.byte	$69		; // CHAMFBR
+	.byte	$20		; // CHAMFBL
+	.byte	$a0		; // CHAMFTR
+	.byte	$e9		; // CHAMFTL
+	.byte	$a0		; // SQUARE
+	.byte	$f8		; // BOREDLR
+	.byte	$f6		; // BOREDTB
+	.byte	$4e		; // SOBLANK
+	.byte	$4a		; // SOFILLED
+	;.byte	0,0,0,0,0,0
+
+symarbr	.byte	$20		; // BLANK
+	.byte	$20		; // CHAMFBR
+	.byte	$5f		; // CHAMFBL
+	.byte	$df		; // CHAMFTR
+	.byte	$a0		; // CHAMFTL
+	.byte	$a0		; // SQUARE
+	.byte	$f8		; // BOREDLR
+	.byte	$f5		; // BOREDTB
+	.byte	$4d		; // SOBLANK
+	.byte	$4b		; // SOFILLED
+	;.byte	0,0,0,0,0,0
+
+tintarr	.byte	VIDEOBG		; // UNTINTD
+	.byte	VIDEOR		; // TINTRED
+	.byte	VIDEOY		; // TINTYEL
+	.byte	VIDEOBL		; // TINTBLU
+	.byte	VIDEOW		; // TINTWHT
+	.byte	0,0,0,VIDEOBK	; // ABSORBD
+	;.byte	0,0,0,0,0,0,0
+
+filltwo	.macro	baseadr		;#define filltwo(baseadr,scoff,cellt,y)        \
+	lda	symarbr,y	;                                  /*y=cellv*/ \
+	pha			;
+	lda	symarbl,y	;
+	pha			;
+	lda	symartr,y	;
+	pha			;
+	lda	symartl,y	;
+	ldy @w	V3LOCAL	;//scoff;
+	sta	CELLUL\baseadr,y;
+	pla			;
+	sta	1+CELLUL\baseadr,y
+	pla			;
+	sta	SCREENW+CELLUL\baseadr,y
+	pla			;
+	sta	1+SCREENW+CELLUL\baseadr,y
+	ldy @w	V2LOCAL	;//cellt;
+	lda	tintarr,y	;
+	ldy @w	V3LOCAL	;//scoff;
+	sta	SCREEND+CELLUL\baseadr,y;
+	sta	SCREEND+1+CELLUL\baseadr,y
+	sta	SCREEND+SCREENW+CELLUL\baseadr,y
+	sta	SCREEND+1+SCREENW+CELLUL\baseadr,y
+	.endm
+
+hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
+	tay			;                                 uint8_t row) {
+	lda	TRYGRID,y	; uint8_t gridi = a; // so we can hint iff a<80
+	and	#%0000 .. %1111	; uint8_t cellv = TRYGRID[a/*0~70|80~159*/]&0xf;
+	cpy	#GRIDSIZ	;
+	bcs	++	;dhidden; if (gridi < GRIDSIZ) { // no hints in HIDGRID
+	bit	pokthru		;
+	beq	++	;deither;  if (cellv & pokthru) { // if unknown, hint
+	bit	guessed		;
+	beq	+		;   if (cellv & guessed) // we placed block so
+	and #~(SOBLANK&SOFILLD)	;    cellv &= ~pokthru; // show guess, not hint
+	bne	++	;deither;   else // no guess placed here so
++	lda	HIDGRID,y	;    // set flag to show either tinted circle
+	ora	#SOBLANK&SOFILLD;    cellv = HIDGRID[y] | pokthru; // or X
++	pha	;V1LOCAL=cellv	;  }
+	lda	TRYGRID,y	; }
+	lsr			;
+	lsr			;
+	lsr			;
+	lsr			;
+	pha	;V2LOCAL=cellt	; uint8_t cellt = TRYGRID[a] >> 4; // 0~4 | 8
+	lda	#-GRIDPIT	;
+	ldy @w	A0FUNCT	;//col	;
+-	clc			;
+	adc	#+GRIDPIT	;
+	dey			;
+	bne	-		;
+	pha	;V3LOCAL=scoff	; uint8_t scoff = (col-1)*GRIDPIT;// 0~9*GRIDPIT
+	ldy @w	V1LOCAL	;//cellv; register uint8_t y;
+	lda @w	A1FUNCT	;//row	; switch (a = row) {
+	and	#1		;  case 2:
+	bne	+		;   scoff += GRIDPIT*SCREENW;
+	lda @w	V3LOCAL	;//scoff;  case 1:
+	clc			;   filltwo(0, a, scoff, cellt, y=cellv, gridi);
+	adc	#GRIDPIT*SCREENW;   break;
+	sta @w	V3LOCAL	;//scoff;  case 4:
++	cmp	#3		;   scoff += GRIDPIT*SCREENW;
+	bcs	+		;  case 3:
+	filltwo	0		;   filltwo(2, a, scoff, cellt, y=cellv, gridi);
+	jmp	++++		;   break;
++	cmp	#5		;  case 6:
+	bcs	+		;   scoff += GRIDPIT*SCREENW;
+	filltwo	2		;   filltwo(4, a, scoff, cellt, y=cellv, gridi);
+	jmp	+++		;   break;
++	cmp	#7		;  case 8:
+	bcs	+		;   scoff += GRIDPIT*SCREENW;
+	filltwo	4		;  case 7:
+	jmp	++		;  default:
++	filltwo	6		;   filltwo(6, a, scoff, cellt, y=cellv, gridi);
++	POPVARS			; }
+	rts			;} // hal_cel()
+
 gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
-	adc	#GRIDSIZ	; uint8_t savey = GRIDSIZ + a; // +0=TRY,+80=HID
-	pha	;//savey=V0LOCAL;
+	adc	#GRIDSIZ	;
+	pha	;//savey=V0LOCAL; uint8_t savey = GRIDSIZ + a; // +0=TRY,+80=HID
 	lda	#GRIDSIZ/8	;
 	pha	;//row=V1LOCAL	;
 	pha	;//col=V2LOCAL	; uint8_t row, col;
@@ -479,12 +614,6 @@ hal_hid	ldy	#$50		;void hal_try(void) {
 	POPVARS			;
 	rts			;} // hal_hid()
 
-.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
-GRIDPIT	= CELLPIT+1
-.else
-GRIDPIT = CELLPIT
-.endif
-
 CGRIDTL	= $
 CGRIDH	= $
 CGRIDHB	= $
@@ -497,24 +626,28 @@ CGRIDBL	= $
 CGRIDHT	= $
 CGRIDBR	= $
 
-CIRCLTL	= $
-CIRCLH	= $
-CIRCLTR	= $
-CIRCLV	= $
-CIRCLBL	= $
-CIRCLBR	= $
+CIRCLTL	= $55
+CIRCLH	= $40
+CIRCLTR	= $49
+CIRCLV	= $5d
+CIRCLBL	= $4a
+CIRCLBR	= $4b
 
 SCREEND	= SCREENC-SCREENM
 
-gridcir	ldy	#1+CELLPIT*GRIDW;void gridcir(void) {
-	lda	#CIRCLTR	; register uint8_t y = 1+CELLPIT*GRIDW;
+gridlbl	POPVARS
+	rts
+
+gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
+	lda	#CIRCLTR	; register uint8_t y = 1+GRIDPIT*GRIDW;
 	sta	LABLULM,y	; LABLULM[y] = CIRCLTR;
 	lda	#CIRCLBR	;
 	sta	LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
-	lda	#CIRCLC		;
-	sta	SCREEND+LABLULM,y
-	lda	#CIRCLBL	; LABLULM[y + SCREEND] = CIRCLC;
+	lda	#CIRCLC		; LABLULM[y+(GRIDPIT*GRIDH+1)*SCREENW]= CIRCLBR;
+	sta	SCREEND+LABLULM,y;LABLULM[y + SCREEND + ""] = CIRCLC;
 	sta	SCREEND+LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
+	lda	#CIRCLBL	; LABLULM[y + SCREEND] = CIRCLC;
+	dey			;
 -	lda	#CIRCLH		; for (; y; --y) {
 	sta	LABLULM,y	;  LABLULM[y] = CIRCLH;
 	sta	LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
@@ -529,15 +662,16 @@ gridcir	ldy	#1+CELLPIT*GRIDW;void gridcir(void) {
 	sta	LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
 	lda	#CIRCLC		; LABLULM[0 + SCREEND] = CIRCLC;
 	sta	SCREEND+LABLULM,y
+	sta	SCREEND+LABLULM+(GRIDPIT*GRIDH+1)*SCREENW,y
 	lda	#CIRCLV		; for (r = 0; y; --y) {
 .for r := 1, r <= GRIDPIT*GRIDH, r += 1
 	sta LABLULM+r*SCREENW	;
-	sta LABLULM+r*SCREENW+GRIDPIT*GRIDW
+	sta LABLULM+r*SCREENW+GRIDPIT*GRIDW+1
 .next
 	lda	#CIRCLC		;
 .for r := 1, r <= GRIDPIT*GRIDH, r += 1
 	sta SCREEND+LABLULM+r*SCREENW
-	sta SCREEND+LABLULM+r*SCREENW+GRIDPIT*GRIDW
+	sta SCREEND+LABLULM+r*SCREENW+GRIDPIT*GRIDW+1
 .next
 	rts			;} // gridcir()
 
