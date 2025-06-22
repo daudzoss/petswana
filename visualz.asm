@@ -77,41 +77,41 @@ commodc	.byte	VIDTEXT		;0
 
 ;;; putchar()-printable color codes for terminal-mode on color platforms (vic20)
 .if BKGRNDC
-petscii	.text	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
-	.text	$1c		;/* annotations are UNMIXED */ 0x1c, // MIXTRED
-	.text	$9e		;/* i.e. 0x98 = c16 blu-grn */ 0x9e, // MIXTYEL
-	.text	$81		;/*  and 0x98 = c64 med-gry */ 0x81, // MIXTORN
-	.text	$1f		;                              0x1f, // MIXTBLU
-	.text	$9c		;                              0x9c, // MIXTPUR
-	.text	$1e		;                              0x1e, // MIXTGRN
-	.text	$95		;                              0x95, // MIXTBRN
-	.text	$05		;                              0x05, // MIXTWHT
-	.text	$96		; /* on c16 this is yel-grn */ 0x96, // MIXT_LR
-	.text	$9b		; /* l. g; no l. y. PETSCII */ 0x9b, // MIXT_LY
-	.text	$9f		; /* cyan; no l. o. PETSCII */ 0x9f, // MIXT_LO
-	.text	$9a		; /* on c16 this is d. blue */ 0x9a, // MIXT_LB
-	.text	$9f		; /* cyan; no l. p. PETSCII */ 0x9f, // MIXT_LP
-	.text	$99		; /* on c16 this is l. blue */ 0x99, // MIXT_LG
-	.text	$97		; /* on c16 this is l. red */  0x97, // MIXTGRY
-	.text	$90		; /* universally black */      0x90};// 16
+petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
+	.byte	$1c		;/* annotations are UNMIXED */ 0x1c, // MIXTRED
+	.byte	$9e		;/* i.e. 0x98 = c16 blu-grn */ 0x9e, // MIXTYEL
+	.byte	$81		;/*  and 0x98 = c64 med-gry */ 0x81, // MIXTORN
+	.byte	$1f		;                              0x1f, // MIXTBLU
+	.byte	$9c		;                              0x9c, // MIXTPUR
+	.byte	$1e		;                              0x1e, // MIXTGRN
+	.byte	$95		;                              0x95, // MIXTBRN
+	.byte	$05		;                              0x05, // MIXTWHT
+	.byte	$96		; /* on c16 this is yel-grn */ 0x96, // MIXT_LR
+	.byte	$9b		; /* l. g; no l. y. PETSCII */ 0x9b, // MIXT_LY
+	.byte	$9f		; /* cyan; no l. o. PETSCII */ 0x9f, // MIXT_LO
+	.byte	$9a		; /* on c16 this is d. blue */ 0x9a, // MIXT_LB
+	.byte	$9f		; /* cyan; no l. p. PETSCII */ 0x9f, // MIXT_LP
+	.byte	$99		; /* on c16 this is l. blue */ 0x99, // MIXT_LG
+	.byte	$97		; /* on c16 this is l. red */  0x97, // MIXTGRY
+	.byte	$90		; /* universally black */      0x90};// 16
 .else
 ;;; putchar()-printable dummy color codes for generic terminal-mode platforms
-petscii	.text   $,$,$,$		;static uint8_t petscii[17] = {0, 0, 0, 0,
-	.text   $,$,$,$		;                              0, 0, 0, 0,
-	.text   $,$,$,$		;                              0, 0, 0, 0,
-	.text   $,$,$,$,$	;                              0, 0, 0, 0, 0};
+petscii	.byte   0,0,0,0		;static uint8_t petscii[17] = {0, 0, 0, 0,
+	.byte   0,0,0,0		;                              0, 0, 0, 0,
+	.byte   0,0,0,0		;                              0, 0, 0, 0,
+	.byte   0,0,0,0,0	;                              0, 0, 0, 0, 0};
 .endif
 
 ;;; putchar()-printable graphics symbols for terminal-mode on all platforms
-petsyms	.text	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
-	.text	($00<<1)	;                   (0*0xa9<<1)|0, // if CHAMFBR
-	.text	($7f<<1)	;                     (0x7f<<1)|1, // if CHAMFBL
-	.text	($00<<1)|1	;                   (0*0xa9<<1)|1, // if CHAMFTL
-	.text	($7f<<1)|1	;                     (0x7f<<1)|0, // if CHAMFTR
-	.text	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
-	.text	($60<<1)|1	;                     (0x60<<1)|1, // if BOREDLR
-	.text	($7d<<1)|1	;                     (0x7d<<1)|1, // if BOREDTB
-	.text	($76<<1)	;                     (0x76<<1)|0, // if SOBLANK
+petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
+	.byte	($00<<1)	;                   (0*0xa9<<1)|0, // if CHAMFBR
+	.byte	($7f<<1)	;                     (0x7f<<1)|1, // if CHAMFBL
+	.byte	($00<<1)|1	;                   (0*0xa9<<1)|1, // if CHAMFTL
+	.byte	($7f<<1)|1	;                     (0x7f<<1)|0, // if CHAMFTR
+	.byte	($20<<1)|1	;                     (0x20<<1)|1, // if SQUARE
+	.byte	($60<<1)|1	;                     (0x60<<1)|1, // if BOREDLR
+	.byte	($7d<<1)|1	;                     (0x7d<<1)|1, // if BOREDTB
+	.byte	($76<<1)	;                     (0x76<<1)|0, // if SOBLANK
 	.text	x"e2" x 7	;                     (0x71<<1)|0,...};//SOFILLD
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
@@ -540,6 +540,16 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 +	lda	HIDGRID,y	;    // set flag to show either tinted circle
 	ora	#SOBLANK&SOFILLD;    cellv = HIDGRID[y] | pokthru; // or X
 +	pha	;V1LOCAL=cellv	;  }
+ cpy #$78
+ bcc +
+ tya
+ pha
+ ldy @w V1LOCAL	;//cellv
+ jsrAPCS puthexd
+ pla
+ tay
++;; delete this +
+
 	lda	TRYGRID,y	; }
 	lsr			;
 	lsr			;
@@ -588,7 +598,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	rts			;} // hal_cel()
 
 gridsho
- pha	
+ pha
  ldy #$0c
 - tya
  pha
@@ -609,11 +619,6 @@ gridsho
 	sta @w	V1LOCAL	;//row	;  for(row = 8; row; row--) {
 -	dec @w	V0LOCAL	;//savey;
 	ldy @w	V0LOCAL	;//savey;
- tya
- pha
- jsrAPCS puthexd
- pla
- tay
 	jsrAPCS	hal_cel		;   hal_cel(--savey, col, row);
 	dec @w	V1LOCAL	;//row	;
 	bne	-		;  }
