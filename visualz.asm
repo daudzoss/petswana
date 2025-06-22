@@ -137,7 +137,7 @@ hal_lbl
 hal_msh	POPVARS
 	rts
 .elsif SCREENH && (SCREENW >= $16)
-CIRCLC	= VIDEOR
+CIRCLC	= VIDEOBK
 CELLDIM	= 2
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
 GRIDPIT	= CELLDIM+1
@@ -454,53 +454,49 @@ hal_cel	POPVARS
 symartl	.byte	$20		; // BLANK
 	.byte	$a0		; // CHAMFBR
 	.byte	$5f		; // CHAMFBL
-	.byte	$df		; // CHAMFTR
 	.byte	$20		; // CHAMFTL
+	.byte	$df		; // CHAMFTR
 	.byte	$a0		; // SQUARE
 	.byte	$f9		; // BOREDLR
 	.byte	$f6		; // BOREDTB
 	.byte	$4d		; // SOBLANK
 	.byte	$55		; // SOFILLED
- .byte	0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0
 
 symartr	.byte	$20		; // BLANK
 	.byte	$69		; // CHAMFBR
 	.byte	$a0		; // CHAMFBL
-	.byte	$20		; // CHAMFTR
 	.byte	$e9		; // CHAMFTL
+	.byte	$20		; // CHAMFTR
 	.byte	$a0		; // SQUARE
 	.byte	$f9		; // BOREDLR
 	.byte	$f5		; // BOREDTB
 	.byte	$4e		; // SOBLANK
 	.byte	$49		; // SOFILLED
- .byte	0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0
 
 symarbl	.byte	$20		; // BLANK
 	.byte	$69		; // CHAMFBR
 	.byte	$20		; // CHAMFBL
-	.byte	$a0		; // CHAMFTR
 	.byte	$e9		; // CHAMFTL
+	.byte	$a0		; // CHAMFTR
 	.byte	$a0		; // SQUARE
 	.byte	$f8		; // BOREDLR
 	.byte	$f6		; // BOREDTB
 	.byte	$4e		; // SOBLANK
 	.byte	$4a		; // SOFILLED
- .byte	0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0
 
 symarbr	.byte	$20		; // BLANK
 	.byte	$20		; // CHAMFBR
 	.byte	$5f		; // CHAMFBL
-	.byte	$df		; // CHAMFTR
 	.byte	$a0		; // CHAMFTL
+	.byte	$df		; // CHAMFTR
 	.byte	$a0		; // SQUARE
 	.byte	$f8		; // BOREDLR
 	.byte	$f5		; // BOREDTB
 	.byte	$4d		; // SOBLANK
 	.byte	$4b		; // SOFILLED
- .byte	0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0
 
 tintarr	.byte	VIDEOBG		; // UNTINTD
@@ -509,21 +505,16 @@ tintarr	.byte	VIDEOBG		; // UNTINTD
 	.byte	VIDEOBL		; // TINTBLU
 	.byte	VIDEOW		; // TINTWHT
 	.byte	0,0,0,VIDEOBK	; // ABSORBD
- .byte	0,0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0,0
 
 filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=cellv*/
-; lda #0
 	sta	CELLUL\baseadr,y;                                 
 	pla	;//symtr=V6LOCAL;
-; lda #0
 	sta	1+CELLUL\baseadr,y
 	pla	;//symbl=V5LOCAL;
-; lda #0
 	sta	SCREENW+CELLUL\baseadr,y
 	pla	;//symbr=V4LOCAL;
-; lda #0
 	sta	1+SCREENW+CELLUL\baseadr,y
 	ldy @w	V2LOCAL	;//cellt;
 	lda	tintarr,y	;
@@ -549,10 +540,6 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 +	lda	HIDGRID,y	;    // set flag to show either tinted circle
 	ora	#SOBLANK&SOFILLD;    cellv = HIDGRID[y] | pokthru; // or X
 +	pha	;V1LOCAL=cellv	;  }
-; pla
-; tya
-; and #7
-; pha ;replace cellv with its row index
 	lda	TRYGRID,y	; }
 	lsr			;
 	lsr			;
@@ -600,19 +587,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 +	POPVARS			; }
 	rts			;} // hal_cel()
 
-gridsho
- pha
- ldy #$0c
-- tya
- pha
- lda #$0d
- jsr putchar
- pla
- tay
- dey
- bne -
- pla
-	clc			;void gridsho(register uint8_t a /* offset */) {
+gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
 	adc	#GRIDSIZ	;
 	pha	;//savey=V0LOCAL; uint8_t savey = GRIDSIZ + a; // +0=TRY,+80=HID
 	lda	#GRIDSIZ/8	;
@@ -666,12 +641,7 @@ SCREEND	= SCREENC-SCREENM
 gridlbl	POPVARS
 	rts
 
-gridcir
-
- jmp gridcir
-
-
-	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
+gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 	lda	#CIRCLTR	; register uint8_t y = 1+GRIDPIT*GRIDW;
 	sta	LABLULM,y	; LABLULM[y] = CIRCLTR;
 	lda	#CIRCLBR	;
