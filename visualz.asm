@@ -40,7 +40,7 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	sbc	#1		;  // contents to show get fetched from TRYGRID
 	tay			;  y = ((what/*col*/-1)<<3) + (whata/*row*/-1);
 	jsrAPCS	hal_cel		;  hal_cel(y/*index*/,what/*col*/,whata/*row*/);
-	jmp	++		;
+	jmp	++		;  return; // can't subsequently print message 
 +	lda @w	V0LOCAL		; }
 	and	#DRW_MSG	; what = whata & DRW_MSG;
 	beq	+		; if (what) {
@@ -507,21 +507,14 @@ tintarr	.byte	VIDEOBG		; // UNTINTD
 	.byte	0,0,0,VIDEOBK	; // ABSORBD
 	;.byte	0,0,0,0,0,0,0
 
-filltwo	.macro	baseadr		;#define filltwo(baseadr,scoff,cellt,y)        \
-	lda	symarbr,y	;                                  /*y=cellv*/ \
-	pha			;
-	lda	symarbl,y	;
-	pha			;
-	lda	symartr,y	;
-	pha			;
-	lda	symartl,y	;
-	ldy @w	V3LOCAL	;//scoff;
-	sta	CELLUL\baseadr,y;
-	pla			;
+filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
+	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=cellv*/
+	sta	CELLUL\baseadr,y;                                 
+	pla	;//symtr=V6LOCAL;
 	sta	1+CELLUL\baseadr,y
-	pla			;
+	pla	;//symbl=V5LOCAL;
 	sta	SCREENW+CELLUL\baseadr,y
-	pla			;
+	pla	;//symbr=V4LOCAL;
 	sta	1+SCREENW+CELLUL\baseadr,y
 	ldy @w	V2LOCAL	;//cellt;
 	lda	tintarr,y	;
@@ -530,7 +523,7 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,scoff,cellt,y)        \
 	sta	SCREEND+1+CELLUL\baseadr,y
 	sta	SCREEND+SCREENW+CELLUL\baseadr,y
 	sta	SCREEND+1+SCREENW+CELLUL\baseadr,y
-	.endm
+	.endm			;
 
 hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	tay			;                                 uint8_t row) {
@@ -561,30 +554,52 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	bne	-		;
 	pha	;V3LOCAL=scoff	; uint8_t scoff = (col-1)*GRIDPIT;// 0~9*GRIDPIT
 	ldy @w	V1LOCAL	;//cellv; register uint8_t y;
-	lda @w	A1FUNCT	;//row	; switch (a = row) {
-	and	#1		;  case 2:
-	bne	+		;   scoff += GRIDPIT*SCREENW;
-	lda @w	V3LOCAL	;//scoff;  case 1:
-	clc			;   filltwo(0, a, scoff, cellt, y=cellv, gridi);
-	adc	#GRIDPIT*SCREENW;   break;
-	sta @w	V3LOCAL	;//scoff;  case 4:
+	lda	symarbr,y	;
+	pha	;V4LOCAL=symbr	;
+	lda	symarbl,y	;
+	pha	;V5LOCAL=symbl	;
+	lda	symartr,y	;
+	pha	;V6LOCAL=symtr	;
+	lda	symartl,y	;
+	pha	;V7LOCAL=symtl	;
+	ldy @w	V3LOCAL	;//scoff;
+	lda @w	A1FUNCT	;//row	;
+	and	#1		; switch (a = row) {
+	bne	+		;  case 2:
+	lda @w	V3LOCAL	;//scoff;   scoff += GRIDPIT*SCREENW;
+	clc			;  case 1:
+	adc	#GRIDPIT*SCREENW;   filltwo(0, a, symtl, symtr, symbl, symbr,
+	sta @w	V3LOCAL	;//scoff;    scoff, cellt, y=scoff, gridi);       break;
+	lda @w	A1FUNCT	;//row	;  case 4:
 +	cmp	#3		;   scoff += GRIDPIT*SCREENW;
 	bcs	+		;  case 3:
-	filltwo	0		;   filltwo(2, a, scoff, cellt, y=cellv, gridi);
-	jmp	++++		;   break;
+	filltwo	0		;   filltwo(2, a, symtl, symtr, symbl, symbr,
+	jmp	++++		;    scoff, cellt, y=scoff, gridi);       break;
 +	cmp	#5		;  case 6:
 	bcs	+		;   scoff += GRIDPIT*SCREENW;
-	filltwo	2		;   filltwo(4, a, scoff, cellt, y=cellv, gridi);
-	jmp	+++		;   break;
+	filltwo	2		;   filltwo(4, a, symtl, symtr, symbl, symbr,
+	jmp	+++		;    scoff, cellt, y=scoff, gridi);       break;
 +	cmp	#7		;  case 8:
 	bcs	+		;   scoff += GRIDPIT*SCREENW;
 	filltwo	4		;  case 7:
-	jmp	++		;  default:
-+	filltwo	6		;   filltwo(6, a, scoff, cellt, y=cellv, gridi);
+	jmp	++		;  default: filltwo(6, a, symtl, symtr, symbl,
++	filltwo	6		;   symbr, scoff, cellt, y=scoff, gridi);
 +	POPVARS			; }
 	rts			;} // hal_cel()
 
-gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
+gridsho
+ pha	
+ ldy #$0c
+- tya
+ pha
+ lda #$0d
+ jsr putchar
+ pla
+ tay
+ dey
+ bne -
+ pla
+	clc			;void gridsho(register uint8_t a /* offset */) {
 	adc	#GRIDSIZ	;
 	pha	;//savey=V0LOCAL; uint8_t savey = GRIDSIZ + a; // +0=TRY,+80=HID
 	lda	#GRIDSIZ/8	;
@@ -594,6 +609,11 @@ gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
 	sta @w	V1LOCAL	;//row	;  for(row = 8; row; row--) {
 -	dec @w	V0LOCAL	;//savey;
 	ldy @w	V0LOCAL	;//savey;
+ tya
+ pha
+ jsrAPCS puthexd
+ pla
+ tay
 	jsrAPCS	hal_cel		;   hal_cel(--savey, col, row);
 	dec @w	V1LOCAL	;//row	;
 	bne	-		;  }
@@ -638,7 +658,12 @@ SCREEND	= SCREENC-SCREENM
 gridlbl	POPVARS
 	rts
 
-gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
+gridcir
+
+ jmp gridcir
+
+
+	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 	lda	#CIRCLTR	; register uint8_t y = 1+GRIDPIT*GRIDW;
 	sta	LABLULM,y	; LABLULM[y] = CIRCLTR;
 	lda	#CIRCLBR	;
