@@ -56,7 +56,7 @@ guessed	.byte	(CHAMFBR|CHAMFBL|CHAMFTL|CHAMFTR|SQUARE)
 
 ;;; color-memory codes for addressable screens
 .if BKGRNDC
-commodc	.byte	VIDTEXT		;0
+commodc	.byte	VIDEOBK		;0
 	.byte	VIDEOR		;1
 	.byte	VIDEOY		;2
 	.byte	VIDEOO		;3
@@ -72,7 +72,6 @@ commodc	.byte	VIDTEXT		;0
 	.byte	VIDEOLP		;13
 	.byte	VIDEOLG		;14
 	.byte	VIDEOGY		;15
-	.byte	VIDEOBK		;16
 .endif
 
 ;;; putchar()-printable color codes for terminal-mode on color platforms (vic20)
@@ -150,6 +149,7 @@ LABLUL2	= SCREENM + 2*GRIDPIT*SCREENW
 LABLUL4	= SCREENM + 4*GRIDPIT*SCREENW
 LABLUL6	= SCREENM + 6*GRIDPIT*SCREENW
 GRIDULM	= 0			; no VIC20 real estate for inter-cell grid lines
+GRIDUL0 = 0
 GRIDUL2	= 0
 GRIDUL4	= 0
 GRIDUL6	= 0
@@ -461,6 +461,7 @@ symartl	.byte	$20		; // BLANK
 	.byte	$f6		; // BOREDTB
 	.byte	$4d		; // SOBLANK
 	.byte	$55		; // SOFILLED
+ .byte	0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0
 
 symartr	.byte	$20		; // BLANK
@@ -473,6 +474,7 @@ symartr	.byte	$20		; // BLANK
 	.byte	$f5		; // BOREDTB
 	.byte	$4e		; // SOBLANK
 	.byte	$49		; // SOFILLED
+ .byte	0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0
 
 symarbl	.byte	$20		; // BLANK
@@ -485,6 +487,7 @@ symarbl	.byte	$20		; // BLANK
 	.byte	$f6		; // BOREDTB
 	.byte	$4e		; // SOBLANK
 	.byte	$4a		; // SOFILLED
+ .byte	0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0
 
 symarbr	.byte	$20		; // BLANK
@@ -497,6 +500,7 @@ symarbr	.byte	$20		; // BLANK
 	.byte	$f5		; // BOREDTB
 	.byte	$4d		; // SOBLANK
 	.byte	$4b		; // SOFILLED
+ .byte	0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0
 
 tintarr	.byte	VIDEOBG		; // UNTINTD
@@ -505,16 +509,21 @@ tintarr	.byte	VIDEOBG		; // UNTINTD
 	.byte	VIDEOBL		; // TINTBLU
 	.byte	VIDEOW		; // TINTWHT
 	.byte	0,0,0,VIDEOBK	; // ABSORBD
+ .byte	0,0,0,0,0,0,0
 	;.byte	0,0,0,0,0,0,0
 
 filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=cellv*/
+; lda #0
 	sta	CELLUL\baseadr,y;                                 
 	pla	;//symtr=V6LOCAL;
+; lda #0
 	sta	1+CELLUL\baseadr,y
 	pla	;//symbl=V5LOCAL;
+; lda #0
 	sta	SCREENW+CELLUL\baseadr,y
 	pla	;//symbr=V4LOCAL;
+; lda #0
 	sta	1+SCREENW+CELLUL\baseadr,y
 	ldy @w	V2LOCAL	;//cellt;
 	lda	tintarr,y	;
@@ -540,16 +549,10 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 +	lda	HIDGRID,y	;    // set flag to show either tinted circle
 	ora	#SOBLANK&SOFILLD;    cellv = HIDGRID[y] | pokthru; // or X
 +	pha	;V1LOCAL=cellv	;  }
- cpy #$78
- bcc +
- tya
- pha
- ldy @w V1LOCAL	;//cellv
- jsrAPCS puthexd
- pla
- tay
-+;; delete this +
-
+; pla
+; tya
+; and #7
+; pha ;replace cellv with its row index
 	lda	TRYGRID,y	; }
 	lsr			;
 	lsr			;
@@ -572,7 +575,6 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	pha	;V6LOCAL=symtr	;
 	lda	symartl,y	;
 	pha	;V7LOCAL=symtl	;
-	ldy @w	V3LOCAL	;//scoff;
 	lda @w	A1FUNCT	;//row	;
 	and	#1		; switch (a = row) {
 	bne	+		;  case 2:
@@ -580,8 +582,9 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	clc			;  case 1:
 	adc	#GRIDPIT*SCREENW;   filltwo(0, a, symtl, symtr, symbl, symbr,
 	sta @w	V3LOCAL	;//scoff;    scoff, cellt, y=scoff, gridi);       break;
-	lda @w	A1FUNCT	;//row	;  case 4:
-+	cmp	#3		;   scoff += GRIDPIT*SCREENW;
++	lda @w	A1FUNCT	;//row	;
+	ldy @w	V3LOCAL	;//scoff;  case 4:
+	cmp	#3		;   scoff += GRIDPIT*SCREENW;
 	bcs	+		;  case 3:
 	filltwo	0		;   filltwo(2, a, symtl, symtr, symbl, symbr,
 	jmp	++++		;    scoff, cellt, y=scoff, gridi);       break;
