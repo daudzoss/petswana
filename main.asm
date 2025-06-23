@@ -690,9 +690,7 @@ rndgrid	pha	;V0LOCAL;//next	;void rndgrid(void) {
 ;	cmp	#GRIDH		;
 ;	bcs	-		;
 	sta @w	V5LOCAL	;//rownm;   } while ((rownm = rand() & 15) >= GRIDH);
-- lda #' '
- jsr putchar
-	lda	RNDLOC1		;   do {
+-	lda	RNDLOC1		;   do {
 	eor	RNDLOC2		;
 	and	#%0000 .. %1111	;
 	cmp	#GRIDW		;

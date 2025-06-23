@@ -145,9 +145,10 @@ GRIDPIT	= CELLDIM+1
 GRIDPIT = CELLDIM
 .endif
 LABLULM	= SCREENM
-LABLUL2	= SCREENM + 2*GRIDPIT*SCREENW
-LABLUL4	= SCREENM + 4*GRIDPIT*SCREENW
-LABLUL6	= SCREENM + 6*GRIDPIT*SCREENW
+LABLUL0	= LABLULM + 0*GRIDPIT*SCREENW
+LABLUL2	= LABLULM + 2*GRIDPIT*SCREENW
+LABLUL4	= LABLULM + 4*GRIDPIT*SCREENW
+LABLUL6	= LABLULM + 6*GRIDPIT*SCREENW
 GRIDULM	= 0			; no VIC20 real estate for inter-cell grid lines
 GRIDUL0 = 0
 GRIDUL2	= 0
@@ -652,27 +653,142 @@ gridbot	.byte	$20,$09,$20,$0a
 	.byte	$20,$11,$20,$12
 	.byte	$20,$20
 	;.byte	" i j k l m n o p q r  "
-gridlbl	
+gridlbl	ldy	#SCREENW	;
+	lda	#' '		;
+	sta	LABLUL0		;
+	sta	LABLUL0,y	;
+	sta	LABLUL2,y	;
+	sta	LABLUL4,y	;
+	sta	LABLUL6,y	;
+	sta	LABLUL6+SCREENW,y
+
+	ldy	#SCREENW*2	;
+	lda	#'a'-'@'	;
+	sta	LABLUL0,y	;
+	lda	#'c'-'@'	;
+	sta	LABLUL2,y	;
+	lda	#'e'-'@'	;
+	sta	LABLUL4,y	;
+	lda	#'g'-'@'	;
+	sta	LABLUL6,y	;
+	lda	#CIRCLC		;
+	sta	SCREEND+LABLUL0,y
+	sta	SCREEND+LABLUL2,y
+	sta	SCREEND+LABLUL4,y
+	sta	SCREEND+LABLUL6,y
+
+	ldy	#SCREENW*3	;
+	lda	#' '		;
+	sta	LABLUL0,y	;
+	sta	LABLUL2,y	;
+	sta	LABLUL4,y	;
+	sta	LABLUL6,y	;
+	sta	LABLUL6+SCREENW,y
+
+	ldy	#SCREENW*4	;
+	lda	#'b'-'@'	;
+	sta	LABLUL0,y	;
+	lda	#'d'-'@'	;
+	sta	LABLUL2,y	;
+	lda	#'f'-'@'	;
+	sta	LABLUL4,y	;
+	lda	#'h'-'@'	;
+	sta	LABLUL6,y	;
+	lda	#CIRCLC		;
+	sta	SCREEND+LABLUL0,y
+	sta	SCREEND+LABLUL2,y
+	sta	SCREEND+LABLUL4,y
+	sta	SCREEND+LABLUL6,y
+	sta	SCREEND+LABLUL6+SCREENW,y
+
+.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
+	ldy	#SCREENW*1+GRIDPIT*10+2
+.else
+	ldy	#SCREENW*1+GRIDPIT*10+1
+.endif
+	lda	#'1'		;
+	sta	LABLUL0,y	;
+	sta	LABLUL2,y	;
+	sta	LABLUL4,y	;
+	sta	LABLUL6,y	;
+	lda	#CIRCLC		;
+	sta	SCREEND+LABLUL0,y
+	sta	SCREEND+LABLUL2,y
+	sta	SCREEND+LABLUL4,y
+	sta	SCREEND+LABLUL6,y
+	
+.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
+	ldy	#SCREENW*2+GRIDPIT*10+2
+.else
+	ldy	#SCREENW*2+GRIDPIT*10+1
+.endif
+	lda	#'1'		;
+	sta	LABLUL0,y	;
+	lda	#'3'		;
+	sta	LABLUL2,y	;
+	lda	#'5'		;
+	sta	LABLUL4,y	;
+	lda	#'7'		;
+	sta	LABLUL6,y	;
+	lda	#CIRCLC		;
+	sta	SCREEND+LABLUL0,y
+	sta	SCREEND+LABLUL2,y
+	sta	SCREEND+LABLUL4,y
+	sta	SCREEND+LABLUL6,y
+
+.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
+	ldy	#SCREENW*3+GRIDPIT*10+2
+.else
+	ldy	#SCREENW*3+GRIDPIT*10+1
+.endif
+	lda	#'1'		;
+	sta	LABLUL0,y	;
+	sta	LABLUL2,y	;
+	sta	LABLUL4,y	;
+	sta	LABLUL6,y	;
+	lda	#CIRCLC		;
+	sta	SCREEND+LABLUL0,y
+	sta	SCREEND+LABLUL2,y
+	sta	SCREEND+LABLUL4,y
+	sta	SCREEND+LABLUL6,y
+	
+.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
+	ldy	#SCREENW*4+GRIDPIT*10+2
+.else
+	ldy	#SCREENW*4+GRIDPIT*10+1
+.endif
+	lda	#'2'		;
+	sta	LABLUL0,y	;
+	lda	#'4'		;
+	sta	LABLUL2,y	;
+	lda	#'6'		;
+	sta	LABLUL4,y	;
+	lda	#'8'		;
+	sta	LABLUL6,y	;
+	lda	#CIRCLC		;
+	sta	SCREEND+LABLUL0,y
+	sta	SCREEND+LABLUL2,y
+	sta	SCREEND+LABLUL4,y
+	sta	SCREEND+LABLUL6,y
+	
 	ldy	#SCREENW	;
 -	lda	gridtop-1,y	;
-	sta	SCREENM-1,y	;
+	sta	LABLULM-1,y	;
 	lda	gridbot-1,y	;
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
-	sta	SCREENM+SCREENW*(2+GRIDPIT*8)-1,y
+	sta	LABLULM+SCREENW*(2+GRIDPIT*8)-1,y
 	lda	#CIRCLC		;
-	sta	SCREEND+SCREENM+SCREENW*(2+GRIDPIT*8)-1,y
+	sta	SCREEND+LABLULM+SCREENW*(2+GRIDPIT*8)-1,y
 .else
-	sta	SCREENM+SCREENW*(1+GRIDPIT*8)-1,y
+	sta	LABLULM+SCREENW*(1+GRIDPIT*8)-1,y
 	lda	#CIRCLC		;
-	sta	SCREEND+SCREENM+SCREENW*(GRIDPIT*8)-1,y
+	sta	SCREEND+LABLULM+SCREENW*(1+GRIDPIT*8)-1,y
 .endif
 	sta	SCREENC-1,y	;
 	dey			;
 	bne	-		;
- jsr gridcir
-self jmp gridlbl
-	POPVARS
-	rts
+	POPVARS			;
+	rts			;} // gridlbl()
 
 gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 	lda	#CIRCLTR	; register uint8_t y = 1+GRIDPIT*GRIDW;
