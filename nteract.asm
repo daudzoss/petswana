@@ -12,11 +12,27 @@ nteract	bit	ask_key		;void nteract(register uint8_t a, uint4_t arg0){
 	POPVARS			; }
 	rts			;} // nteract()
 
+hal_key	jsr	getchar		; register uint8_t a = getchar();
+	POPVARS			;
+	rts			;
+
 confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visualz DRW_MSG
 	POPVARS			; return hal_cnf(a);
 	rts			;} // confirm()
 
-reallyq	.null $14,"are you sure?";static char reallyq[] = "\bare you sure?";
+.if SCREENW && SCREENH
+reallyq	.null 	"are you sure?"	;static char reallyq[] = "\bare you sure?";
+hal_cnf	ldy	#0		;uint8_t hal_cnf(void) {
+	beq	++		;
++	ldy	#1		; return y = (tolower(key) == 'y') ? 1 : 0;
++	POPVARS			;
+	rts			;} // hal_cnf()
+
+hal_inp	POPVARS			;
+	rts			;
+
+.else
+reallyq	.null $14,"are you sure?";
 hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
 	ldy	#$ff		; stckstr(reallyq, reallyq+sizeof(reallyq));
 	jsrAPCS	putstck,lda,#0	; putstck(0, 255, reallyq); // print from stack
@@ -38,23 +54,7 @@ hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
 +	POPVARS			;
 	rts			;} // hal_cnf()
 
-inputkb
-	POPVARS
-	rts
-
-hal_key	jsr	getchar		; register uint8_t a = getchar();
-	POPVARS			;
-	rts			;
-
-hal_inp	jsrAPCS	tempinp		;
-	POPVARS			;
-	rts			;
-
-.if SCREENW && SCREENH
-tempinp POPVARS
-	rts
-.else
-tempinp	lda	#$0d		;uint8_t tempinp(void) {
+hal_inp	lda	#$0d		;uint8_t hal_inp(void) {
 	pha	;//VOLOCAL=rtval; uint8_t rtval;
 	jsr	putchar		; putchar('\n');
 -	lda	#'?'		;
@@ -299,7 +299,7 @@ tempina	jsr	putchar		;   putchar('@');
 	ora	#$80		;  }
 tempinr	tay			; }
 	POPVARS			; return 0;
-	rts			;} // tempinp()
+	rts			;} // hal_inp()
 
 getcell	pha	;//V0LOCAL=cella;register uint8_t getcell(void) {
 	pha	;//V1LOCAL=celln; uint8_t calla/*lpha*/,celln/*umeric*/;
