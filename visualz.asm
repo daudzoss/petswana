@@ -638,7 +638,40 @@ CIRCLBR	= $4b
 
 SCREEND	= SCREENC-SCREENM
 
-gridlbl	POPVARS
+gridtop .byte	$20,$31,$20,$32
+	.byte	$20,$33,$20,$34
+	.byte	$20,$35,$20,$36
+	.byte	$20,$37,$20,$38
+	.byte	$20,$39,$20,$31
+	.byte	$30,$20
+	;.byte	" 1 2 3 4 5 6 7 8 9 10 "
+gridbot	.byte	$20,$09,$20,$0a
+	.byte	$20,$0b,$20,$0c
+	.byte	$20,$0d,$20,$0e
+	.byte	$20,$0f,$20,$10
+	.byte	$20,$11,$20,$12
+	.byte	$20,$20
+	;.byte	" i j k l m n o p q r  "
+gridlbl	
+	ldy	#SCREENW	;
+-	lda	gridtop-1,y	;
+	sta	SCREENM-1,y	;
+	lda	gridbot-1,y	;
+.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
+	sta	SCREENM+SCREENW*(2+GRIDPIT*8)-1,y
+	lda	#CIRCLC		;
+	sta	SCREEND+SCREENM+SCREENW*(2+GRIDPIT*8)-1,y
+.else
+	sta	SCREENM+SCREENW*(1+GRIDPIT*8)-1,y
+	lda	#CIRCLC		;
+	sta	SCREEND+SCREENM+SCREENW*(GRIDPIT*8)-1,y
+.endif
+	sta	SCREENC-1,y	;
+	dey			;
+	bne	-		;
+ jsr gridcir
+self jmp gridlbl
+	POPVARS
 	rts
 
 gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {

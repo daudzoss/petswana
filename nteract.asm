@@ -51,7 +51,8 @@ hal_inp	jsrAPCS	tempinp		;
 	rts			;
 
 .if SCREENW && SCREENH
-tempinp rts
+tempinp POPVARS
+	rts
 .else
 tempinp	lda	#$0d		;uint8_t tempinp(void) {
 	pha	;//VOLOCAL=rtval; uint8_t rtval;
