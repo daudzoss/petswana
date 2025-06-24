@@ -56,9 +56,9 @@ uportal	ora	#$80		; tportal: return y = 0x80|(col); // 1~10
 rcretna	tay			;
 	POPVARS			;
 	rts			;} // rcindex()
-	
+
 reallyq	.null 	"are you sure?"	;static char reallyq[] = "are you sure?";
-hal_cnf	
+hal_cnf
 	ldy	#0		;uint8_t hal_cnf(void) {
 	beq	++		;
 +	ldy	#1		; return y = (tolower(key) == 'y') ? 1 : 0;
@@ -113,7 +113,40 @@ noright	dec @w	A0FUNCT	;//col	; }
 rtright	POPVARS			; --*col;
 	rts			;} // inright()
 
-hilighc
+.if 1 ; not a simple xor
+delighc	jsrAPCS	rcindex		;void delighc(int8_t col,int8_t row,int8_t what)
+	tya			;{
+	bmi	+		; if ((y = rcindex(row,col)) & 0x80 == 0){//cell
+	lda	#DRW_CEL	;  // DRW_SEL bit not set
+	pha			;  int8_t w;
+	lda @w	A1FUNCT		;
+	pha			;  int8_t r;
+	lda @w	A0FUNCT		;
+	pha			;  int8_t c;
+	ldy	#DRW_CEL	;
+	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_CEL);
+	jmp	++		; } else { // portal
++	jsrAPCS	hal_lbl		;  hal_lbl();
++	POPVARS			; }
+	rts			;} // delighc()
+.else
+delighc
+.endif
+hilighc	jsrAPCS	rcindex		;void hilighc(int8_t col,int8_t row,int8_t what)
+	tya			;
+	bmi	+		;
+	lda	#DRW_SEL	;  // DRW_SEL bit set
+	pha			;  int8_t w;
+	lda @w	A1FUNCT		;
+	pha			;  int8_t r;
+	lda @w	A0FUNCT		;
+	pha			;  int8_t c;
+	ldy	#DRW_CEL	;
+	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_CEL);
+	jmp	++		; } else { // portal
++	jsrAPCS	hal_lbl		;  hal_lbl();
++	POPVARS			; }
+	rts			;} // delighc()
 
 portalf	.byte	%0010 .. %0000
 portlcw				;//FIXME: C might be close, asm definitely wrong
@@ -174,7 +207,7 @@ portlno	POPVARS			; }
 
 toportl
  lda #0
- sta A1FUNCT	
+ sta A1FUNCT
  lda #1
  sta A0FUNCT
 	POPVARS
@@ -186,7 +219,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
 	lda	#1		;
 	pha	;//V3LOCAL=incol;
-	jsrAPCS	hilighc		; highlighc(incol = 1, inrow = 0); // portal "1"
+	jsrAPCS	hilighc		; hilighc(incol = 1, inrow = 0); // portal "1"
 -	jsr	getchar		; do {
 	tay			;  register uint8_t a, y;
 	sta @w	V0LOCAL	;//input;  input = getchar();
