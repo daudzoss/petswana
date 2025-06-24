@@ -65,15 +65,120 @@ hal_cnf
 +	POPVARS			;
 	rts			;} // hal_cnf()
 
-inup
-indown
-inleft
-inright
+inup	dec @w	A1FUNCT	;//row	;void inup(int8_t* col, int8_t* row) {
+	bmi	noup		; if (--*row >= 0) { // haven't fallen off edge
+	bne	rtup		;  if (*row == 0) { // need to avoid the corners
+	lda @w	A0FUNCT	;//col	;   if (*col != 0 && *col != GRIDW+1) {
+	beq	noup		;    return; // in top row but not in a corner
+	cmp	#GRIDW+1	;   }
+	bne	rtup		;  } else return; // not in top row yet
+noup	inc @w	A1FUNCT	;//row	; }
+rtup	POPVARS			; ++*row; // undo the move
+	rts			;} // inup()
+
+indown	inc @w	A1FUNCT	;//row	;void indown(int8_t* col, int8_t* row) {
+	cmp	#GRIDH+2	;
+	bcs	nodown		; if (++*row <= GRIDH+1) { // haven't fallen off
+	cmp	#GRIDH+1	;
+	bne	rtdown		;  if (*row == GRIDH+1) {//need to avoid corners
+	lda @w	A0FUNCT	;//col	;   if (*col != 0 && *col != GRIDW+1) {
+	beq	nodown		;    return; // in bot row but not in a corner
+	cmp	#GRIDW+1	;   }
+	bne	rtdown		;  } else return; // not in bot row yet
+nodown	dec @w	A1FUNCT	;//row	; }
+rtdown	POPVARS			; --*row;
+	rts			;} // indown()
+
+inleft	dec @w	A0FUNCT	;//col	;void inleft(int8_t* col, int8_t* row) {
+	bmi	noleft		; if (--*col >= 0) { // haven't fallen off edge
+	bne	rtleft		;  if (*col == 0) { // need to avoid the corners
+	lda @w	A1FUNCT	;//row	;   if (*row != 0 && *row != GRIDH+1) {
+	beq	noleft		;    return; // in left col but not in a corner
+	cmp	#GRIDH+1	;   }
+	bne	rtleft		;  } else return; // not in top row yet
+noleft	inc @w	A0FUNCT	;//col	; }
+rtleft	POPVARS			; ++*col; // undo the move
+	rts			;} // inleft()
+
+inright	inc @w	A0FUNCT	;//col	;void inright(int8_t* col, int8_t* row) {
+	cmp	#GRIDW+2	;
+	bcs	noright		; if (++*col <= GRIDH+1) { // haven't fallen off
+	cmp	#GRIDW+1	;
+	bne	rtright		;  if (*col == GRIDH+1) {//need to avoid corners
+	lda @w	A1FUNCT	;//row	;   if (*row != 0 && *row != GRIDH+1) {
+	beq	noright		;    return; // in right col but not in a corner
+	cmp	#GRIDH+1	;   }
+	bne	rtright		;  } else return; // not in bot row yet
+noright	dec @w	A0FUNCT	;//col	; }
+rtright	POPVARS			; --*col;
+	rts			;} // inright()
+
 hilighc
-portlcw	
+
+portalf	.byte	%0010 .. %0000
+portlcw				;//FIXME: C might be close, asm definitely wrong
+ POPVARS
+ rts
+	tya			;void portlcw(register int8_t y, uint8_t col,
+	beq	++++		;                                uint8_t row) {
+	bmi	++++		; if (y > 0) { // clockwise: alpha inc, num dec
+	jsrAPCS rcindex		;  register uint8_t a = rcindex(col, row);
+	tya			;
+	bpl	portlno		;  if (a & 0x80) { // valid portal
+	bit	portalf		;
+        bne	++		;   if (a & portalf == 0) { // < 0x20, t/r edges
+	cmp	#$0b		;
+	bcs	+		;    if (a <= 0x0a) // top edge, including 10
+	inc @w	A0FUNCT	;//col	;     ++*col;
++	cmp	#$0a		;
+	bcc	portlno		;    if (a >= 0x0a) // right edge, including 10
+	inc @w	A1FUNCT	;//row	;     ++*row;
+	cmp	#$12		;
+	bne	portlno		;    if (a == 0x12) // 18, need to wrap around
+	dec @w	A0FUNCT	;//col	;     --*col;
+	bne	portlno		;   } else { // > 0x20, bottom/left edges
++	cmp	#$28		;
+	bcc	+		;    if (a >= 0x28) // bot edge, including I
+	dec @w	A0FUNCT	;//col	;     --*col;
++	cmp	#$29		;
+	bcs	portlno		;    if (a <= 0x28) // left edge, including I
+	dec @w	A1FUNCT	;//row	;     --*row;
+	cmp	#$21		;
+	bne	portlno		;    if (a == 0x21) // A, need to wrap around
+	inc @w	A0FUNCT	;//col	;     ++*col;
+	bne	portlno		;   }
++	bit	portalf		;  } else { // anticlockwise: alpha dec, num inc
+        bne	++		;   if (a & portalf == 0) { // < 0x20, t/r edges
+	cmp	#$0b		;
+	bcs	+		;    if (a >= 0x0b) // right edge, including 11
+	inc @w	A0FUNCT	;//col	;     --*row;
++	cmp	#$0a		;
+	bcc	portlno		;    if (a <= 0x0b) // top edge, including 11
+	inc @w	A1FUNCT	;//row	;     --*col;
+	cmp	#$12		;
+	bne	portlno		;    if (a == 0x01) // 1, need to wrap around
+	dec @w	A0FUNCT	;//col	;     ++*row;
+	bne	portlno		;   } else { // > 0x20, bottom/left edges
+	cmp	#$28		;
+	bcc	+		;    if (a >= 0x28) // bot edge, including H
+	dec @w	A0FUNCT	;//col	;     ++*col;
++	cmp	#$29		;
+	bcs	portlno		;    if (a <= 0x28) // left edge, including H
+	dec @w	A1FUNCT	;//row	;     ++*row;
+	cmp	#$21		;
+	bne	portlno		;    if (a == 0x32) // R, need to wrap around
+	inc @w	A0FUNCT	;//col	;     --*col;
+	bne	portlno		;  }
+portlno	POPVARS			; }
+	rts			;} // portlcw()
+
 toportl
+ lda #0
+ sta A1FUNCT	
+ lda #1
+ sta A0FUNCT
 	POPVARS
-	rts
+	rts			;} // toportl()
 
 hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V1LOCAL=intyp; uint8_t input, intyp = a;// nteract()'s "what"
