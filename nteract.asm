@@ -22,14 +22,86 @@ confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visua
 
 .if SCREENW && SCREENH
 reallyq	.null 	"are you sure?"	;static char reallyq[] = "\bare you sure?";
-hal_cnf	ldy	#0		;uint8_t hal_cnf(void) {
+hal_cnf	
+	ldy	#0		;uint8_t hal_cnf(void) {
 	beq	++		;
 +	ldy	#1		; return y = (tolower(key) == 'y') ? 1 : 0;
 +	POPVARS			;
 	rts			;} // hal_cnf()
 
-hal_inp	POPVARS			;
-	rts			;
+hal_inp	pha	;//V0LOCAL=intyp;void hal_inp(uint8_t intyp)
+	pha	;//V1LOCAL=input; uint8_t input;
+	lda	#0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
+	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
+	lda	#1		; register uint8_t y;
+	pha	;//V3LOCAL=incol;
+	jsrAPCS	hilighc		; highlighc(incol = 1, inrow = 0); // portal "1"
+-	jsr	getchar		; do {
+	tay			;
+	sta @w	V1LOCAL	;//input;  input = getchar();
+	cmp	#$1d		;  switch (input) {
+	bne	+		;  case 0x1d: // next cell/portal up
+	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	inup		;   inup(&incol, &inrow);
+	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jmp	-		;   break;
++	cmp	#$11		;
+	bne	+		;  case 0x11: // next cell/portal down
+	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	indown		;   inup(&incol, &inrow);
+	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jmp	rcindex		;   break;
++	cmp	#$9d		;
+	bne	+		;  case 0x9d: // next cell/portal left
+	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	inleft		;   inup(&incol, &inrow);
+	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jmp	-		;   break;
++	cmp	#$91		;
+	bne	+		;  case 0x91: // next cell/portal right
+	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	inright		;   inup(&incol, &inrow);
+	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jmp	-		;   break;
++	cmp	#'['		;
+	bne	+		;  case '[': // next portal counter-clockwise
+	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS toportl		;   toportl(&incol, &inrow);
+	jsrAPCS	portlcc		;   portlcc(&incol, &inrow);
+	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jmp	-		;   break;
++	cmp	#']'		;
+	bne	+		;  case ']': // next portal clockwise
+	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS toportl		;   toportl(&incol, &inrow);
+	jsrAPCS	portlcw		;   portlcc(&incol, &inrow);
+	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jmp	-		;   break;
++	cmp	#$0d		;
+	bne	+		;  case '\n'; // accept this cell/portal as move
+
+	jmp	inpretn		;
+
++	cmp	#$20		;
+
++	and	#$5f
+	lda @w	V0LOCAL	;//intyp;
+	bit	ask_ans		;
+	lda	V0LOCAL	;//intyp;
+	bit	ask_ans		;
+	beq	++		;
+	lda	V1LOCAL	;//input;
+	and	#$5f		;
+	cmp	#'s'		;
+	bne	+		;
+	lda	#$80		;
+	jmp	inpretn		;
++	lda	V0LOCAL	;//intyp;
+	bit	ask_prt
+
+inpretn	tay			;
+	POPVARS			;
+	rts			;} // hal_inp()
 
 .else
 reallyq	.null $14,"are you sure?";
