@@ -24,24 +24,26 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	tay			;
 	jsrAPCS	hal_try		;  hal_try(what);
 +	lda @w	V0LOCAL		; }
-	and	#DRW_CEL	; a = whata & DRW_CEL;
+	and	#DRW_CEL|DRW_SEL; a = whata & (DRW_CEL|DRW_SEL);//_SEL=highlight
 	beq	+		; if (a) { // can only draw cell in TRYGRID here
-	lda @w	A1FUNCT	;//arg1	;
-	sta @w	V0LOCAL	;//whata;  whata = arg1; // row 1~8 (screen destination)
+	sta @w	V1LOCAL	;//what	;  what = a; // _SEL can xor,reverse/flash cells
+	lda @w	A1FUNCT	;//arg1	;  uint8_t row, col;
+	pha	;//V2LOCAL=row	;  row = arg1; // row 1~8 (to match a 0~9 x 0~11
 	lda @w	A0FUNCT	;//arg0	;
-	sta @w	V1LOCAL	;//what	;  what = arg0; // col 1~10 (screen destination)
+	pha	;//V3LOCAL=col	;  col = arg0; // col 1~10 (cells+portals matrix
 	sec			;
 	sbc	#1		;
 	asl			;
 	asl			;
 	asl			;
-	adc @w	V0LOCAL	;//arg0	;
+	clc			;
+	adc @w	V2LOCAL	;//row	;
 	sec			;
 	sbc	#1		;  // contents to show get fetched from TRYGRID
-	tay			;  y = ((what/*col*/-1)<<3) + (whata/*row*/-1);
-	jsrAPCS	hal_cel		;  hal_cel(y/*index*/,what/*col*/,whata/*row*/);
-	jmp	++		;  return; // can't subsequently print message 
-+	lda @w	V0LOCAL		; }
+	tay			;  y = ((col - 1) << 3)|(row - 1); // index 0~79
+	jsrAPCS	hal_cel		;  hal_cel(y, col, row, what);
+	jmp	++		;  return; // can't subsequently print a message 
++	lda @w	V0LOCAL		; }       // since it requires a string on stack
 	and	#DRW_MSG	; what = whata & DRW_MSG;
 	beq	+		; if (what) {
 	POPVARS			;

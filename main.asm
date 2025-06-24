@@ -169,14 +169,14 @@ SAY_ANY = SAY_PEK|SAY_PRT|SAY_ANS
 SUBMITG	= %01 .. %111111	; turn in answer for grading, please
 
 DRW_CEL	= 1<<0			; // A0: col#1~10, A1: row#1-8
-DRW_MSG	= 1<<1			; // A0: '\0'-terminated character string?!?
+DRW_SEL	= 1<<1			; // A0: as above, then highlights/dehighlights
+DRW_MSG	= 1<<2			; // A0: '\0'-terminated character string
 DRW_MOV	= 1<<3			; // A0: first move index to draw
 DRW_TRY	= 1<<4			;no args?
 DRW_HID	= 1<<5			;no args?
 DRW_LBL	= 1<<6			;no args
 DRW_MSH	= 1<<7			;no args; also draws screen decorations if any
-DRW_DEC	= DRW_MSH|DRW_LBL	;
-DRW_BTH	= DRW_HID|DRW_TRY	;
+DRW_DEC	= DRW_MSH|DRW_LBL	;to draw both the portal labels and mesh
 
 .include "stdlib.asm"
 
