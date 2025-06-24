@@ -21,7 +21,44 @@ confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visua
 	rts			;} // confirm()
 
 .if SCREENW && SCREENH
-reallyq	.null 	"are you sure?"	;static char reallyq[] = "\bare you sure?";
+rcindex	pha	V0LOCAL	;//col	;register uint8_t rcindex(register int8_t a//col
+	pha	V1LOCAL	;//row_1;                   register int8_t y /*row*/) {
+	dey			; int8_t col = a, row_1;
+	bmi	tportal		; if (y < 1) goto tportal;
+	tya			;
+	and	#%0000 .. %0111	;
+	beq	bportal		; if (y > GRIDH) goto bportal;
+	sta @w	V1LOCAL	;//row_1; row_1 = (y - 1) & 0x07;
+	ldy @w	V0LOCAL	;//col	;
+	dey			;
+	bmi	lportal		; if (col < 1) goto lportal;
+	cpy	#GRIDW		;
+	beq	bportal		; if (col > GRIDW) goto rportal;
+	dey			;
+	tya			;
+	asl			;
+	asl			;
+	asl			;
+	and	#%0111 .. %1000	;
+	ora @w	V1LOCAL	;//row_1; // cells return 0 <= y < GRIDW*GRIDH;
+	bpl	rcretna		; return y = (((col - 1) << 3) & 0x38) | row_1;
+rportal	lda	#$0b		;
+	clc			;
+	adc @w	V1LOCAL	;//row_1; // portals at the edges return negative values
+	bne	tportal		; rportal: return y = 0x80|(11+row-1); // 11~18
+lportal	lda	#$21		;
+	clc			;
+	adc @w	V1LOCAL	;//row_1;
+	bne	tportal		; lportal: return y = 0x80|(0x21+row-1); // A~H
+bportal	lda @w	V0LOCAL	;//col	;
+	clc			;
+	adc	#$28		; bportal: return y = 0x80|(0x28+col); // I~R
+tportal	ora	#$80		; tportal: return y = 0x80|(col); // 1~10
+rcretna	tay			;
+	POPVARS			;
+	rts			;} // rcindex()
+	
+reallyq	.null 	"are you sure?"	;static char reallyq[] = "are you sure?";
 hal_cnf	
 	ldy	#0		;uint8_t hal_cnf(void) {
 	beq	++		;
@@ -41,53 +78,66 @@ hal_inp	pha	;//V0LOCAL=intyp;void hal_inp(uint8_t intyp)
 	sta @w	V1LOCAL	;//input;  input = getchar();
 	cmp	#$1d		;  switch (input) {
 	bne	+		;  case 0x1d: // next cell/portal up
-	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS	inup		;   inup(&incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$11		;
 	bne	+		;  case 0x11: // next cell/portal down
-	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS	indown		;   inup(&incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
 	jmp	rcindex		;   break;
 +	cmp	#$9d		;
 	bne	+		;  case 0x9d: // next cell/portal left
-	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS	inleft		;   inup(&incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$91		;
 	bne	+		;  case 0x91: // next cell/portal right
-	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS	inright		;   inup(&incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#'['		;
 	bne	+		;  case '[': // next portal counter-clockwise
-	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	jsrAPCS	portlcc		;   portlcc(&incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#']'		;
 	bne	+		;  case ']': // next portal clockwise
-	jsrAPCS	hilighc		;   /*de*/highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	jsrAPCS	portlcw		;   portlcc(&incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
 	jmp	-		;   break;
++	cmp	#$20		;
+	bne	+		;  case ' ': // cycle through tints
+	jsrAPCS	rcindex		;   y = rcindex(incol, inrow);
+
++	and	#$5f		;
+	cmp	#'s'		;
+	bne	+		;  case 's': case 'S':
+	lda	V0LOCAL	;//intyp;
+	bit	ask_ans		;
+	beq	+		;   if (intyp & ask_ans) //submission is allowed
+	ldy	#SUBMITG	;
+	bne	inprety		;    return y = SUBMITG; //submit grid for grade
 +	cmp	#$0d		;
-	bne	+		;  case '\n'; // accept this cell/portal as move
-
-	jmp	inpretn		;
-
+	bne	++++++		;  case '\n'; // launch a beam or cycle shapes
+	ldy @w	V2LOCAL	;//inrow;
+ jsrAPCS rcindex,lda,@w,V3LOCAL	;
+	tya			;   if ((y = rcindex(a = incol, y = inrow)) < 0)
+	bmi	inpretp		;    return y & 0x7f; // launch beam from portal
+	lda	TRYGRID,y	;   else {
+	sta @w	V0LOCAL	;//input;    input = TRYGRID[y];
+	
 +	cmp	#$20		;
 
-+	and	#$5f
 	lda @w	V0LOCAL	;//intyp;
-	bit	ask_ans		;
-	lda	V0LOCAL	;//intyp;
 	bit	ask_ans		;
 	beq	++		;
 	lda	V1LOCAL	;//input;
@@ -99,8 +149,9 @@ hal_inp	pha	;//V0LOCAL=intyp;void hal_inp(uint8_t intyp)
 +	lda	V0LOCAL	;//intyp;
 	bit	ask_prt
 
-inpretn	tay			;
-	POPVARS			;
+inpretp	and	#%0111 .. %1111	;
+inpreta	tay			;
+inprety	POPVARS			;
 	rts			;} // hal_inp()
 
 .else
