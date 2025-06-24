@@ -528,8 +528,9 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	sta	SCREEND+1+SCREENW+CELLUL\baseadr,y
 	.endm			;
 
+sel_cel	.byte	DRW_SEL
 hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
-	tay			;                                 uint8_t row) {
+	tay			;                   uint8_t row, uint8_t what) {
 	lda	TRYGRID,y	; uint8_t gridi = a; // so we can hint iff a<80
 	and	#%0000 .. %1111	; uint8_t cellv = TRYGRID[a/*0~70|80~159*/]&0xf;
 	cpy	#GRIDSIZ	;
@@ -558,13 +559,57 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	pha	;V3LOCAL=scoff	; uint8_t scoff = (col-1)*GRIDPIT;// 0~9*GRIDPIT
 	ldy @w	V1LOCAL	;//cellv; register uint8_t y;
 	lda	symarbr,y	;
-	pha	;V4LOCAL=symbr	;
+
+	cmp	#' '		;
+	bne	+		;
+	lda @w	A2FUNCT	;//what	;
+	bit	sel_cel		;
+	php			;
+	lda	symarbr,y	;
+	plp			;
+	beq	+		;
+;	lda	#'*'		;
+
++	pha	;V4LOCAL=symbr	;
 	lda	symarbl,y	;
-	pha	;V5LOCAL=symbl	;
+
+	cmp	#' '		;
+	bne	+		;
+	lda @w	A2FUNCT	;//what	;
+	bit	sel_cel		;
+	php			;
+	lda	symarbl,y	;
+	plp			;
+	beq	+		;
+;	lda	#'*'		;
+
++	pha	;V5LOCAL=symbl	;
 	lda	symartr,y	;
-	pha	;V6LOCAL=symtr	;
+
+	cmp	#' '		;
+	bne	+		;
+	lda @w	A2FUNCT	;//what	;
+	bit	sel_cel		;
+	php			;
+	lda	symartr,y	;
+	plp			;
+	beq	+		;
+;	lda	#'*'		;
+
++	pha	;V6LOCAL=symtr	;
 	lda	symartl,y	;
-	pha	;V7LOCAL=symtl	;
+
+	cmp	#' '		;
+	bne	+		;
+	lda @w	A2FUNCT	;//what	;
+	bit	sel_cel		;
+	php			;
+	lda	symartl,y	;
+	plp			;
+	beq	+		;
+;	lda	#'*'		;
+
++	pha	;V7LOCAL=symtl	;
 	lda @w	A1FUNCT	;//row	;
 	and	#1		; switch (a = row) {
 	bne	+		;  case 2:
@@ -718,7 +763,7 @@ gridlbl	ldy	#SCREENW	;
 	sta	SCREEND+LABLUL2,y
 	sta	SCREEND+LABLUL4,y
 	sta	SCREEND+LABLUL6,y
-	
+
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
 	ldy	#SCREENW*2+GRIDPIT*10+2
 .else
@@ -753,7 +798,7 @@ gridlbl	ldy	#SCREENW	;
 	sta	SCREEND+LABLUL2,y
 	sta	SCREEND+LABLUL4,y
 	sta	SCREEND+LABLUL6,y
-	
+
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
 	ldy	#SCREENW*4+GRIDPIT*10+2
 .else
@@ -772,7 +817,7 @@ gridlbl	ldy	#SCREENW	;
 	sta	SCREEND+LABLUL2,y
 	sta	SCREEND+LABLUL4,y
 	sta	SCREEND+LABLUL6,y
-	
+
 	ldy	#SCREENW	;
 -	lda	gridtop-1,y	;
 	sta	LABLULM-1,y	;
