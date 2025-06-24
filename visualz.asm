@@ -42,7 +42,7 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	sbc	#1		;  // contents to show get fetched from TRYGRID
 	tay			;  y = ((col - 1) << 3)|(row - 1); // index 0~79
 	jsrAPCS	hal_cel		;  hal_cel(y, col, row, what);
-	jmp	++		;  return; // can't subsequently print a message 
+	jmp	++		;  return; // can't subsequently print a message
 +	lda @w	V0LOCAL		; }       // since it requires a string on stack
 	and	#DRW_MSG	; what = whata & DRW_MSG;
 	beq	+		; if (what) {

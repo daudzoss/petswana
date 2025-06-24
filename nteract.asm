@@ -3,13 +3,13 @@ ask_ans	.byte	SAY_ANS		;
 ask_prt	.byte	SAY_PRT		;
 ask_pek	.byte	SAY_PEK		;
 
-nteract	bit	ask_key		;void nteract(register uint8_t a, uint4_t arg0){
+nteract	pha	;//V0LOCAL=what	;void nteract(register uint8_t a, uint1_t arg0){
+	bit	ask_key		; uint8_t what = a;             //^^^which grid?
 	beq	+		; if (ask_key & SAY_KEY) {
-	jsrAPCS	hal_key		;
-	POPVARS			;  return hal_key();
-	rts			; } else {
-+	jsrAPCS	hal_inp		;  return hal_inp();
-	POPVARS			; }
+	jsrAPCS	hal_key		;  return hal_key(what);
+	jmp	++		; } else {
++	jsrAPCS	hal_inp		;  return hal_inp(what);
++	POPVARS			; }
 	rts			;} // nteract()
 
 hal_key	jsr	getchar		; register uint8_t a = getchar();
@@ -21,39 +21,38 @@ confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visua
 	rts			;} // confirm()
 
 .if SCREENW && SCREENH
-rcindex	pha	V0LOCAL	;//col	;register uint8_t rcindex(register int8_t a//col
-	pha	V1LOCAL	;//row_1;                   register int8_t y /*row*/) {
+rcindex	pha	;//V0LOCAL=col	;register uint8_t rcindex(register int8_t a//col
+	pha	;//V1LOCAL=row_1;                   register int8_t y /*row*/) {
 	dey			; int8_t col = a, row_1;
-	bmi	tportal		; if (y < 1) goto tportal;
+	bmi	uportal		; if (y < 1) goto uportal;
 	tya			;
 	and	#%0000 .. %0111	;
-	beq	bportal		; if (y > GRIDH) goto bportal;
+	beq	dportal		; if (y > GRIDH) goto dportal;
 	sta @w	V1LOCAL	;//row_1; row_1 = (y - 1) & 0x07;
 	ldy @w	V0LOCAL	;//col	;
 	dey			;
 	bmi	lportal		; if (col < 1) goto lportal;
 	cpy	#GRIDW		;
-	beq	bportal		; if (col > GRIDW) goto rportal;
-	dey			;
+	beq	rportal		; if (col = GRIDW+1) goto rportal;
 	tya			;
 	asl			;
 	asl			;
 	asl			;
 	and	#%0111 .. %1000	;
-	ora @w	V1LOCAL	;//row_1; // cells return 0 <= y < GRIDW*GRIDH;
+	ora @w	V1LOCAL	;//row_1; // cell returns simple index 0 <= y < GRIDSIZ
 	bpl	rcretna		; return y = (((col - 1) << 3) & 0x38) | row_1;
 rportal	lda	#$0b		;
-	clc			;
-	adc @w	V1LOCAL	;//row_1; // portals at the edges return negative values
-	bne	tportal		; rportal: return y = 0x80|(11+row-1); // 11~18
+	clc			; // portals at the edges return values suitable
+	adc @w	V1LOCAL	;//row_1; // for shinein() but with bit 7 set to flag so
+	bne	uportal		; rportal: return y = 0x80|(11+row-1); // 11~18
 lportal	lda	#$21		;
 	clc			;
 	adc @w	V1LOCAL	;//row_1;
-	bne	tportal		; lportal: return y = 0x80|(0x21+row-1); // A~H
-bportal	lda @w	V0LOCAL	;//col	;
+	bne	uportal		; lportal: return y = 0x80|(0x21+row-1); // A~H
+dportal	lda @w	V0LOCAL	;//col	;
 	clc			;
 	adc	#$28		; bportal: return y = 0x80|(0x28+col); // I~R
-tportal	ora	#$80		; tportal: return y = 0x80|(col); // 1~10
+uportal	ora	#$80		; tportal: return y = 0x80|(col); // 1~10
 rcretna	tay			;
 	POPVARS			;
 	rts			;} // rcindex()
@@ -66,16 +65,16 @@ hal_cnf
 +	POPVARS			;
 	rts			;} // hal_cnf()
 
-hal_inp	pha	;//V0LOCAL=intyp;void hal_inp(uint8_t intyp)
-	pha	;//V1LOCAL=input; uint8_t input;
+hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
+	pha	;//V1LOCAL=intyp; uint8_t input, intyp = a;// nteract()'s "what"
 	lda	#0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
-	lda	#1		; register uint8_t y;
+	lda	#1		;
 	pha	;//V3LOCAL=incol;
 	jsrAPCS	hilighc		; highlighc(incol = 1, inrow = 0); // portal "1"
 -	jsr	getchar		; do {
-	tay			;
-	sta @w	V1LOCAL	;//input;  input = getchar();
+	tay			;  register uint8_t a, y;
+	sta @w	V0LOCAL	;//input;  input = getchar();
 	cmp	#$1d		;  switch (input) {
 	bne	+		;  case 0x1d: // next cell/portal up
 	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
@@ -87,7 +86,7 @@ hal_inp	pha	;//V0LOCAL=intyp;void hal_inp(uint8_t intyp)
 	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS	indown		;   inup(&incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
-	jmp	rcindex		;   break;
+	jmp	-		;   break;
 +	cmp	#$9d		;
 	bne	+		;  case 0x9d: // next cell/portal left
 	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
@@ -104,52 +103,90 @@ hal_inp	pha	;//V0LOCAL=intyp;void hal_inp(uint8_t intyp)
 	bne	+		;  case '[': // next portal counter-clockwise
 	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
-	jsrAPCS	portlcc		;   portlcc(&incol, &inrow);
+	ldy	#$01		;
+	jsrAPCS	portlcw		;   portlcw(y = +1, &incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#']'		;
 	bne	+		;  case ']': // next portal clockwise
 	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
-	jsrAPCS	portlcw		;   portlcc(&incol, &inrow);
+	ldy	#$ff		;
+	jsrAPCS	portlcw		;   portlcc(y = -1, &incol, &inrow);
 	jsrAPCS	hilighc		;   highlighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$20		;
-	bne	+		;  case ' ': // cycle through tints
+	bne	++		;  case ' ': // cycle through tints
 	jsrAPCS	rcindex		;   y = rcindex(incol, inrow);
-
+	tya			;   if (y & 0x80)
+	bmi	-		;    break; // only cells have tint, not portals
+	lda	TRYGRID,y	;   a = TRYGRID[y];
+	bit	pokthru		;   if (a & pokthru == 0) // if we bought a hint
+	bne	-		;    break; // we can't change this cell's tint
+	;lda	HIDGRID,y	;
+	;bne	-		;
+	clc			;
+	adc	#%0001 .. %0000	;   a += 0x10; // advance tint by 1, remembering
+	cmp	#RUBWHT+$10	;
+	bcc	+		;   if (a >= RUBWHT+0x10) // no tints 0x50~0x70,
+	adc	#%0011 .. %0000	;    a += 0x30; // so bump 0x50 to 0x80 (RUBOUT)
++	sta	TRYGRID,y	;
+	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
+;	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jmp	-		;   break;
++	cmp	#'@'		;
+	bne	++		;  case '@':
+	ldy @w	V2LOCAL	;//inrow;
+ jsrAPCS rcindex,lda,@w,V3LOCAL	;
+	tya			;   if (((y = rcindex(a = incol, y = inrow))>=0)
+	bmi	-		;       // a portal is highlighted, not a cell &
+	ora	#%1000 .. %0000	;
+	tay			;
+	lda @w	V1LOCAL	;//intyp;       &&
+	and	#SAY_PEK	;       (intyp & SAY_PEK))//peek/hinting allowed
+	bne	inprety		;    return y |= 0x80;//request a hint this cell
+	beq	-		;   else break;
 +	and	#$5f		;
 	cmp	#'s'		;
 	bne	+		;  case 's': case 'S':
-	lda	V0LOCAL	;//intyp;
-	bit	ask_ans		;
-	beq	+		;   if (intyp & ask_ans) //submission is allowed
+	lda @w	V1LOCAL	;//intyp;
+	and	#SAY_ANS	;
+	beq	-		;   if (intyp & ask_ans) //submission is allowed
 	ldy	#SUBMITG	;
 	bne	inprety		;    return y = SUBMITG; //submit grid for grade
 +	cmp	#$0d		;
-	bne	++++++		;  case '\n'; // launch a beam or cycle shapes
+	bne	++++		;  case '\n'; // launch a beam or cycle shapes
 	ldy @w	V2LOCAL	;//inrow;
  jsrAPCS rcindex,lda,@w,V3LOCAL	;
-	tya			;   if ((y = rcindex(a = incol, y = inrow)) < 0)
-	bmi	inpretp		;    return y & 0x7f; // launch beam from portal
-	lda	TRYGRID,y	;   else {
-	sta @w	V0LOCAL	;//input;    input = TRYGRID[y];
-	
-+	cmp	#$20		;
-
-	lda @w	V0LOCAL	;//intyp;
-	bit	ask_ans		;
-	beq	++		;
-	lda	V1LOCAL	;//input;
-	and	#$5f		;
-	cmp	#'s'		;
-	bne	+		;
-	lda	#$80		;
-	jmp	inpretn		;
-+	lda	V0LOCAL	;//intyp;
-	bit	ask_prt
-
-inpretp	and	#%0111 .. %1111	;
+	tya			;   if (((y = rcindex(a = incol,y = inrow)) < 0)
+	bpl	+		;       // a portal is highlighted, not a cell &
+	lda @w	V1LOCAL	;//intyp;       &&
+	and	#SAY_PRT	;       (intyp & SAY_PRT))//launching is allowed
+	bne	inpretp		;    return y &= 0x7f;// launch beam from portal
+	beq	-		;   else break;
++	lda	TRYGRID,y	;
+	and	#%1111 .. %1000	;   // copied from tempins: below, rtval->input
+	sta @w	V0LOCAL	;//input;   input = TRYGRID[y] & 0xf8; // tint, pokthru
+	lda	TRYGRID,y	;
+	and	#%0000 .. %0111	;
+	clc			;
+	adc	#%0000 .. %0001	;   a = (TRYGRID[y] & 0x07) + 1;// next shape
+	cmp	#MAXSHAP+1	;
+	bcc	+		;   if (a > MAXSHAP) { // roll around to BLANK
+	lda @w	V0LOCAL	;//input;
+	bit	pokthru		;
+	bne	++		;    if (input & pokthru == 0) // if not a hint
+	lda	#BLANK		;     a = BLANK;//must clear tint to fully blank
+	beq	++		;  //else input &= 0xf8; // unchanged
++	ora @w	V0LOCAL	;//input;   }
++	sta 	TRYGRID,y	;   TRYGRID[y] = input | a; // bit 3 untouched
+	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
+	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jmp	-		;   break;
++	eor	#'x'		;  case 'x':
+	beq	+		;   return y = 0;
+	jmp	-		;  }
+inpretp	and	#%0111 .. %1111	; } while (1); // waiting for '\n' or x
 inpreta	tay			;
 inprety	POPVARS			;
 	rts			;} // hal_inp()
