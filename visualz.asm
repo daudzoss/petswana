@@ -165,7 +165,6 @@ GRDLINC	= 0
 
 
 hal_msg
-hal_lbl
 hal_msh	POPVARS
 	rts
 .else
@@ -657,7 +656,6 @@ gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
 
 hal_try	ldy	#0		;void hal_try(void) {
 	jsrAPCS gridsho		; gridsho(0);
-	jsrAPCS	gridlbl		; gridlbl();
 	POPVARS			;
 	rts			;} // hal_try()
 
@@ -702,7 +700,7 @@ gridbot	.byte	$20,$09,$20,$0a
 	.byte	$20,$11,$20,$12
 	.byte	$20,$20
 	;.byte	" i j k l m n o p q r  "
-gridlbl	ldy	#SCREENW	;
+hal_lbl	ldy	#SCREENW	;
 	lda	#' '		;
 	sta	LABLUL0		;
 	sta	LABLUL0,y	;
