@@ -117,7 +117,7 @@ petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
 
-.if SCREENH && (SCREENW >= $50)
+.if 0;SCREENH && (SCREENW >= $50)
 hal_try
 hal_hid
 hal_msg
@@ -125,7 +125,7 @@ hal_lbl
 hal_msh
 hal_cel	POPVARS
 	rts
-.elsif SCREENH && (SCREENW >= $28)
+.elsif 0;SCREENH && (SCREENW >= $28)
 LABLULM	= SCREENM
 LABLUL2	= SCREENM + ...
 GRIDULM	= SCREENM + SCREENW + 1

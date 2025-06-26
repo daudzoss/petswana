@@ -191,6 +191,7 @@ b2basic	rts			;
 	jsrAPCS	initize		; initize(); // screen, portals, grids
 -	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
+ brk
 	ldy	#SAY_ANY	;
 	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
 	sty	OTHRVAR		;
