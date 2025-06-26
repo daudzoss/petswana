@@ -568,7 +568,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	lda	symarbr,y	;
 	plp			;
 	beq	+		;
-;	lda	#'*'		;
+	lda	#'*'		;
 
 +	pha	;V4LOCAL=symbr	;
 	lda	symarbl,y	;
@@ -581,7 +581,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	lda	symarbl,y	;
 	plp			;
 	beq	+		;
-;	lda	#'*'		;
+	lda	#'*'		;
 
 +	pha	;V5LOCAL=symbl	;
 	lda	symartr,y	;
@@ -594,7 +594,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	lda	symartr,y	;
 	plp			;
 	beq	+		;
-;	lda	#'*'		;
+	lda	#'*'		;
 
 +	pha	;V6LOCAL=symtr	;
 	lda	symartl,y	;
@@ -607,7 +607,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	lda	symartl,y	;
 	plp			;
 	beq	+		;
-;	lda	#'*'		;
+	lda	#'*'		;
 
 +	pha	;V7LOCAL=symtl	;
 	lda @w	A1FUNCT	;//row	;
@@ -638,14 +638,16 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
 	adc	#GRIDSIZ	;
 	pha	;//savey=V0LOCAL; uint8_t savey = GRIDSIZ + a; // +0=TRY,+80=HID
+	lda	#DRW_CEL	;
+	pha	;//what=V1LOCAL	; uint8_t what, DRW_CEL;
 	lda	#GRIDSIZ/8	;
-	pha	;//row=V1LOCAL	;
-	pha	;//col=V2LOCAL	; uint8_t row, col;
+	pha	;//row=V2LOCAL	;
+	pha	;//col=V3LOCAL	; uint8_t row, col;
 -	lda	#8		; for (col = 10; col; col--) {
 	sta @w	V1LOCAL	;//row	;  for(row = 8; row; row--) {
 -	dec @w	V0LOCAL	;//savey;
 	ldy @w	V0LOCAL	;//savey;
-	jsrAPCS	hal_cel		;   hal_cel(--savey, col, row);
+	jsrAPCS	hal_cel		;   hal_cel(--savey, col, row, what);
 	dec @w	V1LOCAL	;//row	;
 	bne	-		;  }
 	dec @w	V2LOCAL	;//col	;
