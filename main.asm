@@ -191,7 +191,6 @@ b2basic	rts			;
 	jsrAPCS	initize		; initize(); // screen, portals, grids
 -	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
- brk
 	ldy	#SAY_ANY	;
 	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
 	sty	OTHRVAR		;
@@ -240,16 +239,35 @@ youwon
 youlose	.null	$0d,"you lose after guess 2"
 youlost
 
-modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
+modekey	.text	$09,$83,$08;$93	; enable upper/lower case, uppercase, lock upper
 .if SCREENH
-	.text	$13,$13		; clear any BASIC 3.5/7 subwindows on the screen
+;	.text	$13,$13		; clear any BASIC 3.5/7 subwindows on the screen
 .for d := 0, d < GRIDPIT*GRIDH, d += 1
-	.text	$11
+;	.text	$11
 .next
-	.text	$1b,'t'		; place a BASIC 3.5/7 subwindow for messages
+	.text	$1b,'t';$1b,'a'	; place a BASIC 3.5/7 subwindow for messages
 .endif
-initize	lda	#0		;void initize(void) {
-	pha	;//V0LOCAL	; uint8_t y;
+initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
+.if SCREENH
+	pha			;
+	lda	#>(SCREENW*(GRIDPIT*GRIDH+2))
+	sta @w	V0LOCAL		;
+	lda	#<(SCREENW*(GRIDPIT*GRIDH+2))
+	sta @w	V1LOCAL		;
+	lda	#$13		;
+	jsr	putchar		;
+	lda	#$13		;
+	jsr	putchar		;
+-	lda	#' '		;
+	jsr	putchar		;
+	dec @w	V1LOCAL		;
+	bne	-		;
+	dec @w	V0LOCAL		;
+	bpl	-		;
+.else
+	jsrAPCS	wipescr		; wipescr();
+.endif
+	lda	#0		;
 -	sta @w	V0LOCAL	;//y	; for (y = 0; y < strlen(modekey); y++) {
 	tay			;
 	lda	modekey,y	;
@@ -269,7 +287,6 @@ initize	lda	#0		;void initize(void) {
 	sec			;
 	jsr	inigrid		; inigrid(1 /* HIDGRID */);
 	jsrAPCS	rndgrid		; rndgrid();
-	jsrAPCS	wipescr		; wipescr();
 	POPVARS			;
 	rts			;} // initize()
 

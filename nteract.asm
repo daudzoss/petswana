@@ -221,6 +221,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V3LOCAL=incol;
 	jsrAPCS	hilighc		; hilighc(incol = 1, inrow = 0); // portal "1"
 -	jsr	getchar		; do {
+ brk
 	tay			;  register uint8_t a, y;
 	sta @w	V0LOCAL	;//input;  input = getchar();
 	cmp	#$1d		;  switch (input) {

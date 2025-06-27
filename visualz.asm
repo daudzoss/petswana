@@ -818,7 +818,7 @@ hal_lbl	ldy	#SCREENW	;
 	sta	SCREEND+LABLUL4,y
 	sta	SCREEND+LABLUL6,y
 
-	ldy	#SCREENW	;
+	ldy	#gridbot-gridtop;
 -	lda	gridtop-1,y	;
 	sta	LABLULM-1,y	;
 	lda	gridbot-1,y	;
