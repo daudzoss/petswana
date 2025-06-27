@@ -141,8 +141,8 @@ hilighc	jsrAPCS	rcindex		;void hilighc(int8_t col,int8_t row,int8_t what)
 	pha			;  int8_t r;
 	lda @w	A0FUNCT		;
 	pha			;  int8_t c;
-	ldy	#DRW_CEL	;
-	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_CEL);
+	ldy	#DRW_SEL	;
+	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_SEL);
 	jmp	++		; } else { // portal
 +	jsrAPCS	hal_lbl		;  hal_lbl();
 +	POPVARS			; }
@@ -219,50 +219,63 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
 	lda	#1		;
 	pha	;//V3LOCAL=incol;
-	jsrAPCS	hilighc		; hilighc(incol = 1, inrow = 0); // portal "1"
+	jsrAPCS	hilighc		; hilighc(incol = 1, inrow = 1); // cell A1 // 0); // portal "1"
 -	jsr	getchar		; do {
- brk
-	tay			;  register uint8_t a, y;
+	tya			;  register uint8_t a, y;
+ pha
+ lda #'('
+ jsr putchar
+ ldy @w V2LOCAL
+ jsrAPCS puthexd
+ lda #','
+ jsr putchar
+ ldy @w V3LOCAL
+ jsrAPCS puthexd
+ lda #')'
+ jsr putchar
+ lda #$0d
+ jsr putchar
+ pla
 	sta @w	V0LOCAL	;//input;  input = getchar();
 	cmp	#$1d		;  switch (input) {
 	bne	+		;  case 0x1d: // next cell/portal up
-	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
+	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	inup		;   inup(&incol, &inrow);
-	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$11		;
 	bne	+		;  case 0x11: // next cell/portal down
-	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
+	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	indown		;   indown(&incol, &inrow);
-	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$9d		;
 	bne	+		;  case 0x9d: // next cell/portal left
-	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
+	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	inleft		;   inleft(&incol, &inrow);
-	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$91		;
 	bne	+		;  case 0x91: // next cell/portal right
-	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
+	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	inright		;   inright(&incol, &inrow);
-	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
-+	cmp	#'['		;
-	bne	+		;  case '[': // next portal counter-clockwise
-	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
++	cmp	#','		;
+	bne	+		;  case '<': // next portal counter-clockwise
+	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	ldy	#$01		;
 	jsrAPCS	portlcw		;   portlcw(y = +1, &incol, &inrow);
-	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
-+	cmp	#']'		;
-	bne	+		;  case ']': // next portal clockwise
-	jsrAPCS	hilighc		;   /*de-*/highlighc(incol, inrow);
++	cmp	#'.'		;
+	bne	+		;  case '>': // next portal clockwise
+	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	ldy	#$ff		;
 	jsrAPCS	portlcw		;   portlcc(y = -1, &incol, &inrow);
-	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$20		;
 	bne	++++		;  case ' ': // cycle through tints
@@ -283,7 +296,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	adc	#%0011 .. %0000	;    a += 0x30; // so bump 0x50 to 0x80 (RUBOUT)
 +	sta	TRYGRID,y	;
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
-;	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+;	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#'@'		;
 	bne	++		;  case '@':
@@ -334,7 +347,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 +	ora @w	V0LOCAL	;//input;   }
 +	sta 	TRYGRID,y	;   TRYGRID[y] = input | a; // bit 3 untouched
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
-	jsrAPCS	hilighc		;   highlighc(incol, inrow);
+	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 chkquit	eor	#'x'		;  case 'x':
 	beq	inpreta		;   return y = 0;

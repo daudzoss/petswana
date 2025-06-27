@@ -193,12 +193,9 @@ b2basic	rts			;
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
 	ldy	#SAY_ANY	;
 	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
-	sty	OTHRVAR		;
-	lda	#$ff		;
-	bit	OTHRVAR		;   
+	tya			;
 	bne	+		;  if (y == 0) { // user quit
 	jsrAPCS	confirm		;   register uint8_t y = confirm();
-	tya			;
 	beq	-		;   if (y)
 	lda	#0		;
 	beq	mainend		;    exit(0);
