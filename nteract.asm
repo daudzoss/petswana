@@ -77,6 +77,7 @@ rtup	POPVARS			; ++*row; // undo the move
 	rts			;} // inup()
 
 indown	inc @w	A1FUNCT	;//row	;void indown(int8_t* col, int8_t* row) {
+	lda @w	A1FUNCT	;//row	;
 	cmp	#GRIDH+2	;
 	bcs	nodown		; if (++*row <= GRIDH+1) { // haven't fallen off
 	cmp	#GRIDH+1	;
@@ -101,6 +102,7 @@ rtleft	POPVARS			; ++*col; // undo the move
 	rts			;} // inleft()
 
 inright	inc @w	A0FUNCT	;//col	;void inright(int8_t* col, int8_t* row) {
+	lda @w	A0FUNCT	;//col	;
 	cmp	#GRIDW+2	;
 	bcs	noright		; if (++*col <= GRIDH+1) { // haven't fallen off
 	cmp	#GRIDW+1	;
@@ -215,7 +217,7 @@ toportl
 
 hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V1LOCAL=intyp; uint8_t input, intyp = a;// nteract()'s "what"
-	lda	#0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
+	lda	#1;0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
 	lda	#1		;
 	pha	;//V3LOCAL=incol;
@@ -237,7 +239,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
  jsr putchar
  pla
 	sta @w	V0LOCAL	;//input;  input = getchar();
-	cmp	#$1d		;  switch (input) {
+	cmp	#$91		;  switch (input) {
 	bne	+		;  case 0x1d: // next cell/portal up
 	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	inup		;   inup(&incol, &inrow);
@@ -255,7 +257,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jsrAPCS	inleft		;   inleft(&incol, &inrow);
 	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
-+	cmp	#$91		;
++	cmp	#$1d		;
 	bne	+		;  case 0x91: // next cell/portal right
 	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	inright		;   inright(&incol, &inrow);
