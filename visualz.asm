@@ -510,16 +510,26 @@ tintarr	.byte	VIDEOBG		; // UNTINTD
 	;.byte	0,0,0,0,0,0,0
 
 filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
-	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=cellv*/
+	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=scoff*/
 	sta	CELLUL\baseadr,y;                                 
+
 	pla	;//symtr=V6LOCAL;
 	sta	1+CELLUL\baseadr,y
+
 	pla	;//symbl=V5LOCAL;
 	sta	SCREENW+CELLUL\baseadr,y
+
 	pla	;//symbr=V4LOCAL;
 	sta	1+SCREENW+CELLUL\baseadr,y
+
 	ldy @w	V2LOCAL	;//cellt;
-	lda	tintarr,y	;
+	lda	tintarr,y	;	
+.if 0
+ tay
+ jsrAPCS puthexd
+ ldy @w V2LOCAL
+ lda tintarr,y
+.endif
 	ldy @w	V3LOCAL	;//scoff;
 	sta	SCREEND+CELLUL\baseadr,y;
 	sta	SCREEND+1+CELLUL\baseadr,y
@@ -556,59 +566,62 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	dey			;
 	bne	-		;
 	pha	;V3LOCAL=scoff	; uint8_t scoff = (col-1)*GRIDPIT;// 0~9*GRIDPIT
-	ldy @w	V1LOCAL	;//cellv; register uint8_t y;
+	ldy @w	V1LOCAL	;//cellv; register uint8_t y = cellv;
+.if 1
+ tya
+ pha	
+ jsrAPCS puthexd
+ pla
+ tay
+.endif
 	lda	symarbr,y	;
-
 	cmp	#' '		;
 	bne	+		;
 	lda @w	A2FUNCT	;//what	;
 	bit	sel_cel		;
 	php			;
 	lda	symarbr,y	;
-	plp			;
-	beq	+		;
-	lda	#'*'		;
-
-+	pha	;V4LOCAL=symbr	;
+	plp			; if ((symarbr[y] == ' ') && (what & DRW_SEL))
+	beq	+		;  symbr = '*';
+	lda	#'*'		; else
++	pha	;V4LOCAL=symbr	;  symbr = symarbr[y];
+	
 	lda	symarbl,y	;
-
 	cmp	#' '		;
 	bne	+		;
 	lda @w	A2FUNCT	;//what	;
 	bit	sel_cel		;
 	php			;
 	lda	symarbl,y	;
-	plp			;
-	beq	+		;
-	lda	#'*'		;
+	plp			; if ((symarbl[y] == ' ') && (what & DRW_SEL))
+	beq	+		;  symbl = '*';
+	lda	#'*'		; else
++	pha	;V5LOCAL=symbl	;  symbl = symarbl[y];
 
-+	pha	;V5LOCAL=symbl	;
 	lda	symartr,y	;
-
 	cmp	#' '		;
 	bne	+		;
 	lda @w	A2FUNCT	;//what	;
 	bit	sel_cel		;
 	php			;
 	lda	symartr,y	;
-	plp			;
-	beq	+		;
-	lda	#'*'		;
+	plp			; if ((symartr[y] == ' ') && (what & DRW_SEL))
+	beq	+		;  symtr = '*';
+	lda	#'*'		; else
++	pha	;V6LOCAL=symtr	;  symtr = symartr[y];
 
-+	pha	;V6LOCAL=symtr	;
 	lda	symartl,y	;
-
 	cmp	#' '		;
 	bne	+		;
 	lda @w	A2FUNCT	;//what	;
 	bit	sel_cel		;
 	php			;
 	lda	symartl,y	;
-	plp			;
-	beq	+		;
-	lda	#'*'		;
+	plp			; if ((symartl[y] == ' ') && (what & DRW_SEL))
+	beq	+		;  symtl = '*';
+	lda	#'*'		; else
++	pha	;V7LOCAL=symtl	;  symtl = symartly];
 
-+	pha	;V7LOCAL=symtl	;
 	lda @w	A1FUNCT	;//row	;
 	and	#1		; switch (a = row) {
 	bne	+		;  case 2:

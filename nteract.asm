@@ -22,7 +22,7 @@ confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visua
 
 .if SCREENW && SCREENH
 rcindex	pha	;//V0LOCAL=col	;register uint8_t rcindex(register int8_t a//col
-	pha	;//V1LOCAL=row_1;                   register int8_t y /*row*/) {
+	pha	;//V1LOCAL=row_1;                       register int8_t y){//row
 	dey			; int8_t col = a, row_1;
 	bmi	uportal		; if (y < 1) goto uportal;
 	tya			;
@@ -116,37 +116,54 @@ rtright	POPVARS			; --*col;
 	rts			;} // inright()
 
 .if 1 ; not a simple xor
-delighc	jsrAPCS	rcindex		;void delighc(int8_t col,int8_t row,int8_t what)
-	tya			;{
-	bmi	+		; if ((y = rcindex(row,col)) & 0x80 == 0){//cell
-	lda	#DRW_CEL	;  // DRW_SEL bit not set
+delighc	lda @w	A0FUNCT	;//col	;void delighc(int8_t col,int8_t row,int8_t what)
+	ldy @w	A1FUNCT	;//row	;{
+	jsrAPCS	rcindex		;
+	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
+	bmi	+		;  // cell in range (1~10,1~8)
+	lda	#DRW_CEL	;  // DRW_SEL bit not set, so won't highlight
 	pha			;  int8_t w;
 	lda @w	A1FUNCT		;
 	pha			;  int8_t r;
 	lda @w	A0FUNCT		;
 	pha			;  int8_t c;
-	ldy	#DRW_CEL	;
 	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_CEL);
-	jmp	++		; } else { // portal
+	jmp	++		; } else { // portal, so just redraw all of them
 +	jsrAPCS	hal_lbl		;  hal_lbl();
 +	POPVARS			; }
 	rts			;} // delighc()
 .else
 delighc
 .endif
-hilighc	jsrAPCS	rcindex		;void hilighc(int8_t col,int8_t row,int8_t what)
-	tya			;
-	bmi	+		;
-	lda	#DRW_SEL	;  // DRW_SEL bit set
+hilighc
+.if 1
+ lda #$0d
+ jsr putchar
+ lda #'('
+ jsr putchar
+ ldy @w A0FUNCT
+ jsrAPCS puthexd
+ lda #','
+ jsr putchar
+ ldy @w A1FUNCT
+ jsrAPCS puthexd
+ lda #')'
+ jsr putchar
+.endif
+	lda @w	A0FUNCT	;//col	;void hilighc(int8_t col,int8_t row,int8_t what)
+	ldy @w	A1FUNCT	;//row	;{
+	jsrAPCS	rcindex		;
+	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
+	bmi	+		;  // cell in range (1~10,1~8)
+	lda	#DRW_SEL|DRW_CEL;  // DRW_SEL bit set, so will highlight
 	pha			;  int8_t w;
 	lda @w	A1FUNCT		;
 	pha			;  int8_t r;
 	lda @w	A0FUNCT		;
 	pha			;  int8_t c;
-	ldy	#DRW_SEL	;
 	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_SEL);
 	jmp	++		; } else { // portal
-+	jsrAPCS	hal_lbl		;  hal_lbl();
++ nop
 +	POPVARS			; }
 	rts			;} // delighc()
 
@@ -157,7 +174,9 @@ portlcw				;//FIXME: C might be close, asm definitely wrong
 	tya			;void portlcw(register int8_t y, uint8_t col,
 	beq	++++		;                                uint8_t row) {
 	bmi	++++		; if (y > 0) { // clockwise: alpha inc, num dec
-	jsrAPCS rcindex		;  register uint8_t a = rcindex(col, row);
+	lda @w	A0FUNCT	;//col	;
+	ldy @w	A1FUNCT	;//row	;
+	jsrAPCS rcindex		;  register uint8_t a = rcindex(a=col, y=row);
 	tya			;
 	bpl	portlno		;  if (a & 0x80) { // valid portal
 	bit	portalf		;
@@ -221,47 +240,29 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
 	lda	#1		;
 	pha	;//V3LOCAL=incol;
-	jsrAPCS	hilighc		; hilighc(incol = 1, inrow = 1); // cell A1 // 0); // portal "1"
--	jsr	getchar		; do {
+-	jsrAPCS	hilighc		; hilighc(incol = 1, inrow = 1); // cell A1 // 0); // portal "1"
+	jsr	getchar		; do {
 	tya			;  register uint8_t a, y;
- pha
- lda #'('
- jsr putchar
- ldy @w V2LOCAL
- jsrAPCS puthexd
- lda #','
- jsr putchar
- ldy @w V3LOCAL
- jsrAPCS puthexd
- lda #')'
- jsr putchar
- lda #$0d
- jsr putchar
- pla
 	sta @w	V0LOCAL	;//input;  input = getchar();
 	cmp	#$91		;  switch (input) {
 	bne	+		;  case 0x1d: // next cell/portal up
 	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	inup		;   inup(&incol, &inrow);
-	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$11		;
 	bne	+		;  case 0x11: // next cell/portal down
 	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	indown		;   indown(&incol, &inrow);
-	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$9d		;
 	bne	+		;  case 0x9d: // next cell/portal left
 	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	inleft		;   inleft(&incol, &inrow);
-	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$1d		;
 	bne	+		;  case 0x91: // next cell/portal right
 	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	inright		;   inright(&incol, &inrow);
-	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#','		;
 	bne	+		;  case '<': // next portal counter-clockwise
@@ -269,7 +270,6 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	ldy	#$01		;
 	jsrAPCS	portlcw		;   portlcw(y = +1, &incol, &inrow);
-	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#'.'		;
 	bne	+		;  case '>': // next portal clockwise
@@ -277,10 +277,11 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	ldy	#$ff		;
 	jsrAPCS	portlcw		;   portlcc(y = -1, &incol, &inrow);
-	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#$20		;
-	bne	++++		;  case ' ': // cycle through tints
+	bne	+++++		;  case ' ': // cycle through tints
+	lda @w	V3LOCAL	;//incol;
+	ldy @w	V2LOCAL	;//inrow;
 	jsrAPCS	rcindex		;   y = rcindex(incol, inrow);
 	tya			;   if (y & 0x80)
 	bpl	+		;    break; // only cells have tint, not portals
@@ -293,15 +294,17 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	;lda	HIDGRID,y	;
 	;bne	-		;
 	adc	#%0001 .. %0000	;   a += 0x10; // advance tint by 1, remembering
-	cmp	#RUBWHT+$10	;
-	bcc	+		;   if (a >= RUBWHT+0x10) // no tints 0x50~0x70,
-	adc	#%0011 .. %0000	;    a += 0x30; // so bump 0x50 to 0x80 (RUBOUT)
+	bpl	+		;   if (a & RUBOUT)
+	lda	#UNTINTD	;    a = UNTINTD;
++	cmp	#RUBWHT+$10	;
+	bcc	+		;   else if (a >= RUBWHT+0x10) // no tints >0x50
+	lda	#RUBOUT		;    a = 0x80; // so bump 0x50 to 0x80 (RUBOUT)
 +	sta	TRYGRID,y	;
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
-;	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 +	cmp	#'@'		;
 	bne	++		;  case '@':
+	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
  jsrAPCS rcindex,lda,@w,V3LOCAL	;
 	tya			;   if (((y = rcindex(a = incol, y = inrow))>=0)
@@ -324,6 +327,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	bne	inprety		;    return y = SUBMITG; //submit grid for grade
 +	cmp	#$0d		;
 	bne	chkquit		;  case '\n'; // launch a beam or cycle shapes
+	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
  jsrAPCS rcindex,lda,@w,V3LOCAL	;
 	tya			;   if (((y = rcindex(a = incol,y = inrow)) < 0)
@@ -349,7 +353,6 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 +	ora @w	V0LOCAL	;//input;   }
 +	sta 	TRYGRID,y	;   TRYGRID[y] = input | a; // bit 3 untouched
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
-	jsrAPCS	hilighc		;   hilighc(incol, inrow);
 	jmp	-		;   break;
 chkquit	eor	#'x'		;  case 'x':
 	beq	inpreta		;   return y = 0;
