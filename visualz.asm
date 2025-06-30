@@ -524,12 +524,6 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 
 	ldy @w	V2LOCAL	;//cellt;
 	lda	tintarr,y	;	
-.if 0
- tay
- jsrAPCS puthexd
- ldy @w V2LOCAL
- lda tintarr,y
-.endif
 	ldy @w	V3LOCAL	;//scoff;
 	sta	SCREEND+CELLUL\baseadr,y;
 	sta	SCREEND+1+CELLUL\baseadr,y
