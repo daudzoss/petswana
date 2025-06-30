@@ -158,9 +158,8 @@ rtright	POPVARS			; --*col;
 	rts			;} // inright()
 
 .if 1 ; not a simple xor
-delighc	lda @w	A0FUNCT	;//col	;void delighc(int8_t col,int8_t row,int8_t what)
-	ldy @w	A1FUNCT	;//row	;{
-	jsrAPCS	rcindex		;
+delighc	ldy @w	A1FUNCT	;//row	;void delighc(int8_t col,int8_t row,int8_t what)
+ jsrAPCS rcindex,lda,@w,A0FUNCT	;{
 	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
 	bmi	+		;  // cell in range (1~10,1~8)
 	lda	#DRW_CEL	;  // DRW_SEL bit not set, so won't highlight
@@ -177,24 +176,8 @@ delighc	lda @w	A0FUNCT	;//col	;void delighc(int8_t col,int8_t row,int8_t what)
 .else
 delighc
 .endif
-hilighc
-.if 1
- lda #$0d
- jsr putchar
- lda #'('
- jsr putchar
- ldy @w A0FUNCT
- jsrAPCS puthexd
- lda #','
- jsr putchar
- ldy @w A1FUNCT
- jsrAPCS puthexd
- lda #')'
- jsr putchar
-.endif
-	lda @w	A0FUNCT	;//col	;void hilighc(int8_t col,int8_t row,int8_t what)
-	ldy @w	A1FUNCT	;//row	;{
-	jsrAPCS	rcindex		;
+hilighc	ldy @w	A1FUNCT	;//row	;void hilighc(int8_t col,int8_t row,int8_t what)
+ jsrAPCS rcindex,lda,@w,A0FUNCT	;{
 	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
 	bmi	+		;  // cell in range (1~10,1~8)
 	lda	#DRW_SEL|DRW_CEL;  // DRW_SEL bit set, so will highlight
@@ -216,9 +199,8 @@ portlcw				;//FIXME: C might be close, asm definitely wrong
 	tya			;void portlcw(register int8_t y, uint8_t col,
 	beq	++++		;                                uint8_t row) {
 	bmi	++++		; if (y > 0) { // clockwise: alpha inc, num dec
-	lda @w	A0FUNCT	;//col	;
 	ldy @w	A1FUNCT	;//row	;
-	jsrAPCS rcindex		;  register uint8_t a = rcindex(a=col, y=row);
+ jsrAPCS rcindex,lda,@w,A0FUNCT	;  register uint8_t a = rcindex(a=col, y=row);
 	tya			;
 	bpl	portlno		;  if (a & 0x80) { // valid portal
 	bit	portalf		;
@@ -324,9 +306,8 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jmp	-		;   break;
 +	cmp	#$20		;
 	bne	+++++		;  case ' ': // cycle through tints
-	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
-	jsrAPCS	rcindex		;   y = rcindex(incol, inrow);
+ jsrAPCS rcindex,lda,@w,V3LOCAL	;   y = rcindex(incol, inrow);
 	tya			;   if (y & 0x80)
 	bpl	+		;    break; // only cells have tint, not portals
 	jmp	-
@@ -348,7 +329,6 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jmp	-		;   break;
 +	cmp	#'@'		;
 	bne	++		;  case '@':
-	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
  jsrAPCS rcindex,lda,@w,V3LOCAL	;
 	tya			;   if (((y = rcindex(a = incol, y = inrow))>=0)
@@ -371,7 +351,6 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	bne	inprety		;    return y = SUBMITG; //submit grid for grade
 +	cmp	#$0d		;
 	bne	chkquit		;  case '\n'; // launch a beam or cycle shapes
-	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
  jsrAPCS rcindex,lda,@w,V3LOCAL	;
 	tya			;   if (((y = rcindex(a = incol,y = inrow)) < 0)
