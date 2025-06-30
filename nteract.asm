@@ -159,10 +159,11 @@ portalf	.byte	%0010 .. %0000
 portlcw				;//FIXME: C might be close, asm definitely wrong
  POPVARS
  rts
-	tya			;void portlcw(register int8_t y, uint8_t col,
-	beq	++++		;                                uint8_t row) {
-	bmi	++++		; if (y > 0) { // clockwise: alpha inc, num dec
-	lda @w	A0FUNCT	;//col	;
+	tay			;void portlcw(register int8_t a, uint8_t col,
+	beq	+		;                                uint8_t row) {
+	bmi	+++++		; if (y > 0) { // warp to a specific portal 1~50
+	
++	lda @w	A0FUNCT	;//col	; } else if (y == 0) { // CW: alpha inc,num dec
 	sta	OTHRVAR		;
 	ldy @w	A1FUNCT	;//row	;
  jsrAPCS rcindex,lda,OTHRVAR	;  register uint8_t a = rcindex(a=col, y=row);
@@ -327,17 +328,17 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	adc	#%0001 .. %0000	;    a += 0x10; // increment tint, remembering
 	bpl	+		;    if (a & RUBOUT) // we just advanced to 0x9_
 	and	#%0000 .. %1111	;
-	ora	#RUBRED		;     a = 0x10 | (a & 0x0f); 
+	ora	#RUBRED		;     a = 0x10 | (a & 0x0f);
 	jmp	++		;
-+	cmp	#RUBWHT+$10	; 
++	cmp	#RUBWHT+$10	;
 	bcc	+		;    else if (a >= RUBWHT+0x10) // no tints >0x50
-	and	#%0000 .. %1111	;     a = 0x80 | (a & 0x0f); // so 0x50 then 0x80 
+	and	#%0000 .. %1111	;     a = 0x80 | (a & 0x0f); // so 0x50 then 0x80
 	ora	#RUBOUT		;   }
 +	sta	TRYGRID,y	;   TRYGRID[y] = a;
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
 	jmp	-		;   break;
 chkpeek	cmp	#'@'		;
-	bne	++		;  case '@':
+	bne	+++		;  case '@':
 	lda @w	V3LOCAL	;//incol;
 	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
@@ -349,9 +350,17 @@ chkpeek	cmp	#'@'		;
 	tay			;
 	lda @w	V1LOCAL	;//intyp;       &&
 	and	#SAY_PEK	;       (intyp & SAY_PEK))//peek/hinting allowed
-	bne	inprety		;    return y |= 0x80;//request a hint this cell
-	jmp	-		;   else break;
-+	and	#$5f		;  case 'a':case 'b':case 'c':case 'd':case 'e':
+	beq	+		;    return y |= 0x80;//request a hint this cell
+	jmp	inprety		;   else
++	jmp	-		;    break;
++	and	#$5f		;
+	bne	++		;  case 's':
+	lda @w	V1LOCAL	;//intyp;  case 'S':
+	and	#SAY_ANS	;
+	bne	+		;
+	jmp	-		;   if (intyp & ask_ans) //submission is allowed
++	ldy	#SUBMITG	;    return y = SUBMITG; //submit grid for grade
+	jmp	inprety		;  case 'a':case 'b':case 'c':case 'd':case 'e':
 +	cmp	#'a'		;  case 'A':case 'B':case 'C':case 'D':case 'E':
 	bcc	+		;  case 'f':case 'g':case 'h':case 'i':case 'j':
 	cmp	#'s'		;  case 'F':case 'g':case 'H':case 'I':case 'J':
@@ -359,19 +368,11 @@ chkpeek	cmp	#'@'		;
 	sec			;  case 'K':case 'L':case 'M':case 'N':case 'O':
 	sbc	#'@'		;  case 'p':case 'q':case 'r':
 	ora	#$20		;  case 'P':case 'Q':case 'R':
-	sta @w	V0LOCAL	;//input;
-	jsrAPCS	dlightc		;   delighc(incol, inrow);
+	sta @w	V0LOCAL	;//input;   input = tolower(input) - 'a';
+	jsrAPCS	delighc		;   delighc(incol, inrow);
 	ldy @w	V0LOCAL	;//input;
-	jsrAPCS	portlcw		;   portlcw(y = input = tolower(input) - 'a');
-	jmp	-		;   break;
-+	bne	++		;  case 's': case 'S':
-	lda @w	V1LOCAL	;//intyp;
-	and	#SAY_ANS	;
-	bne	+		;
-	jmp	-		;   if (intyp & ask_ans) //submission is allowed
-+	ldy	#SUBMITG	;
-	bne	inprety		;    return y = SUBMITG; //submit grid for grade
-	
+	jsrAPCS	portlcw		;   portlcw(y = input, &incol, &inrow);
+	lda	#$0d		;   // break intentionally omitted; fall through
 +	cmp	#$0d		;
 	bne	chkquit		;  case '\n'; // launch a beam or cycle shapes
 	lda @w	V3LOCAL	;//incol;

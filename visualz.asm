@@ -452,7 +452,7 @@ hal_cel	POPVARS
 .endif
 
 .if SCREENW && SCREENH
-;;; functions for addressable screens, able to draw randomly accessed 
+;;; functions for addressable screens, able to draw randomly accessed
 symartl	.byte	$20		; // BLANK
 	.byte	$a0		; // CHAMFBR
 	.byte	$5f		; // CHAMFBL
@@ -516,7 +516,7 @@ OUTLNBR	= $7a
 
 filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=scoff*/
-	sta	CELLUL\baseadr,y;                                 
+	sta	CELLUL\baseadr,y;                                
 
 	pla	;//symtr=V6LOCAL;
 	sta	1+CELLUL\baseadr,y
@@ -529,6 +529,8 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 
 	ldy @w	V2LOCAL	;//cellt;
 	cmp	#OUTLNBR	;
+ brk
+ brk
 	php			;
 	lda	tintarr,y	; register uint8_t a = 	tintarr[cellt];
 	plp			;
@@ -536,7 +538,6 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	cpy	#UNTINTD	;
 	bne	+		; if ((symbr == OUTLNBR) && (cellt == UNTINTD))
 	lda	#VIDEOBK	;   a |= VIDEOBK; // highlighting so not VIDEOBG
-	
 +	ldy @w	V3LOCAL	;//scoff;
 	sta	SCREEND+CELLUL\baseadr,y;
 	sta	SCREEND+1+CELLUL\baseadr,y
