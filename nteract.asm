@@ -223,6 +223,7 @@ toportl
 	POPVARS
 	rts			;} // toportl()
 
+rollund	.byte	%0111 .. %0000	;
 hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V1LOCAL=intyp; uint8_t input, intyp = a;// nteract()'s "what"
 	lda	#1;0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
@@ -308,12 +309,14 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	php			;
 	lda	OTHRVAR		;
 	plp			;
-	bpl	++		;   if (input == '-') {
+	bpl	+++		;   if (input == '-') {
 	sec			;
 	sbc	#%0001 .. %0000	;    a -= 0x10; // decrement tint, remembering
-	bpl	+		;    if (a & RUBOUT) // we just rolled over 0xf_
-	and	#%1000 .. %1111	;     a = 0x80 | (a & 0x0f);
-	; ora	#RUBOUT		;
+	bit	rollund		;
+	beq	+		;    if ((a & 0x70 == 0) || // just rolled under
+	bpl	++		;      (a & RUBOUT)) // RED to UNTINTD to RUBOUT
++	and	#%0000 .. %1111	;     a = 0x80 | (a & 0x0f);
+	ora	#RUBOUT		;
 	jmp	++++		;
 +	cmp	#RUBWHT+$10	;
 	bcc	+++		;    else if (a >= RUBWHT+0x10) // no tints >0x50
@@ -323,9 +326,9 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 +	clc			;   } else { // input == '+'
 	adc	#%0001 .. %0000	;    a += 0x10; // increment tint, remembering
 	bpl	+		;    if (a & RUBOUT) // we just advanced to 0x9_
-	and	#%0000 .. %1111	;     a = 0x00 | (a & 0x0f); 
-	; ora	#UNTINTD	;
-	; jmp	++		;
+	and	#%0000 .. %1111	;
+	ora	#RUBRED		;     a = 0x10 | (a & 0x0f); 
+	jmp	++		;
 +	cmp	#RUBWHT+$10	; 
 	bcc	+		;    else if (a >= RUBWHT+0x10) // no tints >0x50
 	and	#%0000 .. %1111	;     a = 0x80 | (a & 0x0f); // so 0x50 then 0x80 
