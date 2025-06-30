@@ -509,6 +509,12 @@ tintarr	.byte	VIDEOBG		; // UNTINTD
 	.byte	0,0,0,VIDEOBK	; // ABSORBD
 	;.byte	0,0,0,0,0,0,0
 
+FLASHED	= $80
+OUTLNTL	= $6f
+OUTLNTR	= $70
+OUTLNBL	= $6c
+OUTLNBR	= $ba
+
 filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=scoff*/
 	sta	CELLUL\baseadr,y;                                 
@@ -523,8 +529,17 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	sta	1+SCREENW+CELLUL\baseadr,y
 
 	ldy @w	V2LOCAL	;//cellt;
-	lda	tintarr,y	;	
-	ldy @w	V3LOCAL	;//scoff;
+	cmp	#OUTLNBR	;
+	php			;
+	lda	tintarr,y	; register uint8_t a = 	tintarr[cellt];
+	plp			;
+	bne	+		; if (symbr == OUTLNBR) { // highlighting a cell
+	ora	#FLASHED	;  a |= FLASHED; //...will flash it (c16 only)
+	cpy	#UNTINTD	;  if (cellt == UNTINTD)
+	bne	+		;   a |= VIDEOBK;  //...and won't be in VIDEOBG!
+	lda	#FLASHED|VIDEOBK; }
+	
++	ldy @w	V3LOCAL	;//scoff;
 	sta	SCREEND+CELLUL\baseadr,y;
 	sta	SCREEND+1+CELLUL\baseadr,y
 	sta	SCREEND+SCREENW+CELLUL\baseadr,y
@@ -539,7 +554,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	cpy	#GRIDSIZ	;
 	bcs	++	;dhidden; if (gridi < GRIDSIZ) { // no hints in HIDGRID
 	bit	pokthru		;
-	beq	++	;deither;  if (cellv & pokthru) { // if unknown, hint
+ 	beq	++	;deither;  if (cellv & pokthru) { // if unknown, hint
 	bit	guessed		;
 	beq	+		;   if (cellv & guessed) // we placed block so
 	and #~(SOBLANK&SOFILLD)	;    cellv &= ~pokthru; // show guess, not hint
@@ -569,8 +584,8 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	php			;
 	lda	symarbr,y	;
 	plp			; if ((symarbr[y] == ' ') && (what & DRW_SEL))
-	beq	+		;  symbr = '*';
-	lda	#'*'		; else
+	beq	+		;  symbr = OUTLNBR;
+	lda	#OUTLNBR	; else
 +	pha	;V4LOCAL=symbr	;  symbr = symarbr[y];
 	
 	lda	symarbl,y	;
@@ -581,8 +596,8 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	php			;
 	lda	symarbl,y	;
 	plp			; if ((symarbl[y] == ' ') && (what & DRW_SEL))
-	beq	+		;  symbl = '*';
-	lda	#'*'		; else
+	beq	+		;  symbl = OUTLNBL;
+	lda	#OUTLNBL	; else
 +	pha	;V5LOCAL=symbl	;  symbl = symarbl[y];
 
 	lda	symartr,y	;
@@ -593,8 +608,8 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	php			;
 	lda	symartr,y	;
 	plp			; if ((symartr[y] == ' ') && (what & DRW_SEL))
-	beq	+		;  symtr = '*';
-	lda	#'*'		; else
+	beq	+		;  symtr = OUTLNTR;
+	lda	#OUTLNTR	; else
 +	pha	;V6LOCAL=symtr	;  symtr = symartr[y];
 
 	lda	symartl,y	;
@@ -605,8 +620,8 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	php			;
 	lda	symartl,y	;
 	plp			; if ((symartl[y] == ' ') && (what & DRW_SEL))
-	beq	+		;  symtl = '*';
-	lda	#'*'		; else
+	beq	+		;  symtl = OUTLNTL;
+	lda	#OUTLNTR	; else
 +	pha	;V7LOCAL=symtl	;  symtl = symartly];
 
 	lda @w	A1FUNCT	;//row	;
