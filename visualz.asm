@@ -509,11 +509,10 @@ tintarr	.byte	VIDEOBG		; // UNTINTD
 	.byte	0,0,0,VIDEOBK	; // ABSORBD
 	;.byte	0,0,0,0,0,0,0
 
-FLASHED	= $80
-OUTLNTL	= $6f
-OUTLNTR	= $70
-OUTLNBL	= $6c
-OUTLNBR	= $ba
+OUTLNTL	= $4f
+OUTLNTR	= $50
+OUTLNBL	= $4c
+OUTLNBR	= $7a
 
 filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=scoff*/
@@ -533,11 +532,10 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	php			;
 	lda	tintarr,y	; register uint8_t a = 	tintarr[cellt];
 	plp			;
-	bne	+		; if (symbr == OUTLNBR) { // highlighting a cell
-	ora	#FLASHED	;  a |= FLASHED; //...will flash it (c16 only)
-	cpy	#UNTINTD	;  if (cellt == UNTINTD)
-	bne	+		;   a |= VIDEOBK;  //...and won't be in VIDEOBG!
-	lda	#FLASHED|VIDEOBK; }
+	bne	+		;
+	cpy	#UNTINTD	;
+	bne	+		; if ((symbr == OUTLNBR) && (cellt == UNTINTD))
+	lda	#VIDEOBK	;   a |= VIDEOBK; // highlighting so not VIDEOBG
 	
 +	ldy @w	V3LOCAL	;//scoff;
 	sta	SCREEND+CELLUL\baseadr,y;
@@ -621,7 +619,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	lda	symartl,y	;
 	plp			; if ((symartl[y] == ' ') && (what & DRW_SEL))
 	beq	+		;  symtl = OUTLNTL;
-	lda	#OUTLNTR	; else
+	lda	#OUTLNTL	; else
 +	pha	;V7LOCAL=symtl	;  symtl = symartly];
 
 	lda @w	A1FUNCT	;//row	;
