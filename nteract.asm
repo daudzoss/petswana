@@ -270,7 +270,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jsrAPCS	portlcw		;   portlcc(y = -1, &incol, &inrow);
 	jmp	-		;   break;
 +	cmp	#$20		;
-	bne	++		;  case ' ': // blank shape, cell (if not hint)
+	bne	+++		;  case ' ': // blank shape, cell (if not hint)
 	lda @w	V3LOCAL	;//incol;
 	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
@@ -284,13 +284,13 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	and	pokthru		;   if (a & pokthru == 0) // if we bought a hint
 	beq	+		;
 	jmp	-		;    break; // we can't change this cell's tint
-	sta	TRYGRID,y	;   TRYGRID[y] = UNTINTD;
++	sta	TRYGRID,y	;   TRYGRID[y] = UNTINTD;
 	jmp	-		;   break;
 +	cmp	#'+'		;
-	bne	+++++		;  case '+': // cycle through tints (next higher)
+	beq	+		;  case '+': // cycle through tints (next higher)
 	cmp	#'-'		;
-	bne	+++++		;  case '-': // cycle through tints (next lower)
-	lda @w	V3LOCAL	;//incol;
+	bne	++++++		;  case '-': // cycle through tints (next lower)
++	lda @w	V3LOCAL	;//incol;
 	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
  jsrAPCS rcindex,lda,OTHRVAR	;   y = rcindex(incol, inrow);
