@@ -236,39 +236,39 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	sta @w	V0LOCAL	;//input;  input = getchar();
 	cmp	#$91		;  switch (input) {
 	bne	+		;  case 0x1d: // next cell/portal up
-	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
+	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS	inup		;   inup(&incol, &inrow);
 	jmp	-		;   break;
 +	cmp	#$11		;
 	bne	+		;  case 0x11: // next cell/portal down
-	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
+	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS	indown		;   indown(&incol, &inrow);
 ; lda @w V3LOCAL
 ; ldy @w V2LOCAL
 	jmp	-		;   break;
 +	cmp	#$9d		;
 	bne	+		;  case 0x9d: // next cell/portal left
-	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
+	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS	inleft		;   inleft(&incol, &inrow);
 	jmp	-		;   break;
 +	cmp	#$1d		;
 	bne	+		;  case 0x91: // next cell/portal right
-	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
+	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS	inright		;   inright(&incol, &inrow);
 	jmp	-		;   break;
 +	cmp	#','		;
 	bne	+		;  case '<': // next portal counter-clockwise
-	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
+	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	ldy	#$01		;
 	jsrAPCS	portlcw		;   portlcw(y = +1, &incol, &inrow);
 	jmp	-		;   break;
 +	cmp	#'.'		;
 	bne	+		;  case '>': // next portal clockwise
-	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
+	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	ldy	#$ff		;
-	jsrAPCS	portlcw		;   portlcc(y = -1, &incol, &inrow);
+	jsrAPCS	portlcw		;   portlcw(y = -1, &incol, &inrow);
 	jmp	-		;   break;
 +	cmp	#$20		;
 	bne	+++		;  case ' ': // blank shape, cell (if not hint)
@@ -290,7 +290,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 +	cmp	#'+'		;
 	beq	+		;  case '+': // cycle through tints (next higher)
 	cmp	#'-'		;
-	bne	checkat		;  case '-': // cycle through tints (next lower)
+	bne	chkpeek		;  case '-': // cycle through tints (next lower)
 +	lda @w	V3LOCAL	;//incol;
 	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
@@ -336,7 +336,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 +	sta	TRYGRID,y	;   TRYGRID[y] = a;
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
 	jmp	-		;   break;
-checkat	cmp	#'@'		;
+chkpeek	cmp	#'@'		;
 	bne	++		;  case '@':
 	lda @w	V3LOCAL	;//incol;
 	sta	OTHRVAR		;
@@ -351,15 +351,27 @@ checkat	cmp	#'@'		;
 	and	#SAY_PEK	;       (intyp & SAY_PEK))//peek/hinting allowed
 	bne	inprety		;    return y |= 0x80;//request a hint this cell
 	jmp	-		;   else break;
-+	and	#$5f		;
-	cmp	#'s'		;
-	bne	++		;  case 's': case 'S':
++	and	#$5f		;  case 'a':case 'b':case 'c':case 'd':case 'e':
++	cmp	#'a'		;  case 'A':case 'B':case 'C':case 'D':case 'E':
+	bcc	+		;  case 'f':case 'g':case 'h':case 'i':case 'j':
+	cmp	#'s'		;  case 'F':case 'g':case 'H':case 'I':case 'J':
+	bcs	+		;  case 'k':case 'l':case 'm':case 'n':case 'o':
+	sec			;  case 'K':case 'L':case 'M':case 'N':case 'O':
+	sbc	#'@'		;  case 'p':case 'q':case 'r':
+	ora	#$20		;  case 'P':case 'Q':case 'R':
+	sta @w	V0LOCAL	;//input;
+	jsrAPCS	dlightc		;   delighc(incol, inrow);
+	ldy @w	V0LOCAL	;//input;
+	jsrAPCS	portlcw		;   portlcw(y = input = tolower(input) - 'a');
+	jmp	-		;   break;
++	bne	++		;  case 's': case 'S':
 	lda @w	V1LOCAL	;//intyp;
 	and	#SAY_ANS	;
 	bne	+		;
 	jmp	-		;   if (intyp & ask_ans) //submission is allowed
 +	ldy	#SUBMITG	;
 	bne	inprety		;    return y = SUBMITG; //submit grid for grade
+	
 +	cmp	#$0d		;
 	bne	chkquit		;  case '\n'; // launch a beam or cycle shapes
 	lda @w	V3LOCAL	;//incol;
