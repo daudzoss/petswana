@@ -289,7 +289,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 +	cmp	#'+'		;
 	beq	+		;  case '+': // cycle through tints (next higher)
 	cmp	#'-'		;
-	bne	++++++		;  case '-': // cycle through tints (next lower)
+	bne	checkat		;  case '-': // cycle through tints (next lower)
 +	lda @w	V3LOCAL	;//incol;
 	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
@@ -301,19 +301,39 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	bit	pokthru		;   if (a & pokthru == 0) // if we bought a hint
 	beq	+		;
 	jmp	-		;    break; // we can't change this cell's tint
-+	clc			;
-	;lda	HIDGRID,y	;
-	;bne	-		;
-	adc	#%0001 .. %0000	;   a += 0x10; // advance tint by 1, remembering
-	bpl	+		;   if (a & RUBOUT)
-	lda	#UNTINTD	;    a = UNTINTD;
++	sta	OTHRVAR		;
+	sec			;
+	lda	#','		;
+	sbc @w	V0LOCAL	;//input; // 0x2b +  0x2c ,  0x2d - (so N flag set if -)
+	php			;
+	lda	OTHRVAR		;
+	plp			;
+	bpl	++		;   if (input == '-') {
+	sec			;
+	sbc	#%0001 .. %0000	;    a -= 0x10; // decrement tint, remembering
+	bpl	+		;    if (a & RUBOUT) // we just rolled over 0xf_
+	and	#%1000 .. %1111	;     a = 0x80 | (a & 0x0f);
+	; ora	#RUBOUT		;
+	jmp	++++		;
 +	cmp	#RUBWHT+$10	;
-	bcc	+		;   else if (a >= RUBWHT+0x10) // no tints >0x50
-	lda	#RUBOUT		;    a = 0x80; // so bump 0x50 to 0x80 (RUBOUT)
-+	sta	TRYGRID,y	;
+	bcc	+++		;    else if (a >= RUBWHT+0x10) // no tints >0x50
+	and	#%0000 .. %1111	;
+	ora	#RUBWHT		;     a = 0x50 | (a & 0x0f);
+	jmp	+++		;
++	clc			;   } else { // input == '+'
+	adc	#%0001 .. %0000	;    a += 0x10; // increment tint, remembering
+	bpl	+		;    if (a & RUBOUT) // we just advanced to 0x9_
+	and	#%0000 .. %1111	;     a = 0x00 | (a & 0x0f); 
+	; ora	#UNTINTD	;
+	; jmp	++		;
++	cmp	#RUBWHT+$10	; 
+	bcc	+		;    else if (a >= RUBWHT+0x10) // no tints >0x50
+	and	#%0000 .. %1111	;     a = 0x80 | (a & 0x0f); // so 0x50 then 0x80 
+	ora	#RUBOUT		;   }
++	sta	TRYGRID,y	;   TRYGRID[y] = a;
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
 	jmp	-		;   break;
-+	cmp	#'@'		;
+checkat	cmp	#'@'		;
 	bne	++		;  case '@':
 	lda @w	V3LOCAL	;//incol;
 	sta	OTHRVAR		;
