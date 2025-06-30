@@ -22,18 +22,31 @@ confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visua
 
 .if SCREENW && SCREENH
 rcindex	pha	;//V0LOCAL=col	;register uint8_t rcindex(register int8_t a//col
-	pha	;//V1LOCAL=row_1;                       register int8_t y){//row
+	tya			;                       register int8_t y){//row
+	pha	;//V1LOCAL=row_1;
+.if 1
+ lda #'x'
+ jsr putchar
+ ldy @w V0LOCAL		
+ jsrAPCS puthexd
+ lda #'y'
+ jsr putchar
+ ldy @w V1LOCAL		
+ jsrAPCS puthexd
+ lda @w V0LOCAL
+ ldy @w V1LOCAL
+.endif
 	dey			; int8_t col = a, row_1;
 	bmi	uportal		; if (y < 1) goto uportal;
 	tya			;
-	and	#%0000 .. %0111	;
-	beq	dportal		; if (y > GRIDH) goto dportal;
+	cmp	#GRIDH		;
+	bcs	dportal		; if (y > GRIDH) goto dportal;
 	sta @w	V1LOCAL	;//row_1; row_1 = (y - 1) & 0x07;
 	ldy @w	V0LOCAL	;//col	;
 	dey			;
 	bmi	lportal		; if (col < 1) goto lportal;
 	cpy	#GRIDW		;
-	beq	rportal		; if (col = GRIDW+1) goto rportal;
+	bcs	rportal		; if (col > GRIDW) goto rportal;
 	tya			;
 	asl			;
 	asl			;
@@ -53,7 +66,36 @@ dportal	lda @w	V0LOCAL	;//col	;
 	clc			;
 	adc	#$28		; bportal: return y = 0x80|(0x28+col); // I~R
 uportal	ora	#$80		; tportal: return y = 0x80|(col); // 1~10
-rcretna	tay			;
+rcretna
+.if 1
+ pha	;1:rtval
+ pla	;1->0
+ bmi +
+ pha	;1:rtval
+ lda #'i'
+ jsr putchar
+ pla	;1->0
+ pha	;1:rtval
+ tay
+ jsrAPCS puthexd
+ jmp +++
++ pha
+ and #$7f
+ cmp #$20
+ bcc +
+ clc
+ adc #$20
+ jsr putchar 
+ jmp ++
++ pha
+ lda #'#'
+ jsr putchar
+ pla
+ tay
+ jsrAPCS puthexd
++ pla	;1->0
+.endif
+	tay			;
 	POPVARS			;
 	rts			;} // rcindex()
 
@@ -253,6 +295,8 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	bne	+		;  case 0x11: // next cell/portal down
 	jsrAPCS	delighc		;   /*de-*/delighc(incol, inrow);
 	jsrAPCS	indown		;   indown(&incol, &inrow);
+; lda @w V3LOCAL
+; ldy @w V2LOCAL
 	jmp	-		;   break;
 +	cmp	#$9d		;
 	bne	+		;  case 0x9d: // next cell/portal left

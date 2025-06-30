@@ -567,13 +567,6 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	bne	-		;
 	pha	;V3LOCAL=scoff	; uint8_t scoff = (col-1)*GRIDPIT;// 0~9*GRIDPIT
 	ldy @w	V1LOCAL	;//cellv; register uint8_t y = cellv;
-.if 1
- tya
- pha	
- jsrAPCS puthexd
- pla
- tay
-.endif
 	lda	symarbr,y	;
 	cmp	#' '		;
 	bne	+		;
