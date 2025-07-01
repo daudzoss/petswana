@@ -379,13 +379,15 @@ chkpeek	cmp	#'@'		;
 	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
  jsrAPCS rcindex,lda,OTHRVAR	;
-	tya			;   if (((y = rcindex(a = incol,y = inrow)) < 0)
-	bpl	+		;       // a portal is highlighted, not a cell &
-	lda @w	V1LOCAL	;//intyp;       &&
-	and	#SAY_PRT	;       (intyp & SAY_PRT))//launching is allowed
+	tya			;   if ((y = rcindex(a = incol,y = inrow)) < 0){
+	bpl	++		;    // a portal is highlighted, not a cell
+	lda @w	V1LOCAL	;//intyp;
+	and	#SAY_PRT	;
+	bne	+		;    if (intyp&SAY_PRT == 0) //launch disallowed
+	jmp	-		;     break;
++	tya			;    else
 	bne	inpretp		;    return y &= 0x7f;// launch beam from portal
-	jmp	-		;   else break;
-+	lda	TRYGRID,y	;
++	lda	TRYGRID,y	;   }
 	and	#%1111 .. %1000	;   // copied from tempins: below, rtval->input
 	sta @w	V0LOCAL	;//input;   input = TRYGRID[y] & 0xf8; // tint, pokthru
 	lda	TRYGRID,y	;

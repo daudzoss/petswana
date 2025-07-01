@@ -515,6 +515,30 @@ OUTLNBL	= $4c
 OUTLNBR	= $7a
 
 filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
+.if 1
+ tya
+ pha
+ lda #$0d
+ jsr putchar
+ pla
+ pha
+ tay
+ jsrAPCS puthexd
+ lda @w V7LOCAL
+ and #$60
+ jsr putchar
+ lda @w V6LOCAL
+ and #$60
+ jsr putchar
+ lda @w V5LOCAL
+ and #$60
+ jsr putchar
+ lda @w V4LOCAL
+ and #$60
+ jsr putchar
+ pla
+ tay
+.endif
 	pla	;//symtl=V7LOCAL;symbr,scoff,cellt,y)/*y=scoff*/
 	sta	CELLUL\baseadr,y;                                
 
@@ -529,8 +553,7 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 
 	ldy @w	V2LOCAL	;//cellt;
 	cmp	#OUTLNBR	;
- brk
- brk
+
 	php			;
 	lda	tintarr,y	; register uint8_t a = 	tintarr[cellt];
 	plp			;
@@ -539,6 +562,17 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	bne	+		; if ((symbr == OUTLNBR) && (cellt == UNTINTD))
 	lda	#VIDEOBK	;   a |= VIDEOBK; // highlighting so not VIDEOBG
 +	ldy @w	V3LOCAL	;//scoff;
+.if 1
+ pha
+ lda #' '	
+ jsr putchar
+ pla
+ pha
+ tay
+ jsrAPCS puthexd
+ pla
+ ldy @w V3LOCAL
+.endif
 	sta	SCREEND+CELLUL\baseadr,y;
 	sta	SCREEND+1+CELLUL\baseadr,y
 	sta	SCREEND+SCREENW+CELLUL\baseadr,y
