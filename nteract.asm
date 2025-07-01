@@ -382,7 +382,9 @@ chkpeek	cmp	#'@'		;
 	bne	inpretp		;    return y &= 0x7f;// launch beam from portal
 +	lda	TRYGRID,y	;   }
 	and	#%1111 .. %1000	;   // copied from tempins: below, rtval->input
-	sta @w	V0LOCAL	;//input;   input = TRYGRID[y] & 0xf8; // tint, pokthru
+	bne	+		;   input = TRYGRID[y] & 0xf8; // tint, pokthru
+	lda	#RUBWHT		;   if (input == UNTINTD)
++	sta @w	V0LOCAL	;//input;    input = RUBWHT; // can't do untinted shapes
 	lda	TRYGRID,y	;
 	and	#%0000 .. %0111	;
 	clc			;
