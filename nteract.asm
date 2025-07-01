@@ -241,8 +241,6 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	bne	+		;  case 0x11: // next cell/portal down
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS	indown		;   indown(&incol, &inrow);
-; lda @w V3LOCAL
-; ldy @w V2LOCAL
 	jmp	-		;   break;
 +	cmp	#$9d		;
 	bne	+		;  case 0x9d: // next cell/portal left
@@ -269,8 +267,10 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jsrAPCS	portlcw		;   portlcw(y = -1, &incol, &inrow);
 	jmp	-		;   break;
 +	cmp	#$20		;
-	bne	+++		;  case ' ': // blank shape, cell (if not hint)
-	lda @w	V3LOCAL	;//incol;
+	beq	+		;  case ' ': // blank shape, cell (if not hint)
+	cmp	#$14		;
+	bne	++++		;  case 0x14: // DEL key same as space
++	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
 	jsr_a_y	rcindex,OTHRVAR	;   y = rcindex(incol, inrow);
 	tya			;   if (y & 0x80)
@@ -378,7 +378,7 @@ chkpeek	cmp	#'@'		;
 	bne	+		;    if (intyp&SAY_PRT == 0) //launch disallowed
 	jmp	-		;     break;
 +	tya			;    else
-	bne	inpretp		;    return y &= 0x7f;// launch beam from portal
+	bne	inpretp		;     return y &= 0x7f;//launch beam from portal
 +	lda	TRYGRID,y	;   }
 	and	#%1111 .. %1000	;   // copied from tempins: below, rtval->input
 	bne	+		;   input = TRYGRID[y] & 0xf8; // tint, pokthru
