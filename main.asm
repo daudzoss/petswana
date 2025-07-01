@@ -15,33 +15,11 @@
 ;;; in the first jsrAPCS example, the flags at the entry into f() are set per Y
 ;;; in the second jsrAPCS example, the  "    "  "    "     "   "   "   "   "  A
 
-.if BASIC
 *	= BASIC+1
-.else
-*	= $0002+1
-COPIED2	= $0400
-	.word	(+), 3
-	.text	$81,$41,$b2,$30	; FOR A = 0
-	.text	$a4		; TO prefld-start
-	.text	format("%4d",pre_end-start)
-	.text	$3a,$dc,$30	; : BANK 0
-	.text	$3a,$42,$b2,$c2	; : B = PEEK
-	.text	$28		; ( start
-	.text	format("%2d",COPIED2)
-	.text	$aa,$41,$29,$3a	; + A ) :
-	.text	$dc,$31,$35,$3a	; BANK 1 5 :
-	.text	$97		; POKE start
-	.text 	format("%2d",COPIED2)
-	.text	$aa,$41,$2c,$42	; + A , B
-	.text	$3a,$82,$00	; : NEXT
-.endif
-+	.word	(+),2055
+	.word	(+),2055
 	.text	$9e
 	.null	format("%4d",main)
 +	.word	0
-.if !BASIC
-*	= COPIED2
-.endif
 
 ;;; 10x8 playfield: labeled 1-10 on top, 11-18 on right, A-H on left, I-R on bot
 GRIDW	= $0a
@@ -183,12 +161,9 @@ DRW_DEC	= DRW_MSH|DRW_LBL	;to draw both the portal labels and mesh
 main	jsrAPCS	b2basic+1	;int main(void) {
 b2basic	rts			;
 	lda	#2		;
-	pha	;//V0LOCAL	; uint8_t remng = 2; // guesses remaining
-.if !BASIC
-	lda	#$0f		; static volatile uint8_t execute_bank* = 0x01;
-	sta	$01		; *execute_bank = 15;// P500 runs in system bank
-.endif
+	pha	;//V0LOCAL=remng; uint8_t remng = 2; // guesses remaining
 	jsrAPCS	initize		; initize(); // screen, portals, grids
+
 -	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
 	ldy	#SAY_ANY	;

@@ -333,21 +333,20 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
 	jmp	-		;   break;
 chkpeek	cmp	#'@'		;
-	bne	+++		;  case '@':
+	bne	++		;  case '@':
 	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
 	jsr_a_y	rcindex,OTHRVAR	;
-	tya			;   if (((y = rcindex(a = incol, y = inrow))>=0)
-	bpl	+		;
-	jmp	-		;       // a cell is highlighted, not a portal &
-+	ora	#%1000 .. %0000	;
-	tay			;
-	lda @w	V1LOCAL	;//intyp;       &&
-	and	#SAY_PEK	;       (intyp & SAY_PEK))//peek/hinting allowed
-	beq	+		;    return y |= 0x80;//request a hint this cell
-	jmp	inprety		;   else
-+	jmp	-		;    break;
-+	and	#$5f		;
+	tya			;
+	bpl	++		;   if ((y = rcindex(a = incol, y = inrow))>=0){
+	lda @w	V1LOCAL	;//intyp;    // a cell is highlighted, not a portal
+	and	#SAY_PEK	;
+	bne	+		;    if (intyp&SAY_PEK == 0) // peeks disallowed
+	jmp	-		;     break;
++	tya			;    else
+	ora	#%1000 .. %0000	;
+	jmp	inprety		;    return y |= 0x80;//request a hint this cell
++	and	#$5f		;   }
 	bne	++		;  case 's':
 	lda @w	V1LOCAL	;//intyp;  case 'S':
 	and	#SAY_ANS	;
@@ -372,9 +371,9 @@ chkpeek	cmp	#'@'		;
 	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
 	jsr_a_y	rcindex,OTHRVAR	;
-	tya			;   if ((y = rcindex(a = incol,y = inrow)) < 0){
-	bpl	++		;    // a portal is highlighted, not a cell
-	lda @w	V1LOCAL	;//intyp;
+	tya			;
+	bpl	++		;   if ((y = rcindex(a = incol,y = inrow)) < 0){
+	lda @w	V1LOCAL	;//intyp;    // a portal is highlighted, not a cell
 	and	#SAY_PRT	;
 	bne	+		;    if (intyp&SAY_PRT == 0) //launch disallowed
 	jmp	-		;     break;
