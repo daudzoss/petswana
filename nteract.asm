@@ -250,7 +250,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jsrAPCS	inleft		;   inleft(&incol, &inrow);
 	jmp	-		;   break;
 +	cmp	#$1d		;
-	bne	+		;  case 0x91: // next cell/portal right
+	bne	+		;  case 0x1d: // next cell/portal right
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS	inright		;   inright(&incol, &inrow);
 	jmp	-		;   break;

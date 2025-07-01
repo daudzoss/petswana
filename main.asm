@@ -213,11 +213,12 @@ youlost
 
 modekey	.text	$09,$83,$08;$93	; enable upper/lower case, uppercase, lock upper
 .if SCREENH
-;	.text	$13,$13		; clear any BASIC 3.5/7 subwindows on the screen
-.for d := 0, d < GRIDPIT*GRIDH, d += 1
-;	.text	$11
+	.text	$13,$13,$1d	; clear any BASIC 3.5/7 subwindows on the screen
+.for d := 0, d <= GRIDPIT*GRIDW, d += 1
+	.text	$1d
 .next
-	.text	$1b,'t';$1b,'a'	; place a BASIC 3.5/7 subwindow for messages
+	.text	$1b,'t',$93,$1d	; place, clear a BASIC 3.5/7 window for messages
+	.text	$1b,'t'
 .endif
 initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 .if SCREENH
