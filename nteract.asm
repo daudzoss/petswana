@@ -118,9 +118,8 @@ rtright	POPVARS			; --*col;
 
 .if 1 ; not a simple xor
 delighc	lda @w	A0FUNCT		;void delighc(int8_t col,int8_t row,int8_t what)
-	sta	OTHRVAR		;{
-	ldy @w	A1FUNCT	;//row	;
- jsrAPCS rcindex,lda,OTHRVAR	;
+	ldy @w	A1FUNCT	;//row	;{
+	jsr_a_y	rcindex,OTHRVAR	;
 	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
 	bmi	+		;  // cell in range (1~10,1~8)
 	lda	#DRW_CEL	;  // DRW_SEL bit not set, so won't highlight
@@ -138,9 +137,8 @@ delighc	lda @w	A0FUNCT		;void delighc(int8_t col,int8_t row,int8_t what)
 delighc
 .endif
 hilighc	lda @w	A0FUNCT		;void hilighc(int8_t col,int8_t row,int8_t what)
-	sta	OTHRVAR		;{
-	ldy @w	A1FUNCT	;//row	;
- jsrAPCS rcindex,lda,OTHRVAR	;
+	ldy @w	A1FUNCT	;//row	;{
+	jsr_a_y	rcindex,OTHRVAR	;
 	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
 	bmi	+		;  // cell in range (1~10,1~8)
 	lda	#DRW_CEL|DRW_SEL;  // DRW_SEL bit set, so will highlight
@@ -164,9 +162,8 @@ portlcw				;//FIXME: C might be close, asm definitely wrong
 	bmi	+++++		; if (y > 0) { // warp to a specific portal 1~50
 	
 +	lda @w	A0FUNCT	;//col	; } else if (y == 0) { // CW: alpha inc,num dec
-	sta	OTHRVAR		;
 	ldy @w	A1FUNCT	;//row	;
- jsrAPCS rcindex,lda,OTHRVAR	;  register uint8_t a = rcindex(a=col, y=row);
+	jsr_a_y	rcindex,OTHRVAR	;  register uint8_t a = rcindex(a=col, y=row);
 	tya			;
 	bpl	portlno		;  if (a & 0x80) { // valid portal
 	bit	portalf		;
@@ -274,9 +271,8 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 +	cmp	#$20		;
 	bne	+++		;  case ' ': // blank shape, cell (if not hint)
 	lda @w	V3LOCAL	;//incol;
-	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
- jsrAPCS rcindex,lda,OTHRVAR	;   y = rcindex(incol, inrow);
+	jsr_a_y	rcindex,OTHRVAR	;   y = rcindex(incol, inrow);
 	tya			;   if (y & 0x80)
 	bpl	+		;    break; // only cells have tint, not portals
 	jmp	-
@@ -293,9 +289,8 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	cmp	#'-'		;
 	bne	chkpeek		;  case '-': // cycle through tints (next lower)
 +	lda @w	V3LOCAL	;//incol;
-	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
- jsrAPCS rcindex,lda,OTHRVAR	;   y = rcindex(incol, inrow);
+	jsr_a_y	rcindex,OTHRVAR	;   y = rcindex(incol, inrow);
 	tya			;   if (y & 0x80)
 	bpl	+		;    break; // only cells have tint, not portals
 	jmp	-
@@ -340,9 +335,8 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 chkpeek	cmp	#'@'		;
 	bne	+++		;  case '@':
 	lda @w	V3LOCAL	;//incol;
-	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
- jsrAPCS rcindex,lda,OTHRVAR	;
+	jsr_a_y	rcindex,OTHRVAR	;
 	tya			;   if (((y = rcindex(a = incol, y = inrow))>=0)
 	bpl	+		;
 	jmp	-		;       // a cell is highlighted, not a portal &
@@ -376,9 +370,8 @@ chkpeek	cmp	#'@'		;
 +	cmp	#$0d		;
 	bne	chkquit		;  case '\n'; // launch a beam or cycle shapes
 	lda @w	V3LOCAL	;//incol;
-	sta	OTHRVAR		;
 	ldy @w	V2LOCAL	;//inrow;
- jsrAPCS rcindex,lda,OTHRVAR	;
+	jsr_a_y	rcindex,OTHRVAR	;
 	tya			;   if ((y = rcindex(a = incol,y = inrow)) < 0){
 	bpl	++		;    // a portal is highlighted, not a cell
 	lda @w	V1LOCAL	;//intyp;
