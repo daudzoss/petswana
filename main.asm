@@ -32,6 +32,9 @@ HIDGRID	= vararea + GRIDSIZ
 PORTALS	= vararea + 2*GRIDSIZ
 PORTINT	= vararea + 2*GRIDSIZ + ANSWERS
 OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS
+.if SCREENH && (OTHRVAR >= SCREENM)
+ .warn "code has grown too big for unexpanded vic20"
+.endif
 
 ;;; HIDGRID[] and TRYGRID[]:
 ;;; a cell in a grid has a 7-bit state, representing the residing object portion

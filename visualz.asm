@@ -9,8 +9,7 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	and	#DRW_LBL	;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_LBL;
 	beq	+		; if (what) {
-	tay			;
-	jsrAPCS	hal_lbl		;  hal_lbl(what);
+	jsr	hal_lbl		;  hal_lbl(what); // uses X extensively
 +	lda @w	V0LOCAL		; }
 	and	#DRW_HID	;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_HID;
@@ -121,9 +120,9 @@ RVS_OFF	= $92			;// done for good measure after printing a cell
 hal_try
 hal_hid
 hal_msg
-hal_lbl
 hal_msh
 hal_cel	POPVARS
+hal_lbl
 	rts
 .elsif 0;SCREENH && (SCREENW >= $28)
 LABLULM	= SCREENM
@@ -135,8 +134,8 @@ hal_cel	POPVARS
 hal_try
 hal_hid
 hal_msg
-hal_lbl
 hal_msh	POPVARS
+hal_lbl
 	rts
 .elsif SCREENH && (SCREENW >= $16)
 CIRCLC	= VIDEOBK
@@ -445,9 +444,9 @@ hal_msg	ldy	#$ff		;void hal_msg(void) {
 	lda	#0		; putstck(0,255); // needs direct A0FUNCT access
 	jmp	putstck		;} // hal_msg()
 
-hal_lbl
 hal_msh
 hal_cel	POPVARS
+hal_lbl
 	rts
 .endif
 
@@ -515,7 +514,7 @@ OUTLNBL	= $4c
 OUTLNBR	= $7a
 
 filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
-.if 1
+.if 0
  tya
  pha
  lda #$0d
@@ -562,7 +561,7 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	bne	+		; if ((symbr == OUTLNBR) && (cellt == UNTINTD))
 	lda	#VIDEOBK	;   a |= VIDEOBK; // highlighting so not VIDEOBG
 +	ldy @w	V3LOCAL	;//scoff;
-.if 1
+.if 0
  pha
  lda #' '	
  jsr putchar
@@ -784,7 +783,8 @@ gridbot	.byte	$20,$09,$20,$0a
 	.byte	$20,$11,$20,$12
 	.byte	$20,$20
 	;" i j k l m n o p q r  "
-hal_lbl	ldy	#SCREENW
+hal_lbl	txa
+	pha
 	lda	#' '	
 	sta	LABLUL0	
 	sta	LABLUL0+SCREENW
@@ -793,7 +793,6 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL6+SCREENW
 	sta	LABLUL6+SCREENW+SCREENW
 
-	ldy	#SCREENW*2
 	lda	#'a'-'@'
 	sta	LABLUL0+(SCREENW*2)
 	lda	#'c'-'@'
@@ -802,13 +801,26 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL4+(SCREENW*2)
 	lda	#'g'-'@'
 	sta	LABLUL6+(SCREENW*2)
-	lda	#CIRCLC	
+	ldy	#ANSWERS/2+'a'-'@'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*2)
 
-	ldy	#SCREENW*3
 	lda	#' '	
 	sta	LABLUL0+(SCREENW*3)
 	sta	LABLUL2+(SCREENW*3)
@@ -816,7 +828,6 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL6+(SCREENW*3)
 	sta	LABLUL6+SCREENW+(SCREENW*3)
 
-	ldy	#SCREENW*4
 	lda	#'b'-'@'
 	sta	LABLUL0+(SCREENW*4)
 	lda	#'d'-'@'
@@ -825,41 +836,80 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL4+(SCREENW*4)
 	lda	#'h'-'@'
 	sta	LABLUL6+(SCREENW*4)
-	lda	#CIRCLC	
+	ldy	#ANSWERS/2+'b'-'@'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*4)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*4)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*4)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*4)
-	sta	SCREEND+LABLUL6+SCREENW+(SCREENW*4)
+;	sta	SCREEND+LABLUL6+SCREENW+(SCREENW*4)
 
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
-	ldy	#SCREENW*1+GRIDPIT*10+2
 	lda	#'1'	
 	sta	LABLUL0+(SCREENW*1+GRIDPIT*10+2)
 	sta	LABLUL2+(SCREENW*1+GRIDPIT*10+2)
 	sta	LABLUL4+(SCREENW*1+GRIDPIT*10+2)
 	sta	LABLUL6+(SCREENW*1+GRIDPIT*10+2)
-	lda	#CIRCLC	
+	ldy	#'1'-'1'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*1+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*1+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*1+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*1+GRIDPIT*10+2)
 .else
-	ldy	#SCREENW*1+GRIDPIT*10+1
 	lda	#'1'	
 	sta	LABLUL0+(SCREENW*1+GRIDPIT*10+1)
 	sta	LABLUL2+(SCREENW*1+GRIDPIT*10+1)
 	sta	LABLUL4+(SCREENW*1+GRIDPIT*10+1)
 	sta	LABLUL6+(SCREENW*1+GRIDPIT*10+1)
-	lda	#CIRCLC	
+	ldy	#'1'-'1'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*1+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*1+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*1+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*1+GRIDPIT*10+1)
 .endif
 
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
-	ldy	#SCREENW*2+GRIDPIT*10+2
 	lda	#'1'	
 	sta	LABLUL0+(SCREENW*2+GRIDPIT*10+2)
 	lda	#'3'	
@@ -868,13 +918,26 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL4+(SCREENW*2+GRIDPIT*10+2)
 	lda	#'7'	
 	sta	LABLUL6+(SCREENW*2+GRIDPIT*10+2)
-	lda	#CIRCLC	
+	ldy	#'1'-'1'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*2+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*2+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*2+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*2+GRIDPIT*10+2)
 .else
-	ldy	#SCREENW*2+GRIDPIT*10+1
 	lda	#'1'	
 	sta	LABLUL0+(SCREENW*2+GRIDPIT*10+1)
 	lda	#'3'	
@@ -883,10 +946,24 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL4+(SCREENW*2+GRIDPIT*10+1)
 	lda	#'7'	
 	sta	LABLUL6+(SCREENW*2+GRIDPIT*10+1)
-	lda	#CIRCLC	
+	ldy	#'1'-'1'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*2+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*2+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*2+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*2+GRIDPIT*10+1)
 .endif
 
@@ -897,10 +974,24 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL2+(SCREENW*3+GRIDPIT*10+2)
 	sta	LABLUL4+(SCREENW*3+GRIDPIT*10+2)
 	sta	LABLUL6+(SCREENW*3+GRIDPIT*10+2)
-	lda	#CIRCLC	
+	ldy	#'1'-'1'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*3+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*3+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*3+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*3+GRIDPIT*10+2)
 .else
 	ldy	#SCREENW*3+GRIDPIT*10+1
@@ -909,15 +1000,28 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL2+(SCREENW*3+GRIDPIT*10+1)
 	sta	LABLUL4+(SCREENW*3+GRIDPIT*10+1)
 	sta	LABLUL6+(SCREENW*3+GRIDPIT*10+1)
-	lda	#CIRCLC	
+	ldy	#'1'-'1'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*3+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*3+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*3+GRIDPIT*10+1)
-	sta	SCREEND+LABLUL6+(SCREENW*3+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
+	sta	SCREEND+LABLUL6+(SCREENW*3+GRIDPIT*10+1)	
 .endif
 
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
-	ldy	#SCREENW*4+GRIDPIT*10+2
 	lda	#'2'	
 	sta	LABLUL0+(SCREENW*4+GRIDPIT*10+2)
 	lda	#'4'	
@@ -926,13 +1030,26 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL4+(SCREENW*4+GRIDPIT*10+2)
 	lda	#'8'	
 	sta	LABLUL6+(SCREENW*4+GRIDPIT*10+2)
-	lda	#CIRCLC	
+	ldy	#'2'-'1'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*4+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*4+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*4+GRIDPIT*10+2)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*4+GRIDPIT*10+2)
 .else
-	ldy	#SCREENW*4+GRIDPIT*10+1
 	lda	#'2'	
 	sta	LABLUL0+(SCREENW*4+GRIDPIT*10+1)
 	lda	#'4'	
@@ -941,12 +1058,26 @@ hal_lbl	ldy	#SCREENW
 	sta	LABLUL4+(SCREENW*4+GRIDPIT*10+1)
 	lda	#'8'	
 	sta	LABLUL6+(SCREENW*4+GRIDPIT*10+1)
-	lda	#CIRCLC	
+	ldy	#'2'-'1'
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*4+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*4+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*4+GRIDPIT*10+1)
+	iny
+	iny
+	ldx	PORTINT,y
+	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*4+GRIDPIT*10+1)
-.endif
+ .endif
 
 	ldy	#gridbot-gridtop;
 -	lda	gridtop-1,y
@@ -964,8 +1095,9 @@ hal_lbl	ldy	#SCREENW
 	sta	SCREENC-1,y
 	dey		
 	bne	-	
-	POPVARS		
-	rts			;} // gridlbl()
+	pla
+	tax
+	rts			;} // hal_lbl()
 
 gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 	lda	#CIRCLTR	; register uint8_t y = 1+GRIDPIT*GRIDW;
