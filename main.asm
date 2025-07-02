@@ -175,17 +175,23 @@ b2basic	rts			;
 	bne	+		;  if (y == 0) { // user quit
 	jsrAPCS	confirm		;   register uint8_t y = confirm();
 	tya			;
-	beq	-		;   if (y)
+	pha			;   uint8_t yesorno = confirm();
+	jsrAPCS	wipescr		;   wipescr();
+	pla			;   if (!yesorno) // no
+	beq	-		;    break /*switch*/;
 	lda	#0		;
-	beq	mainend		;    exit(0);
+	jmp	mainend		;   exit(0);
 +	bpl	+		;  } else if (y & SAY_PEK) { // cell check
 	jsrAPCS	peekcel		;   peekcel(y); // FIXME: add msg
 	jmp	-		;
-+	bvc	+++		;  } else if (y & 0x40) { // special input  
++	bvc	++++		;  } else if (y & 0x40) { // special input  
 	cpy	#SUBMITG	;   switch (y) {
 	bne	++		;   case SUBMITG:
 	jsrAPCS	confirm		;
-	tya			;    if (!confirm())
+	tya			;
+	pha			;    uint8_t yesorno = confirm();
+	jsrAPCS	wipescr		;    wipescr();
+	pla			;    if (!yesorno) // no
 	beq	-		;     break /*switch*/;
 	jsrAPCS	chkgrid		;
 	tya			;
@@ -196,8 +202,9 @@ b2basic	rts			;
 	ldy @w	V0LOCAL	;//remng;
 	jmp	mainend	    	;     exit(y = remng);
 +	dec @w	V0LOCAL	;//remng;
-	bne	-		;    } else if (--remnng == 0) {
-	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
+	beq	+		;
+	jmp	-		;    } else if (--remnng == 0) {
++	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
 	ldy	#DRW_HID|DRW_MSG;
 	jsrAPCS	visualz		;     visualz(DRW_HID|DRW_MSG);
 	ldy	#0		;     exit(y = 0);
