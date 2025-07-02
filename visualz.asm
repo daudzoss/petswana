@@ -578,10 +578,15 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	sta	SCREEND+1+SCREENW+CELLUL\baseadr,y
 	.endm			;
 
+hal_prt	POPVARS			;//fixme: need to be able to highlight a portal!
+	rts			;} // hal_prt()
+
 sel_cel	.byte	DRW_SEL
 hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	tay			;                   uint8_t row, uint8_t what) {
-	lda	TRYGRID,y	; uint8_t gridi = a; // so we can hint iff a<80
+	bpl	+		; if (a < 0) // portal, not a grid cell
+	jmp	hal_prt		;  hal_prt(a, col, row, what); // separate funct
++	lda	TRYGRID,y	; uint8_t gridi = a; // so we can hint iff a<80
 	and	#%0000 .. %1111	; uint8_t cellv = TRYGRID[a/*0~70|80~159*/]&0xf;
 	cpy	#GRIDSIZ	;
 	bcs	++	;dhidden; if (gridi < GRIDSIZ) { // no hints in HIDGRID
@@ -624,10 +629,10 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	bit	sel_cel		;
 	php			;
 	lda	symarbr,y	;
-	plp			;
-	beq	+		;
-	lda	#$80|OUTLNBR	;
-+	pha	;V4LOCAL=symbr	;  symbr = symarbr[y];
+	plp			; else if ((symarbr[y] = 0xa0) &&
+	beq	+		;          (what & DRW_SEL))
+	lda	#$80|OUTLNBR	;  symbr = 0x80 | OUTLNBR;
++	pha	;V4LOCAL=symbr	; else symbr = symarbr[y];
 	
 	lda	symarbl,y	;
 	cmp	#' '		;
@@ -645,10 +650,10 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	bit	sel_cel		;
 	php			;
 	lda	symarbl,y	;
-	plp			;
-	beq	+		;
-	lda	#$80|OUTLNBL	;
-+	pha	;V5LOCAL=symbl	;  symbl = symarbl[y];
+	plp			; else if ((symarbl[y] = 0xa0) &&
+	beq	+		;          (what & DRW_SEL))
+	lda	#$80|OUTLNBL	;  symbl = 0x80 | OUTLNBL;
++	pha	;V5LOCAL=symbl	; else symbl = symarbl[y];
 
 	lda	symartr,y	;
 	cmp	#' '		;
@@ -666,10 +671,10 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	bit	sel_cel		;
 	php			;
 	lda	symartr,y	;
-	plp			;
-	beq	+		;
-	lda	#$80|OUTLNTR	;
-+	pha	;V6LOCAL=symtr	;  symtr = symartr[y];
+	plp			; else if ((symartr[y] = 0xa0) &&
+	beq	+		;          (what & DRW_SEL))
+	lda	#$80|OUTLNTR	;  symtr = 0x80 | OUTLNTR;
++	pha	;V6LOCAL=symtr	; else symtr = symartr[y];
 
 	lda	symartl,y	;
 	cmp	#' '		;
@@ -687,10 +692,10 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	bit	sel_cel		;
 	php			;
 	lda	symartl,y	;
-	plp			;
-	beq	+		;
-	lda	#$80|OUTLNTL	;
-+	pha	;V7LOCAL=symtl	;  symtl = symartly];
+	plp			; else if ((symartl[y] = 0xa0) &&
+	beq	+		;          (what & DRW_SEL))
+	lda	#$80|OUTLNTL	;  symtl = 0x80 | OUTLNTL;
++	pha	;V7LOCAL=symtl	; else symtl = symartly];
 
 	lda @w	A1FUNCT	;//row	;
 	and	#1		; switch (a = row) {
@@ -783,7 +788,7 @@ gridbot	.byte	$20,$09,$20,$0a
 	.byte	$20,$11,$20,$12
 	.byte	$20,$20
 	;" i j k l m n o p q r  "
-hal_lbl	txa
+hal_lbl	txa			;inline void hal_lbl(void) {
 	pha
 	lda	#' '	
 	sta	LABLUL0	

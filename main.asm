@@ -214,7 +214,7 @@ youwon
 youlose	.null	$0d,"you lose after guess 2"
 youlost
 
-modekey	.text	$09,$83,$08;$93	; enable upper/lower case, uppercase, lock upper
+modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
 .if SCREENH
 	.text	$13,$13,$1d	; clear any BASIC 3.5/7 subwindows on the screen
 .for d := 0, d <= GRIDPIT*GRIDW, d += 1
@@ -222,6 +222,9 @@ modekey	.text	$09,$83,$08;$93	; enable upper/lower case, uppercase, lock upper
 .next
 	.text	$1b,'t',$93,$1d	; place, clear a BASIC 3.5/7 window for messages
 	.text	$1b,'t'
+.for d := 0, d <= GRIDPIT*GRIDH, d += 1
+	.text	$11
+.next
 .endif
 initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 .if SCREENH

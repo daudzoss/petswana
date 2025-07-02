@@ -117,8 +117,8 @@ rtright	POPVARS			; --*col;
 	rts			;} // inright()
 
 .if 1 ; not a simple xor
-delighc	lda @w	A0FUNCT		;void delighc(int8_t col,int8_t row,int8_t what)
-	ldy @w	A1FUNCT	;//row	;{
+delighc	lda @w	A0FUNCT		;void delighc(int8_t col, int8_t row) {
+	ldy @w	A1FUNCT	;//row	;
 	jsr_a_y	rcindex,OTHRVAR	;
 	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
 	bmi	+		;  // cell in range (1~10,1~8)
@@ -136,11 +136,9 @@ delighc	lda @w	A0FUNCT		;void delighc(int8_t col,int8_t row,int8_t what)
 .else
 delighc
 .endif
-hilighc	lda @w	A0FUNCT		;void hilighc(int8_t col,int8_t row,int8_t what)
+hilighc	lda @w	A0FUNCT	;//col 	;void hilighc(int8_t col,int8_t row,int8_t what)
 	ldy @w	A1FUNCT	;//row	;{
-	jsr_a_y	rcindex,OTHRVAR	;
-	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
-	bmi	+		;  // cell in range (1~10,1~8)
+	jsr_a_y	rcindex,OTHRVAR	; y = rcindex(a = col, y = row);
 	lda	#DRW_CEL|DRW_SEL;  // DRW_SEL bit set, so will highlight
 	pha			;  int8_t w;
 	lda @w	A1FUNCT		;
@@ -148,18 +146,16 @@ hilighc	lda @w	A0FUNCT		;void hilighc(int8_t col,int8_t row,int8_t what)
 	lda @w	A0FUNCT		;
 	pha			;  int8_t c;
 	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_SEL);
-	jmp	++		; } else { // portal
-+ nop
-+	POPVARS			; }
+	POPVARS			;
 	rts			;} // delighc()
 
-portalf	.byte	%0010 .. %0000
-portlcw				;//FIXME: C might be close, asm definitely wrong
- POPVARS
- rts
+portalf	.byte	%0010 .. %0000	;//FIXME: C might be close, asm definitely wrong
+portlcw
+ jmp portlno
 	tay			;void portlcw(register int8_t a, uint8_t col,
 	beq	+		;                                uint8_t row) {
 	bmi	+++++		; if (y > 0) { // warp to a specific portal 1~50
+	
 	
 +	lda @w	A0FUNCT	;//col	; } else if (y == 0) { // CW: alpha inc,num dec
 	ldy @w	A1FUNCT	;//row	;
@@ -256,15 +252,15 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	bne	+		;  case '<': // next portal counter-clockwise
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
-	ldy	#$01		;
-	jsrAPCS	portlcw		;   portlcw(y = +1, &incol, &inrow);
+	ldy	#$ff		;
+	jsrAPCS	portlcw		;   portlcw(y = -1, &incol, &inrow); // N=1, CCW
 	jmp	-		;   break;
 +	cmp	#'.'		;
 	bne	+		;  case '>': // next portal clockwise
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
-	ldy	#$ff		;
-	jsrAPCS	portlcw		;   portlcw(y = -1, &incol, &inrow);
+	ldy	#$00		;
+	jsrAPCS	portlcw		;   portlcw(y = 0, &incol, &inrow); // N=0, CW
 	jmp	-		;   break;
 +	cmp	#$20		;
 	beq	+		;  case ' ': // blank shape, cell (if not hint)
@@ -284,7 +280,48 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jmp	-		;    break; // we can't change this cell's tint
 +	sta	TRYGRID,y	;   TRYGRID[y] = UNTINTD;
 	jmp	-		;   break;
-+	cmp	#'+'		;
++	cmp	#'1'		;
+	beq	+		;  case '1': // black direct shortcut
+	cmp	#'2'		;
+	beq	+		;  case '2': // white direct shortcut
+	cmp	#'3'		;
+	beq	+		;  case '3': // red direct shortcut
+	cmp	#'7'		;
+	beq	+		;  case '7': // yellow direct shortcut
+	cmp	#'8'		;
+	bne	shrtkey+8	;  case '8': // blue direct shortcut
++	lda @w	V3LOCAL	;//incol;
+	ldy @w	V2LOCAL	;//inrow;
+	jsr_a_y	rcindex,OTHRVAR	;   y = rcindex(incol, inrow);
+	tya			;   if (y & 0x80)
+	bpl	+		;    break; // only cells have tint, not portals
+	jmp	-
++	lda	TRYGRID,y	;   a = TRYGRID[y];
+	bit	pokthru		;   if (a & pokthru == 0) // if we bought a hint
+	beq	+		;
+	jmp	-		;    break; // we can't change this cell's tint
++	and	#%0000 .. %0111	;
+	sta	OTHRVAR		;
+	tya			;
+	pha			;
+	lda @w	V0LOCAL	;//input;
+	sec			;
+	sbc	#'1'		;
+	and	#%0000 .. %0111	;
+	tay			;
+	lda	shrtkey,y	;
+	ora	OTHRVAR		;
+	sta	OTHRVAR		;
+	pla			;
+	tay			;
+	lda	OTHRVAR		;   TRYGRID[y] = shrtkey[input-'1'] | // tint
+	sta	TRYGRID,y	;                (TRYGRID[y] & 0x07); // shape
+	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
+	jmp	-		;   break;
+shrtkey	.byte	RUBOUT,RUBWHT	;
+	.byte	RUBRED,0,0,0	;
+	.byte	RUBBLU,RUBYEL	;
+	cmp	#'+'		;
 	beq	+		;  case '+': // cycle through tints (next higher)
 	cmp	#'-'		;
 	bne	chkpeek		;  case '-': // cycle through tints (next lower)
@@ -347,6 +384,7 @@ chkpeek	cmp	#'@'		;
 	ora	#%1000 .. %0000	;
 	jmp	inprety		;    return y |= 0x80;//request a hint this cell
 +	and	#$5f		;   }
+	cmp	#'s'		;
 	bne	++		;  case 's':
 	lda @w	V1LOCAL	;//intyp;  case 'S':
 	and	#SAY_ANS	;
@@ -361,10 +399,10 @@ chkpeek	cmp	#'@'		;
 	sec			;  case 'K':case 'L':case 'M':case 'N':case 'O':
 	sbc	#'@'		;  case 'p':case 'q':case 'r':
 	ora	#$20		;  case 'P':case 'Q':case 'R':
-	sta @w	V0LOCAL	;//input;   input = tolower(input) - 'a';
+	sta @w	V0LOCAL	;//input;   input = 0x20 | (tolower(input) - 'a' + 1);
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	ldy @w	V0LOCAL	;//input;
-	jsrAPCS	portlcw		;   portlcw(y = input, &incol, &inrow);
+	jsrAPCS	portlcw		;   portlcw(y = input, NULL, NULL);
 	lda	#$0d		;   // break intentionally omitted; fall through
 +	cmp	#$0d		;
 	bne	chkquit		;  case '\n'; // launch a beam or cycle shapes
