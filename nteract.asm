@@ -150,18 +150,50 @@ hilighc	lda @w	A0FUNCT	;//col 	;void hilighc(int8_t col,int8_t row,int8_t what)
 	rts			;} // delighc()
 
 portalf	.byte	%0010 .. %0000	;//FIXME: C might be close, asm definitely wrong
-portlcw
- jmp portlno
-	tay			;void portlcw(register int8_t a, uint8_t col,
-	beq	+		;                                uint8_t row) {
-	bmi	+++++		; if (y > 0) { // warp to a specific portal 1~50
-	
-	
-+	lda @w	A0FUNCT	;//col	; } else if (y == 0) { // CW: alpha inc,num dec
+portlcw	tay			;void portlcw(register int8_t a, uint8_t &col,
+	beq	portalp		;                                uint8_t &row) {
+	bpl	+		;
+	jmp	portaln		; if ((y > 0) &&
++	cpy	#$33		;     (y <= 50)){ // warp to specific portal 1~50
+	bcs	+		;
+	jmp	portlno		;  static uint8_t portalx[50] = {
+portalx	.byte	1,2,3,4,5	;   1, 2, 3, 4, 5,
+	.byte	6,7,8,9,$0a	;   6, 7, 8, 9, 10, // 1~10 across top row
+	.byte	GRIDW+1,GRIDW+1	;   11, 11,
+	.byte	GRIDW+1,GRIDW+1	;   11, 11,
+	.byte	GRIDW+1,GRIDW+1	;   11, 11,
+	.byte	GRIDW+1,GRIDW+1	;   11, 11, // 11~18 down right edge
+	.byte	0,0,0,0		;   0, 0, 0, 0, 0,
+	.byte	0,0,0,0		;   0, 0, 0, 0, 0, // a~h down left edge
+	.byte	1,2,3,4,5	;   1, 2, 3, 4, 5, 6, 7, 8, 9, 10}; // i~r bottom
+	.byte	6,7,8,9,$0a	;  static uint8_t portalr[50] = {
+portalr	.byte	$0,$0,$0,$0,$0	;   0, 0, 0, 0, 0,
+	.byte	$0,$0,$0,$0,$0	;   0, 0, 0, 0, 0, // 1~10 across top row	
+	.byte	1,2,3,4		;   1, 2, 3, 4,
+	.byte	5,6,7,8		;   5, 6, 7, 8, // 11~18 down right edge
+	.byte	1,2,3,4		;   1, 2, 3, 4,
+	.byte	5,6,7,8		;   5, 6, 7, 8, // a~i down left edge
+	.byte	GRIDH+1,GRIDH+1	;   9, 9,
+	.byte	GRIDH+1,GRIDH+1	;   9, 9,
+	.byte	GRIDH+1,GRIDH+1	;   9, 9,
+	.byte	GRIDH+1,GRIDH+1	;   9, 9,
+	.byte	GRIDH+1,GRIDH+1	;   9, 9}; // i~r across bottom row
++	cpy	#$21		;
+	bcc	+		;  if (y > 32)
+	tya			;
+	sbc	#$0e		;   y -= 14; // so 0x12 is "18", 0x13 (0x21) "a"
++	lda	portalx-1,y	;
+	sta @w	A0FUNCT	;//col	;  *col = portalx[y-1];
+	lda	portalr-1,y	;
+	sta @w	A1FUNCT	;//row	;  *row = portalr[y-1];
+	jmp	portlno		;
+portalp	lda @w	A0FUNCT	;//col	; } else if (y == 0) { // CW: alpha inc,num dec
 	ldy @w	A1FUNCT	;//row	;
 	jsr_a_y	rcindex,OTHRVAR	;  register uint8_t a = rcindex(a=col, y=row);
 	tya			;
-	bpl	portlno		;  if (a & 0x80) { // valid portal
+	bmi	+		;
+	jmp	portlno		;  if (a & 0x80) { // valid portal
++	and	#%0111 .. %1111	;   a &= 0x7f;
 	bit	portalf		;
         bne	++		;   if (a & portalf == 0) { // < 0x20, t/r edges
 	cmp	#$0b		;
@@ -184,7 +216,13 @@ portlcw
 	bne	portlno		;    if (a == 0x21) // A, need to wrap around
 	inc @w	A0FUNCT	;//col	;     ++*col;
 	bne	portlno		;   }
-+	bit	portalf		;  } else { // anticlockwise: alpha dec, num inc
+portaln	lda @w	A0FUNCT	;//col	;  }
+	ldy @w	A1FUNCT	;//row	; } else { // anticlockwise: alpha dec, num inc
+	jsr_a_y	rcindex,OTHRVAR	;  register uint8_t a = rcindex(a=col, y=row);
+	tya			;
+	bpl	portlno		;  if (a & 0x80) { // valid portal
+	and	#%0111 .. %1111	;   a &= 0x7f;
+	bit	portalf		;
         bne	++		;   if (a & portalf == 0) { // < 0x20, t/r edges
 	cmp	#$0b		;
 	bcs	+		;    if (a >= 0x0b) // right edge, including 11
@@ -205,7 +243,7 @@ portlcw
 	cmp	#$21		;
 	bne	portlno		;    if (a == 0x32) // R, need to wrap around
 	inc @w	A0FUNCT	;//col	;     --*col;
-	bne	portlno		;  }
+	bne	portlno		;  }}
 portlno	POPVARS			; }
 	rts			;} // portlcw()
 
