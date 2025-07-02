@@ -596,7 +596,6 @@ halhprt	bcs	+		;inline void halhprt(register uint8_t y,
 	rts			;} // halhprt()
 
 hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
- brk
 	tay			;
 	jsrAPCS	bportal		; register uint8_t y = bportal(a & 0x7f);
 	tya			;

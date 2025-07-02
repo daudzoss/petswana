@@ -22,14 +22,14 @@ confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visua
 
 .if SCREENW && SCREENH
 rcindex	pha	;//V0LOCAL=col	;register uint8_t rcindex(register int8_t a//col
-	tya			;                       register int8_t y){//row
-	pha	;//V1LOCAL=row_1;
-	dey			; int8_t col = a, row_1;
-	bmi	uportal		; if (y < 1) goto uportal;
+	dey			;                       register int8_t y){//row
 	tya			;
-	cmp	#GRIDH		;
-	bcs	dportal		; if (y > GRIDH) goto dportal;
-	sta @w	V1LOCAL	;//row_1; row_1 = (y - 1) & 0x07;
+	pha	;//V1LOCAL=row_1;
+	lda @w	V0LOCAL	;//col	; int8_t col = a, row_1 = --y;
+	cpy	#$ff		;
+	beq	uportal		; if (row_1 == -1) goto uportal;
+	cpy	#GRIDH		;
+	beq	dportal		; if (row_1 == GRIDH) goto dportal;
 	ldy @w	V0LOCAL	;//col	;
 	dey			;
 	bmi	lportal		; if (col < 1) goto lportal;
