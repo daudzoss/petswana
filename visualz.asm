@@ -578,8 +578,71 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	sta	SCREEND+1+SCREENW+CELLUL\baseadr,y
 	.endm			;
 
-hal_prt	POPVARS			;//fixme: need to be able to highlight a portal!
-	rts			;} // hal_prt()
+halhprt	bcs	+		;inline void halhprt(register uint8_t y,
+	lda	SCREENM,y	;                    register uint1_t c) {
+	ora	#$80		; if (c == 0) { // top row 1~10
+	sta	SCREENM,y	;  SCREENM[y] |= 0x80;
+	lda	SCREENM+1,y	;
+	ora	#$80		;
+	sta	SCREENM+1,y	;  SCREENM[y+1] |= 0x80;
+	bne	+		; } else { // bot row i~r
++	lda	SCREENM+SCREENW*(1+GRIDPIT*GRIDH),y
+	ora	#$80		;  SCREENM[SCREENW*(1+GRIDPIT*GRIDH)+y] |= 0x80;
+	sta	SCREENM+SCREENW*(1+GRIDPIT*GRIDH),y
+	lda	SCREENM+SCREENW*(1+GRIDPIT*GRIDH)+1,y
+	ora	#$80		;  SCREENM[SCREENW*(1+GRIDPIT*GRIDH)+y+1]|=0x80;
+	sta	SCREENM+SCREENW*(1+GRIDPIT*GRIDH)+1,y
++	POPVARS			; } // jmp'ed here from hal_prt so POPVARS
+	rts			;} // halhprt()
+
+hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
+ brk
+	tay			;
+	jsrAPCS	bportal		; register uint8_t y = bportal(a & 0x7f);
+	tya			;
+	cmp	#$0a  		;
+	bcs	+		; if (y < 10) { // portals 1~10 are [0~9]
+.if GRIDPIT == 2
+	asl			;
+	tay			;
+	iny			;  y = y * GRIDPIT + 1; // SCREENM[1,3,5,...19]
+.elsif GRIDPT == 3
+	sta	OTHRVAR		;
+	asl			;
+	clc			;
+	adc	OTHRVAR		;
+	tay			;
+	iny			;  y = y * GRIDPIT + 1; // SCREENM[1,4,7,...,28]
+.else
+.error "unhandled GRIDPIT value"
+.endif
+	clc			;
+	jmp	halhprt		;  halhprt(y, 0);// paint top character and next
++	cmp	#$12		;
+	bcs	+		; } else if (y < 18) { // portal ~18 are [10~17]
++	cmp	#$1a		;
+	bcs	+		; } else if (y < 26) { // portal a~h are [18~25]
++	cmp	#$24		;
+	bcs	+		; } else if (y < 36) { // portal i~r are [26~35]
+	sec			;
+	sbc	#$1a		;
+.if GRIDPIT == 2
+	asl			;
+	tay			;
+	iny			;  y = (y-26)*GRIDPIT+1; // [1,3,5,...19]
+.elsif GRIDPT == 3
+	sta	OTHRVAR		;
+	asl			;
+	clc			;
+	adc	OTHRVAR		;
+	tay			;
+	iny			;  y = (y-26)*GRIDPIT+1;// [1,4,7,...,28]
+.else
+.error "unhandled GRIDPIT value"
+.endif
+	sec			;  halhprt(y, 1);// paint bot character and next
+	jmp	halhprt		; } else exit(DRW_SEL);
++	brk			;} // hal_prt()
 
 sel_cel	.byte	DRW_SEL
 hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
