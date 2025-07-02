@@ -152,10 +152,10 @@ hilighc	lda @w	A0FUNCT	;//col 	;void hilighc(int8_t col,int8_t row,int8_t what)
 portalf	.byte	%0010 .. %0000	;//FIXME: C might be close, asm definitely wrong
 portlcw	tay			;void portlcw(register int8_t a, uint8_t &col,
 	beq	portalp		;                                uint8_t &row) {
-	bpl	+		;
-	jmp	portaln		; if ((y > 0) &&
-+	cpy	#$33		;     (y <= 50)){ // warp to specific portal 1~50
-	bcs	+		;
+	bpl	+		; if ((y > 0) &&
+	jmp	portaln		;
++	cpy	#$33		;
+	bcs	+		;     (y <= 50)){ // warp to specific portal 1~50
 	jmp	portlno		;  static uint8_t portalx[50] = {
 portalx	.byte	1,2,3,4,5	;   1, 2, 3, 4, 5,
 	.byte	6,7,8,9,$0a	;   6, 7, 8, 9, 10, // 1~10 across top row
@@ -181,7 +181,8 @@ portalr	.byte	$0,$0,$0,$0,$0	;   0, 0, 0, 0, 0,
 +	cpy	#$21		;
 	bcc	+		;  if (y > 32)
 	tya			;
-	sbc	#$0e		;   y -= 14; // so 0x12 is "18", 0x13 (0x21) "a"
+	sbc	#$0e		;
+	tay			;   y -= 14; // so 0x12 is "18", 0x13 (0x21) "a"
 +	lda	portalx-1,y	;
 	sta @w	A0FUNCT	;//col	;  *col = portalx[y-1];
 	lda	portalr-1,y	;
