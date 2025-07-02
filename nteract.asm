@@ -178,15 +178,17 @@ portalr	.byte	$0,$0,$0,$0,$0	;   0, 0, 0, 0, 0,
 	.byte	GRIDH+1,GRIDH+1	;   9, 9,
 	.byte	GRIDH+1,GRIDH+1	;   9, 9,
 	.byte	GRIDH+1,GRIDH+1	;   9, 9}; // i~r across bottom row
-+	cpy	#$21		;
-	bcc	+		;  if (y > 32)
-	tya			;
-	sbc	#$0e		;
-	tay			;   y -= 14; // so 0x12 is "18", 0x13 (0x21) "a"
-+	lda	portalx-1,y	;
-	sta @w	A0FUNCT	;//col	;  *col = portalx[y-1];
-	lda	portalr-1,y	;
-	sta @w	A1FUNCT	;//row	;  *row = portalr[y-1];
++	jsrAPCS	bportal		;  y = bportal(y);
+;	cpy	#$21		;
+;	bcc	+		;  if (y > 32)
+;	tya			;
+;	sbc	#$0e		;
+;	tay			;   y -= 14; // so 0x12 is "18", 0x13 (0x21) "a"
+;+
+	lda	portalx,y	;
+	sta @w	A0FUNCT	;//col	;  *col = portalx[y];
+	lda	portalr,y	;
+	sta @w	A1FUNCT	;//row	;  *row = portalr[y];
 	jmp	portlno		;
 portalp	lda @w	A0FUNCT	;//col	; } else if (y == 0) { // CW: alpha inc,num dec
 	ldy @w	A1FUNCT	;//row	;
