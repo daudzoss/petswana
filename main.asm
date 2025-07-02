@@ -174,6 +174,7 @@ b2basic	rts			;
 	tya			;
 	bne	+		;  if (y == 0) { // user quit
 	jsrAPCS	confirm		;   register uint8_t y = confirm();
+	tya			;
 	beq	-		;   if (y)
 	lda	#0		;
 	beq	mainend		;    exit(0);
