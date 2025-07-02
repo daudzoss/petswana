@@ -59,8 +59,22 @@ rcretna	tay			;
 	rts			;} // rcindex()
 
 reallyq	.null 	"are you sure?"	;static char reallyq[] = "are you sure?";
-hal_cnf
-	ldy	#0		;uint8_t hal_cnf(void) {
+hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
+	ldy	#$ff		; stckstr(reallyq, reallyq+sizeof(reallyq));
+	jsrAPCS	putstck,lda,#0	; putstck(0, 255, reallyq); // print from stack
+	POPVARS			;
+	DONTRTS			;
+	ldy	#SAY_KEY	;
+	jsrAPCS	nteract		;
+	tya			;
+	pha			; uint8_t key = nteract(SAY_KEY);
+	jsr	putchar		; putchar(key);
+	lda @w	V0LOCAL	;//key	;
+	cmp	#'y'		;
+	beq	+		;
+	cmp	#'y'+$20	;
+	beq	+		;
+	ldy	#0		;
 	beq	++		;
 +	ldy	#1		; return y = (tolower(key) == 'y') ? 1 : 0;
 +	POPVARS			;
