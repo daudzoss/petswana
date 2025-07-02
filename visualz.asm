@@ -585,7 +585,7 @@ halhprt	bcs	+		;inline void halhprt(register uint8_t y,
 	lda	SCREENM+1,y	;
 	ora	#$80		;
 	sta	SCREENM+1,y	;  SCREENM[y+1] |= 0x80;
-	bne	+		; } else { // bot row i~r
+	bne	++		; } else { // bot row i~r
 +	lda	SCREENM+SCREENW*(1+GRIDPIT*GRIDH),y
 	ora	#$80		;  SCREENM[SCREENW*(1+GRIDPIT*GRIDH)+y] |= 0x80;
 	sta	SCREENM+SCREENW*(1+GRIDPIT*GRIDH),y
