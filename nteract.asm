@@ -275,12 +275,12 @@ toportl
 rollund	.byte	%0111 .. %0000	;
 hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V1LOCAL=intyp; uint8_t input, intyp = a;// nteract()'s "what"
-	lda	#1;0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
+	lda	#0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
 	lda	#1		;
-	pha	;//V3LOCAL=incol;
--	jsrAPCS	hilighc		; hilighc(incol = 1, inrow = 1); // cell A1 // 0); // portal "1"
-	jsr	getchar		; do {
+	pha	;//V3LOCAL=incol; incol = 1, inrow = 0; // portal "1"
+-	jsrAPCS	hilighc		; do {
+	jsr	getchar		;  hilighc(incol, inrow);
 	tya			;  register uint8_t a, y;
 	sta @w	V0LOCAL	;//input;  input = getchar();
 	cmp	#$91		;  switch (input) {

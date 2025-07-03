@@ -184,9 +184,11 @@ b2basic	rts			;
 +	bpl	+		;  } else if (y & SAY_PEK) { // cell check
 	jsrAPCS	peekcel		;   peekcel(y); // FIXME: add msg
 	jmp	-		;
-+	bvc	++++		;  } else if (y & 0x40) { // special input  
+special	.byte	%01 .. %000000	;
++	bit	special		;
+	bvc	++++		;  } else if (y & 0x40) { // special input  
 	cpy	#SUBMITG	;   switch (y) {
-	bne	++		;   case SUBMITG:
+	bne	++++		;   case SUBMITG:
 	jsrAPCS	confirm		;
 	tya			;
 	pha			;    uint8_t yesorno = confirm();
@@ -206,6 +208,7 @@ b2basic	rts			;
 	jmp	-		;    } else if (--remnng == 0) {
 +	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
 	ldy	#DRW_HID|DRW_MSG;
+ brk
 	jsrAPCS	visualz		;     visualz(DRW_HID|DRW_MSG);
 	ldy	#0		;     exit(y = 0);
 	jmp	mainend		;    }
