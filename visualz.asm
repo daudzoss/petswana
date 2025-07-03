@@ -645,6 +645,12 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 sel_cel	.byte	DRW_SEL
 hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	tay			;                   uint8_t row, uint8_t what) {
+.if 0
+ jsrAPCS puthexd
+ lda #'='
+ jsr putchar
+ ldy @w V0LOCAL
+.endif
 +	lda	TRYGRID,y	; uint8_t gridi = a; // so we can hint iff a<80
 	and	#%0000 .. %1111	; uint8_t cellv = TRYGRID[a/*0~70|80~159*/]&0xf;
 	cpy	#GRIDSIZ	;
@@ -659,10 +665,19 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	ora	#SOBLANK&SOFILLD;    cellv = HIDGRID[y] | pokthru; // or X
 +	pha	;V1LOCAL=cellv	;  }
 	lda	TRYGRID,y	; }
+.if 0
+ tay
+ jsrAPCS puthexd
+ lda #' '
+ jsr putchar
+ ldy @w V0LOCAL
+ lda TRYGRID,y
+.endif
 	lsr			;
 	lsr			;
 	lsr			;
 	lsr			;
+ lda #RUBRED>>4
 	pha	;V2LOCAL=cellt	; uint8_t cellt = TRYGRID[a] >> 4; // 0~4 | 8
 	lda	#-GRIDPIT	;
 	ldy @w	A0FUNCT	;//col	;
@@ -691,7 +706,9 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	plp			; else if ((symarbr[y] = 0xa0) &&
 	beq	+		;          (what & DRW_SEL))
 	lda	#$80|OUTLNBR	;  symbr = 0x80 | OUTLNBR;
-+	pha	;V4LOCAL=symbr	; else symbr = symarbr[y];
++
+ lda #4
+	pha	;V4LOCAL=symbr	; else symbr = symarbr[y];
 	
 	lda	symarbl,y	;
 	cmp	#' '		;
@@ -712,7 +729,9 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	plp			; else if ((symarbl[y] = 0xa0) &&
 	beq	+		;          (what & DRW_SEL))
 	lda	#$80|OUTLNBL	;  symbl = 0x80 | OUTLNBL;
-+	pha	;V5LOCAL=symbl	; else symbl = symarbl[y];
++
+ lda #3
+	pha	;V5LOCAL=symbl	; else symbl = symarbl[y];
 
 	lda	symartr,y	;
 	cmp	#' '		;
@@ -733,7 +752,9 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	plp			; else if ((symartr[y] = 0xa0) &&
 	beq	+		;          (what & DRW_SEL))
 	lda	#$80|OUTLNTR	;  symtr = 0x80 | OUTLNTR;
-+	pha	;V6LOCAL=symtr	; else symtr = symartr[y];
++
+ lda #2
+	pha	;V6LOCAL=symtr	; else symtr = symartr[y];
 
 	lda	symartl,y	;
 	cmp	#' '		;
@@ -754,7 +775,9 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	plp			; else if ((symartl[y] = 0xa0) &&
 	beq	+		;          (what & DRW_SEL))
 	lda	#$80|OUTLNTL	;  symtl = 0x80 | OUTLNTL;
-+	pha	;V7LOCAL=symtl	; else symtl = symartly];
++
+ lda #1
+	pha	;V7LOCAL=symtl	; else symtl = symartly];
 
 	lda @w	A1FUNCT	;//row	;
 	and	#1		; switch (a = row) {
@@ -806,11 +829,11 @@ hal_try	ldy	#0		;void hal_try(void) {
 	POPVARS			;
 	rts			;} // hal_try()
 
-hal_hid	ldy	#$50		;void hal_try(void) {
-.if 1;causing an unhandled case at the end of halhprt()
+hal_hid	jsrAPCS	gridcir		;void hal_try(void) {
+	ldy	#$50		; gridcir();
+.if 1;causes an unhandled case at the end of halhprt() if a portal is selected:
 	jsrAPCS gridsho		; gridsho(80);
 .endif
-	jsrAPCS	gridcir		; gridcir();
 	POPVARS			;
 	rts			;} // hal_hid()
 
