@@ -152,16 +152,20 @@ delighc
 .endif
 hilighc	lda @w	A0FUNCT	;//col 	;void hilighc(int8_t col,int8_t row,int8_t what)
 	ldy @w	A1FUNCT	;//row	;{
-	jsr_a_y	rcindex,OTHRVAR	; y = rcindex(a = col, y = row);
+	jsr_a_y	rcindex,OTHRVAR	;
+	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
+	bmi	+		;  // cell in range (1~10,1~8)
 	lda	#DRW_CEL|DRW_SEL;  // DRW_SEL bit set, so will highlight
 	pha			;  int8_t w;
 	lda @w	A1FUNCT		;
 	pha			;  int8_t r;
 	lda @w	A0FUNCT		;
 	pha			;  int8_t c;
-	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_SEL);
-	POPVARS			;
-	rts			;} // delighc()
+	jsrAPCS	hal_cel		;  hal_cel(y, c = col, r = row, w = DRW_CEL);
+	jmp	++		; } else { // portal, so draw it selected
++	jsrAPCS	hal_prt		;  hal_prt(y, c = col, r = row, w = DRW_SEL);
++	POPVARS			; }
+	rts			;} // hilighc()
 
 portalf	.byte	%0010 .. %0000	;//FIXME: C might be close, asm definitely wrong
 portlcw	tay			;void portlcw(register int8_t a, uint8_t &col,
@@ -275,7 +279,7 @@ toportl
 rollund	.byte	%0111 .. %0000	;
 hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V1LOCAL=intyp; uint8_t input, intyp = a;// nteract()'s "what"
-	lda	#0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
+	lda	#1;0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
 	lda	#1		;
 	pha	;//V3LOCAL=incol; incol = 1, inrow = 0; // portal "1"

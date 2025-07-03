@@ -207,9 +207,10 @@ special	.byte	%01 .. %000000	;
 	beq	+		;
 	jmp	-		;    } else if (--remnng == 0) {
 +	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
-	ldy	#DRW_HID|DRW_MSG;
- brk
-	jsrAPCS	visualz		;     visualz(DRW_HID|DRW_MSG);
+	ldy	#DRW_MSG	;
+	jsrAPCS	visualz		;     visualz(DRW_MSG);
+	ldy	#DRW_HID	;
+	jsrAPCS	visualz		;     visualz(DRW_HID);
 	ldy	#0		;     exit(y = 0);
 	jmp	mainend		;    }
 +	jmp	-		;   }
@@ -232,7 +233,7 @@ modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
 	.text	$1d
 .next
 	.text	$1b,'t',$93,$1d	; place, clear a BASIC 3.5/7 window for messages
-	.text	$1b,'t'
+	.text	$1d,$1d,$1b,'t'
 .for d := 0, d <= GRIDPIT*GRIDH, d += 1
 	.text	$11
 .next
