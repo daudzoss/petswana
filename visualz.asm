@@ -645,8 +645,6 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 sel_cel	.byte	DRW_SEL
 hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	tay			;                   uint8_t row, uint8_t what) {
-;moveme	bpl	+		; if (a < 0) // portal, not a grid cell
-;moveme	jmp	hal_prt		;  hal_prt(a, col, row, what); // separate funct
 +	lda	TRYGRID,y	; uint8_t gridi = a; // so we can hint iff a<80
 	and	#%0000 .. %1111	; uint8_t cellv = TRYGRID[a/*0~70|80~159*/]&0xf;
 	cpy	#GRIDSIZ	;
