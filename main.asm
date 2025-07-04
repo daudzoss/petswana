@@ -278,9 +278,6 @@ initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 	sec			;
 	jsr	inigrid		; inigrid(1 /* HIDGRID */);
 	jsrAPCS	rndgrid		; rndgrid();
- ldy #DRW_HID	
- jsrAPCS visualz
- brk
 	POPVARS			;
 	rts			;} // initize()
 

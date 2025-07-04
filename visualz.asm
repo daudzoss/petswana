@@ -645,18 +645,6 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 sel_cel	.byte	DRW_SEL
 hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	tay			;                   uint8_t row, uint8_t what) {
-.if 1
- jsrAPCS puthexd
- lda #'='
- jsr putchar
- lda TRYGRID,y
- tay
- jsrAPCS puthexd
- lda #' '
- jsr putchar
- jsr getchar
- ldy @w V0LOCAL
-.endif
 	lda	TRYGRID,y	; uint8_t gridi = a; // so we can hint iff a<80
 	and	#%0000 .. %1111	; uint8_t cellv = TRYGRID[a/*0~70|80~159*/]&0xf;
 	cpy	#GRIDSIZ	;
@@ -671,14 +659,10 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	ora	#SOBLANK&SOFILLD;    cellv = HIDGRID[y] | pokthru; // or X
 +	pha	;V1LOCAL=cellv	;  }
 	lda	TRYGRID,y	; }
-.if 0
 	lsr			;
 	lsr			;
 	lsr			;
 	lsr			;
-.else
- lda #RUBYEL>>4
-.endif
 	pha	;V2LOCAL=cellt	; uint8_t cellt = TRYGRID[a] >> 4; // 0~4 | 8
 	lda	#-GRIDPIT	;
 	ldy @w	A0FUNCT	;//col	;
@@ -707,14 +691,6 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	plp			; else if ((symarbr[y] = 0xa0) &&
 	beq	+		;          (what & DRW_SEL))
 	lda	#$80|OUTLNBR	;  symbr = 0x80 | OUTLNBR;
-+
- tya
- and #$0f
- clc
- adc #'0'
- cmp #$3a
- bcc +
- adc #'a'-'9'-1
 +	pha	;V4LOCAL=symbr	; else symbr = symarbr[y];
 	
 	lda	symarbl,y	;
@@ -736,17 +712,6 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	plp			; else if ((symarbl[y] = 0xa0) &&
 	beq	+		;          (what & DRW_SEL))
 	lda	#$80|OUTLNBL	;  symbl = 0x80 | OUTLNBL;
-+
- tya
- lsr
- lsr
- lsr
- lsr
- clc
- adc #'0'
- cmp #$3a
- bcc +
- adc #'a'-'9'-1
 +	pha	;V5LOCAL=symbl	; else symbl = symarbl[y];
 
 	lda	symartr,y	;
@@ -768,13 +733,6 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	plp			; else if ((symartr[y] = 0xa0) &&
 	beq	+		;          (what & DRW_SEL))
 	lda	#$80|OUTLNTR	;  symtr = 0x80 | OUTLNTR;
-+
- lda @w V1LOCAL
- and #$0f
- adc #'0'
- cmp #$3a
- bcc +
- adc #'a'-'9'-1
 +	pha	;V6LOCAL=symtr	; else symtr = symartr[y];
 
 	lda	symartl,y	;
@@ -796,19 +754,7 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	plp			; else if ((symartl[y] = 0xa0) &&
 	beq	+		;          (what & DRW_SEL))
 	lda	#$80|OUTLNTL	;  symtl = 0x80 | OUTLNTL;
-+
- lda @w V1LOCAL
- lsr
- lsr
- lsr
- lsr
- clc
- adc #'0'
- cmp #$3a
- bcc +
- adc #'a'-'9'-1
-+
-	pha	;V7LOCAL=symtl	; else symtl = symartly];
++	pha	;V7LOCAL=symtl	; else symtl = symartly];
 
 	lda @w	A1FUNCT	;//row	;
 	and	#1		; switch (a = row) {
@@ -844,13 +790,13 @@ gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
 	pha	;//row=V2LOCAL	;
 	pha	;//col=V3LOCAL	; uint8_t row, col;
 -	lda	#8		; for (col = 10; col; col--) {
-	sta @w	V1LOCAL	;//row	;  for(row = 8; row; row--) {
+	sta @w	V2LOCAL	;//row	;  for(row = 8; row; row--) {
 -	dec @w	V0LOCAL	;//savey;
 	ldy @w	V0LOCAL	;//savey;
 	jsrAPCS	hal_cel		;   hal_cel(--savey, col, row, what);
-	dec @w	V1LOCAL	;//row	;
+	dec @w	V2LOCAL	;//row	;
 	bne	-		;  }
-	dec @w	V2LOCAL	;//col	;
+	dec @w	V3LOCAL	;//col	;
 	bne	--		; }
 	POPVARS			;
 	rts			;} // gridsho()
