@@ -282,7 +282,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	lda	#1;0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
 	lda	#1		;
-	pha	;//V3LOCAL=incol; incol = 1, inrow = 0; // portal "1"
+	pha	;//V3LOCAL=incol; incol = 1, inrow = 1;//0; // portal "1"
 -	jsrAPCS	hilighc		; do {
 	jsr	getchar		;  hilighc(incol, inrow);
 	tya			;  register uint8_t a, y;
@@ -321,10 +321,8 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	ldy	#$00		;
 	jsrAPCS	portlcw		;   portlcw(y = 0, &incol, &inrow); // N=0, CW
 	jmp	-		;   break;
-+	cmp	#$20		;
-	beq	+		;  case ' ': // blank shape, cell (if not hint)
-	cmp	#$14		;
-	bne	++++		;  case 0x14: // DEL key same as space
++	cmp	#$14		;
+	bne	++++		;  case 0x14: // DEL blanks cell (if not a hint)
 +	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
 	jsr_a_y	rcindex,OTHRVAR	;   y = rcindex(incol, inrow);
@@ -428,21 +426,21 @@ shrtkey	.byte	RUBOUT,RUBWHT	;
 +	sta	TRYGRID,y	;   TRYGRID[y] = a;
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
 	jmp	-		;   break;
-chkpeek	cmp	#'@'		;
-	bne	++		;  case '@':
+chkpeek	cmp	#$20		;
+	bne	+++		;  case ' ':
 	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
 	jsr_a_y	rcindex,OTHRVAR	;
 	tya			;
-	bpl	++		;   if ((y = rcindex(a = incol, y = inrow))>=0){
+	bmi	+		;   if ((y = rcindex(a = incol, y = inrow)) >= 0
 	lda @w	V1LOCAL	;//intyp;    // a cell is highlighted, not a portal
 	and	#SAY_PEK	;
-	bne	+		;    if (intyp&SAY_PEK == 0) // peeks disallowed
-	jmp	-		;     break;
-+	tya			;    else
+	bne	++		;       && (intyp & SAY_PEK)) // peeking allowed
++	jmp	-		;
++	tya			;
 	ora	#%1000 .. %0000	;
-	jmp	inprety		;    return y |= 0x80;//request a hint this cell
-+	and	#$5f		;   }
+	jmp	inpreta		;    return y |= 0x80;//request a hint this cell
++	and	#$5f		;   break;
 	cmp	#'s'		;
 	bne	++		;  case 's':
 	lda @w	V1LOCAL	;//intyp;  case 'S':

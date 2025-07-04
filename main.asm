@@ -188,7 +188,7 @@ special	.byte	%01 .. %000000	;
 +	bit	special		;
 	bvc	++++		;  } else if (y & 0x40) { // special input  
 	cpy	#SUBMITG	;   switch (y) {
-	bne	++++		;   case SUBMITG:
+	bne	-		;   case SUBMITG:
 	jsrAPCS	confirm		;
 	tya			;
 	pha			;    uint8_t yesorno = confirm();
@@ -291,13 +291,13 @@ chkgrid	ldy	#GRIDSIZ	;inline register unit8_t chkgrid(void) {
 +	POPVARS			; return y; // 0 for perfect match
 	rts			;} // chkgrid()
 
-peekcel	and	#%0111 .. %1111	;
-	tay			;
+peekcel	and	#%0111 .. %1111	;void peekcel(register uint8_t a) {
+	tay			; register uint8_t y = a & 0x7f;
 	lda	TRYGRID,y	;
 	ora	#%0000 .. %1000	;
-	sta	TRYGRID,y	;
+	sta	TRYGRID,y	; TRYGRID[y] |= 0x80; // pokthru flag
 	POPVARS			;
-	rts			;
+	rts			;} // peekcel()
 
 iniport	lda	#$00		;inline void iniport(void) {
 	ldy	#ANSWERS	; for (register uint8_t y = ANSWERS; y; y--) {
