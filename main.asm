@@ -237,7 +237,7 @@ modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
 	.text	$1d
 .next
 	.text	$1b,'t',$93,$1d	; place, clear a BASIC 3.5/7 window for messages
-	.text	$1d,$1d,$1b,'t'
+	.text	$1d,$1d,$1d,$1b,'t'
 .for d := 0, d <= GRIDPIT*GRIDH, d += 1
 	.text	$11
 .next
@@ -287,6 +287,11 @@ initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 	sec			;
 	jsr	inigrid		; inigrid(1 /* HIDGRID */);
 	jsrAPCS	rndgrid		; rndgrid();
+ ldy #GRIDSIZ
+- lda HIDGRID-1,y
+ sta TRYGRID-1,y
+ dey
+ bne -
 	POPVARS			;
 	rts			;} // initize()
 
