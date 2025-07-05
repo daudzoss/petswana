@@ -21,6 +21,8 @@ confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visua
 	rts			;} // confirm()
 
 .if SCREENW && SCREENH
+LASTCOL	= OTHRVAR+1
+LASTROW	= OTHRVAR+2
 rcindex	pha	;//V0LOCAL=col	;register uint8_t rcindex(register int8_t a//col
 	dey			;                       register int8_t y){//row
 	tya			;
@@ -279,9 +281,9 @@ toportl
 rollund	.byte	%0111 .. %0000	;
 hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V1LOCAL=intyp; uint8_t input, intyp = a;// nteract()'s "what"
-	lda	#1;0		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
+	lda	LASTROW		; uint8_t inrow; // 1~8 grid, 0|9 top|bot portal
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
-	lda	#1		;
+	lda	LASTCOL		;
 	pha	;//V3LOCAL=incol; incol = 1, inrow = 1;//0; // portal "1"
 -	jsrAPCS	hilighc		; do {
 	jsr	getchar		;  hilighc(incol, inrow);
@@ -499,7 +501,11 @@ chkquit	eor	#'x'		;  case 'x':
 	jmp	-		;  }
 inpretp	and	#%0111 .. %1111	; } while (1); // waiting for '\n' or x
 inpreta	tay			;
-inprety	POPVARS			;
+inprety lda @w	V2LOCAL	;//inrow;
+	sta	LASTROW		;
+	lda @w	V3LOCAL	;//incol;
+	sta	LASTCOL		;
+	POPVARS			;
 	rts			;} // hal_inp()
 
 .else

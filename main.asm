@@ -31,8 +31,9 @@ TRYGRID	= vararea + $00
 HIDGRID	= vararea + GRIDSIZ
 PORTALS	= vararea + 2*GRIDSIZ
 PORTINT	= vararea + 2*GRIDSIZ + ANSWERS
-OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS
-.if SCREENH && (OTHRVAR >= SCREENM)
+OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS + 0
+LASTVAR = OTHRVAR + 16
+.if SCREENH && (LASTVAR >= SCREENM)
  .warn "code has grown too big for unexpanded vic20"
 .endif
 
@@ -165,7 +166,7 @@ main	jsrAPCS	b2basic+1	;int main(void) {
 b2basic	rts			;
 	lda	#2		;
 	pha	;//V0LOCAL=remng; uint8_t remng = 2; // guesses remaining
-	jsrAPCS	initize		; initize(); // screen, portals, grids
+	jsrAPCS	initize		; initize(); // screen, portals, grids, vars
 
 -	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
@@ -268,6 +269,11 @@ initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 	tya			;
 	cmp	#initize-modekey;
 	bcc	-		; }
+	ldy	#LASTVAR-OTHRVAR;
+	lda	#1		;
+-	sta	OTHRVAR-1,y	; for (y = 16; y; y--) {
+	dey			;  OTHRVAR[y-1] = 1; // for LASTROW,LASTCOL
+	bne	-		; }
 .if BKGRNDC
 	lda	#VIDEOBG	; if (BKGRNDC) // use available color screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
