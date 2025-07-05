@@ -1202,9 +1202,11 @@ gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 .next
 	rts			;} // gridcir()
 
-tempout rts
+tempout	;FIXME: print '\n and the launch portal here
 .else
-tempout	pha			;void tempout(uint8_t a) {
+tempout
+.endif
+	pha			;void tempout(uint8_t a) {
 	jsr	bportal		;
 	lda	PORTINT,y	;
 	sta	OTHRVAR		; OTHRVAR = PORTINT[bportal(a)];
@@ -1272,4 +1274,4 @@ tempout	pha			;void tempout(uint8_t a) {
 tintltr	.byte	0,'r','y',0	;
 	.byte	'b',0,0,0,'w'	;
 	.byte	0,0,0,0,0,0,0,'a'
-.endif
+

@@ -60,7 +60,7 @@ rcretna	tay			;
 	POPVARS			;
 	rts			;} // rcindex()
 
-reallyq	.null 	"are you sure?"	;static char reallyq[] = "are you sure?";
+reallyq	.null $0d,$90,"are you sure?";static char reallyq[] = "\nare you sure?";
 hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
 	ldy	#$ff		; stckstr(reallyq, reallyq+sizeof(reallyq));
 	jsrAPCS	putstck,lda,#0	; putstck(0, 255, reallyq); // print from stack
@@ -509,7 +509,7 @@ inprety lda @w	V2LOCAL	;//inrow;
 	rts			;} // hal_inp()
 
 .else
-reallyq	.null $14,"are you sure?";
+reallyq	.null $14,"are you sure?";static char reallyq[] = "\bare you sure?";
 hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
 	ldy	#$ff		; stckstr(reallyq, reallyq+sizeof(reallyq));
 	jsrAPCS	putstck,lda,#0	; putstck(0, 255, reallyq); // print from stack

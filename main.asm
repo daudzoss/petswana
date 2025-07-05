@@ -184,10 +184,11 @@ b2basic	rts			;
 	jmp	mainend		;   exit(0);
 +	bpl	+		;  } else if (y & SAY_PEK) { // cell check
 	jsrAPCS	peekcel		;   peekcel(y); // FIXME: add msg
+	ldy	#DRW_TRY	;
+	jsrAPCS visualz		;
 	jmp	-		;
-special	.byte	%01 .. %000000	;
-+	bit	special		;
-	bvc	++++		;  } else if (y & 0x40) { // special input  
++	and	#%01 .. %000000	;
+	beq	++++		;  } else if (y & 0x40) { // special input  
 	cpy	#SUBMITG	;   switch (y) {
 	bne	-		;   case SUBMITG:
 	jsrAPCS	confirm		;
@@ -201,7 +202,7 @@ special	.byte	%01 .. %000000	;
 	bne	+		;    if (chkgrid(y) == 0) {
 	stckstr	youwin,youwon	;     stckstr(youwin, youwin+sizeof(youwin));
 	ldy	#DRW_MSG	;
-	jsrAPCS	visualz		;     visualz(DRW_MSG);
+	jsrAPCS	visualz		;     visualz(y = DRW_MSG);
 	ldy @w	V0LOCAL	;//remng;
 	jmp	mainend	    	;     exit(y = remng);
 +	dec @w	V0LOCAL	;//remng;
@@ -217,7 +218,9 @@ special	.byte	%01 .. %000000	;
 +	jmp	-		;   }
 +	jsrAPCS	shinein		;  } else { // portal check
 	tya			;   tempout(shinein(a)); // FIXME: add msg
-	jsr	tempout		;  }
+	jsr	tempout		;
+	ldy	#DRW_LBL	;   visualz(y = DRW_LBL);
+	jsrAPCS	visualz		;  }
 	jmp	-		; } while (a);
 mainend	POPVARS			;
 	rts			;} // main()
