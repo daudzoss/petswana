@@ -867,22 +867,19 @@ hal_lbl	txa			;inline void hal_lbl(void) {
 	sta	LABLUL4+(SCREENW*2)
 	lda	#'g'-'@'
 	sta	LABLUL6+(SCREENW*2)
-	ldy	#ANSWERS/2+'a'-'@'
+	ldy	#ANSWERS/2+'a'-'a'
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*2)
-	iny
-	iny
+	ldy	#ANSWERS/2+'c'-'a'
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*2)
-	iny
-	iny
+	ldy	#ANSWERS/2+'e'-'a'
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*2)
-	iny
-	iny
+	ldy	#ANSWERS/2+'g'-'a'
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*2)
@@ -902,26 +899,22 @@ hal_lbl	txa			;inline void hal_lbl(void) {
 	sta	LABLUL4+(SCREENW*4)
 	lda	#'h'-'@'
 	sta	LABLUL6+(SCREENW*4)
-	ldy	#ANSWERS/2+'b'-'@'
+	ldy	#ANSWERS/2+'b'-'a'
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*4)
-	iny
-	iny
+	ldy	#ANSWERS/2+'d'-'a'
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*4)
-	iny
-	iny
+	ldy	#ANSWERS/2+'f'-'a'
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*4)
-	iny
-	iny
+	ldy	#ANSWERS/2+'h'-'a'
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*4)
-;	sta	SCREEND+LABLUL6+SCREENW+(SCREENW*4)
 
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
 	lda	#'1'	
@@ -929,54 +922,6 @@ hal_lbl	txa			;inline void hal_lbl(void) {
 	sta	LABLUL2+(SCREENW*1+GRIDPIT*10+2)
 	sta	LABLUL4+(SCREENW*1+GRIDPIT*10+2)
 	sta	LABLUL6+(SCREENW*1+GRIDPIT*10+2)
-	ldy	#'1'-'1'
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL0+(SCREENW*1+GRIDPIT*10+2)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL2+(SCREENW*1+GRIDPIT*10+2)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL4+(SCREENW*1+GRIDPIT*10+2)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL6+(SCREENW*1+GRIDPIT*10+2)
-.else
-	lda	#'1'	
-	sta	LABLUL0+(SCREENW*1+GRIDPIT*10+1)
-	sta	LABLUL2+(SCREENW*1+GRIDPIT*10+1)
-	sta	LABLUL4+(SCREENW*1+GRIDPIT*10+1)
-	sta	LABLUL6+(SCREENW*1+GRIDPIT*10+1)
-	ldy	#'1'-'1'
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL0+(SCREENW*1+GRIDPIT*10+1)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL2+(SCREENW*1+GRIDPIT*10+1)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL4+(SCREENW*1+GRIDPIT*10+1)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL6+(SCREENW*1+GRIDPIT*10+1)
-.endif
-
-.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
-	lda	#'1'	
 	sta	LABLUL0+(SCREENW*2+GRIDPIT*10+2)
 	lda	#'3'	
 	sta	LABLUL2+(SCREENW*2+GRIDPIT*10+2)
@@ -984,27 +929,32 @@ hal_lbl	txa			;inline void hal_lbl(void) {
 	sta	LABLUL4+(SCREENW*2+GRIDPIT*10+2)
 	lda	#'7'	
 	sta	LABLUL6+(SCREENW*2+GRIDPIT*10+2)
-	ldy	#'1'-'1'
+	ldy	#$0b-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL0+(SCREENW*1+GRIDPIT*10+2)
 	sta	SCREEND+LABLUL0+(SCREENW*2+GRIDPIT*10+2)
-	iny
-	iny
+	ldy	#$0d-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL2+(SCREENW*1+GRIDPIT*10+2)
 	sta	SCREEND+LABLUL2+(SCREENW*2+GRIDPIT*10+2)
-	iny
-	iny
+	ldy	#$0f-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL4+(SCREENW*1+GRIDPIT*10+2)
 	sta	SCREEND+LABLUL4+(SCREENW*2+GRIDPIT*10+2)
-	iny
-	iny
+	ldy	#$11-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL6+(SCREENW*1+GRIDPIT*10+2)
 	sta	SCREEND+LABLUL6+(SCREENW*2+GRIDPIT*10+2)
 .else
 	lda	#'1'	
+	sta	LABLUL0+(SCREENW*1+GRIDPIT*10+1)
+	sta	LABLUL2+(SCREENW*1+GRIDPIT*10+1)
+	sta	LABLUL4+(SCREENW*1+GRIDPIT*10+1)
+	sta	LABLUL6+(SCREENW*1+GRIDPIT*10+1)
 	sta	LABLUL0+(SCREENW*2+GRIDPIT*10+1)
 	lda	#'3'	
 	sta	LABLUL2+(SCREENW*2+GRIDPIT*10+1)
@@ -1012,139 +962,98 @@ hal_lbl	txa			;inline void hal_lbl(void) {
 	sta	LABLUL4+(SCREENW*2+GRIDPIT*10+1)
 	lda	#'7'	
 	sta	LABLUL6+(SCREENW*2+GRIDPIT*10+1)
-	ldy	#'1'-'1'
+	ldy	#$0b-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL0+(SCREENW*1+GRIDPIT*10+1)
 	sta	SCREEND+LABLUL0+(SCREENW*2+GRIDPIT*10+1)
-	iny
-	iny
+	ldy	#$0d-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL2+(SCREENW*1+GRIDPIT*10+1)
 	sta	SCREEND+LABLUL2+(SCREENW*2+GRIDPIT*10+1)
-	iny
-	iny
+	ldy	#$0f-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL4+(SCREENW*1+GRIDPIT*10+1)
 	sta	SCREEND+LABLUL4+(SCREENW*2+GRIDPIT*10+1)
-	iny
-	iny
+	ldy	#$11-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL6+(SCREENW*1+GRIDPIT*10+1)
 	sta	SCREEND+LABLUL6+(SCREENW*2+GRIDPIT*10+1)
 .endif
 
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
-	ldy	#SCREENW*3+GRIDPIT*10+2
 	lda	#'1'	
 	sta	LABLUL0+(SCREENW*3+GRIDPIT*10+2)
 	sta	LABLUL2+(SCREENW*3+GRIDPIT*10+2)
 	sta	LABLUL4+(SCREENW*3+GRIDPIT*10+2)
 	sta	LABLUL6+(SCREENW*3+GRIDPIT*10+2)
-	ldy	#'1'-'1'
+	lda	#'2'
+	sta	LABLUL0+(SCREENW*4+GRIDPIT*10+2)
+	lda	#'4'
+	sta	LABLUL2+(SCREENW*4+GRIDPIT*10+2)
+	lda	#'6'
+	sta	LABLUL4+(SCREENW*4+GRIDPIT*10+2)
+	lda	#'8'
+	sta	LABLUL6+(SCREENW*4+GRIDPIT*10+2)
+	ldy	#$0c-1
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*3+GRIDPIT*10+2)
-	iny
-	iny
+	sta	SCREEND+LABLUL0+(SCREENW*4+GRIDPIT*10+2)
+	ldy	#$0e-1
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*3+GRIDPIT*10+2)
-	iny
-	iny
+	sta	SCREEND+LABLUL2+(SCREENW*4+GRIDPIT*10+2)
+	ldy	#$10-1
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*3+GRIDPIT*10+2)
-	iny
-	iny
+	sta	SCREEND+LABLUL4+(SCREENW*4+GRIDPIT*10+2)
+	ldy	#$12-1
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL6+(SCREENW*3+GRIDPIT*10+2)
+	sta	SCREEND+LABLUL6+(SCREENW*4+GRIDPIT*10+2)
 .else
-	ldy	#SCREENW*3+GRIDPIT*10+1
 	lda	#'1'	
 	sta	LABLUL0+(SCREENW*3+GRIDPIT*10+1)
 	sta	LABLUL2+(SCREENW*3+GRIDPIT*10+1)
 	sta	LABLUL4+(SCREENW*3+GRIDPIT*10+1)
 	sta	LABLUL6+(SCREENW*3+GRIDPIT*10+1)
-	ldy	#'1'-'1'
+	lda	#'2'
+	sta	LABLUL0+(SCREENW*4+GRIDPIT*10+1)
+	lda	#'4'
+	sta	LABLUL2+(SCREENW*4+GRIDPIT*10+1)
+	lda	#'6'
+	sta	LABLUL4+(SCREENW*4+GRIDPIT*10+1)
+	lda	#'8'
+	sta	LABLUL6+(SCREENW*4+GRIDPIT*10+1)
+	ldy	#$0c-1
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL0+(SCREENW*3+GRIDPIT*10+1)
-	iny
-	iny
+	sta	SCREEND+LABLUL0+(SCREENW*4+GRIDPIT*10+1)
+	ldy	#$0e-1
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL2+(SCREENW*3+GRIDPIT*10+1)
-	iny
-	iny
+	sta	SCREEND+LABLUL2+(SCREENW*4+GRIDPIT*10+1)
+	ldy	#$10-1
 	ldx	PORTINT,y
 	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*3+GRIDPIT*10+1)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL6+(SCREENW*3+GRIDPIT*10+1)	
-.endif
-
-.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
-	lda	#'2'	
-	sta	LABLUL0+(SCREENW*4+GRIDPIT*10+2)
-	lda	#'4'	
-	sta	LABLUL2+(SCREENW*4+GRIDPIT*10+2)
-	lda	#'6'	
-	sta	LABLUL4+(SCREENW*4+GRIDPIT*10+2)
-	lda	#'8'	
-	sta	LABLUL6+(SCREENW*4+GRIDPIT*10+2)
-	ldy	#'2'-'1'
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL0+(SCREENW*4+GRIDPIT*10+2)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL2+(SCREENW*4+GRIDPIT*10+2)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL4+(SCREENW*4+GRIDPIT*10+2)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL6+(SCREENW*4+GRIDPIT*10+2)
-.else
-	lda	#'2'	
-	sta	LABLUL0+(SCREENW*4+GRIDPIT*10+1)
-	lda	#'4'	
-	sta	LABLUL2+(SCREENW*4+GRIDPIT*10+1)
-	lda	#'6'	
-	sta	LABLUL4+(SCREENW*4+GRIDPIT*10+1)
-	lda	#'8'	
-	sta	LABLUL6+(SCREENW*4+GRIDPIT*10+1)
-	ldy	#'2'-'1'
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL0+(SCREENW*4+GRIDPIT*10+1)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
-	sta	SCREEND+LABLUL2+(SCREENW*4+GRIDPIT*10+1)
-	iny
-	iny
-	ldx	PORTINT,y
-	lda	commodc,x
 	sta	SCREEND+LABLUL4+(SCREENW*4+GRIDPIT*10+1)
-	iny
-	iny
+	ldy	#$12-1
 	ldx	PORTINT,y
 	lda	commodc,x
+	sta	SCREEND+LABLUL6+(SCREENW*3+GRIDPIT*10+1)
 	sta	SCREEND+LABLUL6+(SCREENW*4+GRIDPIT*10+1)
- .endif
-
+.endif
+	;; FIXME: need to load tint for these too
 	ldy	#gridbot-gridtop;
 -	lda	gridtop-1,y
 	sta	LABLULM-1,y
@@ -1202,7 +1111,39 @@ gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 .next
 	rts			;} // gridcir()
 
-tempout	;FIXME: print '\n and the launch portal here
+tempstr	.null	$0d,$98,"beam @"
+tempout	pha			;
+	pha			;
+	ldy	#0		;
+-	tya			;
+	pha			;
+	lda	tempstr,y	;
+	jsr	putchar		;
+	pla			;
+	tay			;
+	iny			;
+	cmp #tempout-tempstr-1	;
+	bcc	-		;
+	pla			;
+	jsr	bportal		;
+	lda	PORTALS,y	;
+	bit	portalf		;
+	beq	+		;
+	eor	#%0110 .. %0000	;
+	jmp	++		;
++	ora	#%0011 .. %0000	;
+	cmp	#'9'+1		;
+	bcc	+		;
+	sec			;
+	sbc	#$0a		;
+	pha			;
+	lda	#'1'		;
+	jsr	putchar		;
+	pla			;
++	jsr	putchar		;
+	lda	#':'		;
+	jsr	putchar		;
+	pla			;
 .else
 tempout
 .endif
