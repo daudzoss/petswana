@@ -1053,21 +1053,50 @@ hal_lbl	txa			;inline void hal_lbl(void) {
 	sta	SCREEND+LABLUL6+(SCREENW*3+GRIDPIT*10+1)
 	sta	SCREEND+LABLUL6+(SCREENW*4+GRIDPIT*10+1)
 .endif
-	;; FIXME: need to load tint for these too
-	ldy	#gridbot-gridtop;
+	ldy	#gridbot-gridtop
 -	lda	gridtop-1,y
 	sta	LABLULM-1,y
+	tya
+	pha
+	lsr
+	tay
+	ldx	PORTINT-1,y
+	pla
+	tay
+	lda	#CIRCLC
+	cpy	#1
+	beq	+
+	cpy	#gridbot-gridtop
+	beq	+
+	lda	commodc,x
++	sta	SCREEND+LABLULM-1,y
+
 	lda	gridbot-1,y
 .if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
 	sta	LABLULM+SCREENW*(2+GRIDPIT*8)-1,y
-	lda	#CIRCLC	
-	sta	SCREEND+LABLULM+SCREENW*(2+GRIDPIT*8)-1,y
 .else
 	sta	LABLULM+SCREENW*(1+GRIDPIT*8)-1,y
-	lda	#CIRCLC	
+.endif
+	tya
+	pha
+	lsr
+	tay
+	ldx	PORTINT+GRIDW+2*GRIDH-1,y
+	pla
+	tay
+	lda	#CIRCLC
+	cpy	#1
+	beq	+
+	cpy	#gridbot-gridtop
+	beq	+
+	lda	commodc,x
++
+.if GRIDULM && GRIDUL2 && GRIDUL4 && GRIDUL6
+	sta	SCREEND+LABLULM+SCREENW*(2+GRIDPIT*8)-1,y
+.else
 	sta	SCREEND+LABLULM+SCREENW*(1+GRIDPIT*8)-1,y
 .endif
-	sta	SCREENC-1,y
+;	sta	SCREENC-1,y
 	dey		
 	bne	-	
 	pla
