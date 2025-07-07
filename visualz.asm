@@ -642,6 +642,7 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	jmp	halhprt		; } else exit(DRW_SEL);
 +	brk			;} // hal_prt()
 
+ocupied	.byte	%0000 .. %0111	;
 sel_cel	.byte	DRW_SEL
 hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	tay			;                   uint8_t row, uint8_t what) {
@@ -658,13 +659,21 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 +	lda	HIDGRID,y	;    // set flag to show either tinted circle
 	ora	#SOBLANK&SOFILLD;    cellv = HIDGRID[y] | pokthru; // or X
 +	pha	;V1LOCAL=cellv	;  }
-	lda	TRYGRID,y	; }
+	lda	#$98		; }
+	pha	;V2LOCAL=cellt	; uint8_t cellt = 0x98 /* or CIRLC? */; // for X
+	lda	TRYGRID,y	;
+	bit	pokthru		;
+	beq	+		; if ((pokthru & TRYGRID[y] == 0) // not a hint
+	lda	HIDGRID,y	;
+	bit	ocupied		;
+	beq	++		;  || (ocupied & HIDGRID[y])) // cell is a shape
++	lda	TRYGRID,y	;
 	lsr			;
 	lsr			;
 	lsr			;
 	lsr			;
-	pha	;V2LOCAL=cellt	; uint8_t cellt = TRYGRID[a] >> 4; // 0~4 | 8
-	lda	#-GRIDPIT	;
+	sta @w	V2LOCAL	;//cellt;  cellt = TRYGRID[a] >> 4; // use tint 0~4 | 8
++	lda	#-GRIDPIT	;
 	ldy @w	A0FUNCT	;//col	;
 -	clc			;
 	adc	#+GRIDPIT	;
