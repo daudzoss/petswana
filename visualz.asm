@@ -577,8 +577,8 @@ filltwo	.macro	baseadr		;#define filltwo(baseadr,symtl,symtr,symbl,\
 	sta	SCREEND+1+SCREENW+CELLUL\baseadr,y
 	.endm			;
 
-halhprt	bcs	+		;inline void halhprt(register uint8_t y,
-	lda	SCREENM,y	;                    register uint1_t c) {
+halhprt	bcs	+		;void halhprt(register uint8_t y, // col#
+	lda	SCREENM,y	;             register uint1_t c) {
 	ora	#$80		; if (c == 0) { // top row 1~10
 	sta	SCREENM,y	;  SCREENM[y] |= 0x80;
 	lda	SCREENM+1,y	;
@@ -593,6 +593,44 @@ halhprt	bcs	+		;inline void halhprt(register uint8_t y,
 	sta	SCREENM+SCREENW*(1+GRIDPIT*GRIDH)+1,y
 +	POPVARS			; } // jmp'ed here from hal_prt so POPVARS
 	rts			;} // halhprt()
+
+halvsml	lda	SCREENM+999,y	;static uint8_t* charcell = SCREENM+999;
+	ora	#$80		;void halvsml(register uint8_t y) {
+halvsms	sta	SCREENM+999,y	; *charcell |= 0x80;
+	rts			;} // halvsml()
+halvini	lda	#(>SCREENM)-1	;void halvini(register uint8_t y) { // row#
+	sta	1+halvsml+1	;
+	lda	#<SCREENM	;
+;	sta	halvsml+1	;
+-	inc	1+halvsml+1	;
+-	cpy	#0		;
+	beq	+		;
+	dey			;
+	clc			;
+	adc	#SCREENW	;
+	bcs	--		;
+	bcc	-		;
++	sta	halvsml+1	;
+	sta	halvsms+1	;
+	lda	1+halvsml+1	;
+	sta	1+halvsms+1	; charcell = SCREENM + y * SCREENW;
+	rts			;} // halvini()
+halvprt	bcs	+		;void halvpr(register uint8_t y, // row#
+	jsr	halvini		;            register uint1_t c) {
+	ldy	#0		; if (c == 0) { // left col a~h
+	beq	++		;  halvini(y);
++	jsr	halvini		;  y = 0;
+	ldy	#GRIDPIT*GRIDW+1; } else { // right col 11~18
++	tya			;  halvini(y);
+	clc			;  y = GRIDPIT+GRIDH;
+	adc	#SCREENW	; }
+	pha			;
+	jsr	halvsml		; halvsml(y);
+	pla			;
+	tay			;
+	jsr	halvsml		; halvsml(y + SCREENW);
+	POPVARS			;
+	rts			;} // halvprt()
 
 hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	tay			;
@@ -617,9 +655,49 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	clc			;
 	jmp	halhprt		;  halhprt(y, 0);// paint top character and next
 +	cmp	#$12		;
-	bcs	+		; } else if (y < 18) { // portal ~18 are [10~17]
+	bcs	+		; } else if (y < 18) { // portal 11~18 : [10~17]
+
+	sec			;
+	sbc	#$0a		;
+.if GRIDPIT == 2
+	asl			;
+	tay			;
+	iny			;  y = (y-10)*GRIDPIT+1; // [1,3,5,...]
+.elsif GRIDPT == 3
+	sta	OTHRVAR		;
+	asl			;
+	clc			;
+	adc	OTHRVAR		;
+	tay			;
+	iny			;  y = (y-10)*GRIDPIT+1;// [1,4,7,...,28]
+.else
+.error "unhandled GRIDPIT value"
+.endif
+	sec			;
+	jmp	halvprt		;  halvprt(y,1);// paint right character and blw
+
 +	cmp	#$1a		;
 	bcs	+		; } else if (y < 26) { // portal a~h are [18~25]
+
+	sec			;
+	sbc	#$12		;
+.if GRIDPIT == 2
+	asl			;
+	tay			;
+	iny			;  y = (y-18)*GRIDPIT+1; // [1,3,5,...19]
+.elsif GRIDPT == 3
+	sta	OTHRVAR		;
+	asl			;
+	clc			;
+	adc	OTHRVAR		;
+	tay			;
+	iny			;  y = (y-18)*GRIDPIT+1;// [1,4,7,...,28]
+.else
+.error "unhandled GRIDPIT value"
+.endif
+	clc			;
+	jmp	halvprt		;  halvprt(y,0); // paint left character and blw
+	
 +	cmp	#$24		;
 	bcs	+		; } else if (y < 36) { // portal i~r are [26~35]
 	sec			;
