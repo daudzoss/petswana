@@ -29,12 +29,12 @@ GRIDH	= $08
 GRIDSIZ	= GRIDW*GRIDH		; sizeof(HIDGRID); sizeof(TRYGRID);
 ANSWERS	= 2*GRIDH + 2*GRIDW	; sizeof(PORTALS); sizeof(PORTINT);
 
-TRYGRID	= vararea + $00
-HIDGRID	= vararea + GRIDSIZ
-PORTALS	= vararea + 2*GRIDSIZ
-PORTINT	= vararea + 2*GRIDSIZ + ANSWERS
-OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS + 0
-LASTVAR = OTHRVAR + 16
+PORTALS	= vararea + 0
+PORTINT	= vararea + ANSWERS
+TRYGRID	= vararea + 2*ANSWERS
+HIDGRID	= vararea + 2*ANSWERS + GRIDSIZ
+OTHRVAR	= vararea + 2*ANSWERS + 2*GRIDSIZ
+LASTVAR = OTHRVAR + 2		; OTHRVAR, LASTCOL, LASTROW, ...
 .if SCREENH && (LASTVAR >= SCREENM) && VIC20UNEXP
  .warn "code has grown too big for unexpanded vic20"
 .endif
@@ -794,12 +794,16 @@ wipescr	lda #>(SCREENW*SCREENH)	;void wipescr(void) {
 wipescr	rts			;void wipescr(void) {} // wipescr()
 .endif
 
-.include "obstacle.asm"
 .include "visualz.asm"
 .include "nteract.asm"
-
+.if !VIC20UNEXP
+.include "obstacle.asm"		; so we can run the program twice in a row
+.endif
 pre_end
-.align $10			;//FIXME:unnecessary for production
+;.align $10			;//FIXME:unnecessary for production
 vararea
+.if VIC20UNEXP
+.include "obstacle.asm"		; will overwrite the obstacle data with variables
+.endif
 .end
 
