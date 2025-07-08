@@ -1,0 +1,1 @@
+../6502apcs/stdin.asm
