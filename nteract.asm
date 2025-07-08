@@ -179,7 +179,7 @@ portlcw	tay			;void portlcw(register int8_t a, uint8_t &col,
 	bpl	+		; if ((y > 0) &&
 	jmp	portaln		;
 +	cpy	#$33		;
-	bcs	+		;     (y <= 50)){ // warp to specific portal 1~50
+	bcc	+		;     (y <= 50)){ // warp to specific portal 1~50
 	jmp	portlno		;  static uint8_t portalx[50] = {
 portalx	.byte	1,2,3,4,5	;   1, 2, 3, 4, 5,
 	.byte	6,7,8,9,$0a	;   6, 7, 8, 9, 10, // 1~10 across top row
@@ -432,6 +432,7 @@ shrtkey	.byte	RUBOUT,RUBWHT	;
 +	sta	TRYGRID,y	;   TRYGRID[y] = a;
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
 	jmp	-		;   break;
+.if !VIC20UNEXP
 chkpeek	cmp	#$20		;
 	bne	+++		;  case ' ':
 	lda @w	V3LOCAL	;//incol;
@@ -446,6 +447,9 @@ chkpeek	cmp	#$20		;
 +	tya			;
 	ora	#%1000 .. %0000	;
 	jmp	inpreta		;    return y |= 0x80;//request a hint this cell
+.else
+chkpeek
+.endif
 +	and	#$5f		;   break;
 	cmp	#'s'		;
 	bne	++		;  case 's':
