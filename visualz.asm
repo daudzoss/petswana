@@ -1,11 +1,13 @@
 visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	pha	;//V1LOCAL=what	;                                 uint4_t arg1){
+.if !VIC20UNEXP
 	and	#DRW_MSH	; uint8_t whata/*ll*/ = a, what;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_MSH;
 	beq	+		; if (what) {
 	tay			;
 	jsrAPCS	hal_msh		;  hal_msh(what);
 +	lda @w	V0LOCAL		; }
+.endif
 	and	#DRW_LBL	;
 	sta @w	V1LOCAL	;//what	; what = whata & DRW_LBL;
 	beq	+		; if (what) {
@@ -24,7 +26,7 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	jsrAPCS	hal_try		;  hal_try(what);
 +	lda @w	V0LOCAL		; }
 	and	#DRW_CEL|DRW_SEL; a = whata & (DRW_CEL|DRW_SEL);//_SEL=highlight
-	beq	+		; if (a) { // can only draw cell in TRYGRID here
+	beq	visualm		; if (a) { // can only draw cell in TRYGRID here
 	sta @w	V1LOCAL	;//what	;  what = a; // _SEL can xor,reverse/flash cells
 	lda @w	A1FUNCT	;//arg1	;  uint8_t row, col;
 	pha	;//V2LOCAL=row	;  row = arg1; // row 1~8 (to match a 0~9 x 0~11
@@ -41,14 +43,19 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 	sbc	#1		;  // contents to show get fetched from TRYGRID
 	tay			;  y = ((col - 1) << 3)|(row - 1); // index 0~79
 	jsrAPCS	hal_cel		;  hal_cel(y, col, row, what);
-	jmp	++		;  return; // can't subsequently print a message
-+	lda @w	V0LOCAL		; }       // since it requires a string on stack
+.if VIC20UNEXP
+visualm
+.else
+	jmp	visualx		;  return; // can't subsequently print a message
+visualm	lda @w	V0LOCAL		; }       // since it requires a string on stack
 	and	#DRW_MSG	; what = whata & DRW_MSG;
-	beq	+		; if (what) {
+	beq	visualx		; if (what) {
 	POPVARS			;
 	DONTRTS			;
 	jmp	hal_msg		;  hal_msg(); // needs direct A0FUNCT access
-+	POPVARS			; }
+visualx
+.endif
+	POPVARS			; }
 	rts			;} // visualz()
 
 tinted	.byte	(RUBRED|RUBYEL|RUBBLU|RUBWHT|RUBOUT)
@@ -75,6 +82,7 @@ commodc	.byte	VIDEOBK		;0
 	.byte	VIDEOGY		;15
 .endif
 
+.if !VIC20UNEXP
 ;;; putchar()-printable color codes for terminal-mode on color platforms (vic20)
 .if BKGRNDC
 petscii	.byte	$98		;static uint8_t petscii[17] = {0x98, // UNMIXED
@@ -115,6 +123,7 @@ petsyms	.byte	($20<<1)	;static uint8_t petsyms[] = {0x20<<1,// if BLANK
 	.text	x"e2" x 7	;                     (0x71<<1)|0,...};//SOFILLD
 RVS_ON	= $12			;// if 0th bit above is 1, will reverse a symbol
 RVS_OFF	= $92			;// done for good measure after printing a cell
+.endif
 
 .if 0;SCREENH && (SCREENW >= $50)
 hal_try
@@ -163,8 +172,11 @@ CELLUL6	= CELLULM + 6*GRIDPIT*SCREENW
 GRDLINC	= 0
 
 
+.if !VIC20UNEXP
 hal_msh	POPVARS
 	rts
+.endif
+
 .else
 rule	.macro	temp,lj,mj,rj	;#define rule(temp,lj,mj,rj) {                 \
 .if SCREENW != $16
@@ -437,7 +449,7 @@ dendrow
 	lda	petscii+UNMIXED	;
 	jsr	putchar		;   putchar(petscii[UNMIXED]);
 	POPVARS			;
-	rts			;} // putgrid
+	rts			;} // hal_try()
 
 hal_msh
 hal_cel	POPVARS
