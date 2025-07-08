@@ -445,9 +445,13 @@ hal_lbl
 	rts
 .endif
 
+.if !VIC20UNEXP
 hal_msg	ldy	#$ff		;void hal_msg(void) {
 	lda	#0		; putstck(0,255); // needs direct A0FUNCT access
 	jmp	putstck		;} // hal_msg()
+.else
+hal_msg	rts
+.endif
 
 .if SCREENW && SCREENH
 ;;; functions for addressable screens, able to draw randomly accessed
@@ -888,18 +892,17 @@ gridsho	clc			;void gridsho(register uint8_t a /* offset */) {
 	POPVARS			;
 	rts			;} // gridsho()
 
-hal_try	ldy	#0		;void hal_try(void) {
-	jsrAPCS gridsho		; gridsho(0);
-	POPVARS			;
-	rts			;} // hal_try()
+hal_try	lda	#0		;void hal_try(void) { gridsho(0);
+	jmp	gridsho		;} // hal_try()
 
-hal_hid	jsrAPCS	gridcir		;void hal_try(void) {
-	ldy	#$50		; gridcir();
-.if 1;causes an unhandled case at the end of halhprt() if a portal is selected:
-	jsrAPCS gridsho		; gridsho(80);
+hal_hid
+.if !VIC20UNEXP
+	jsrAPCS	gridcir		;void hal_try(void) {
 .endif
-	POPVARS			;
-	rts			;} // hal_hid()
+	lda	#$50		; gridcir(); gridsho(80);
+.if 1;causes an unhandled case at the end of halhprt() if a portal is selected:
+	jmp	gridsho		;} // hal_hid()
+.endif
 
 CGRIDTL	= $
 CGRIDH	= $
@@ -1190,6 +1193,7 @@ hal_lbl	txa			;inline void hal_lbl(void) {
 	tax
 	rts			;} // hal_lbl()
 
+.if !VIC20UNEXP
 gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 	lda	#CIRCLTR	; register uint8_t y = 1+GRIDPIT*GRIDW;
 	sta	LABLULM,y	; LABLULM[y] = CIRCLTR;
@@ -1227,6 +1231,7 @@ gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 .next
 	rts			;} // gridcir()
 
+
 tempstr	.null	$0d,$98,"beam @"
 tempout	pha			;
 	pha			;
@@ -1260,9 +1265,11 @@ tempout	pha			;
 	lda	#':'		;
 	jsr	putchar		;
 	pla			;
+.endif
 .else
 tempout
 .endif
+.if !VIC20UNEXP
 	pha			;void tempout(uint8_t a) {
 	jsr	bportal		;
 	lda	PORTINT,y	;
@@ -1327,8 +1334,10 @@ tempout
 	pha			;
 	jsr	putchar		; }
 +	pla			;
-	rts			;} // tempout()
+	rts
 tintltr	.byte	0,'r','y',0	;
 	.byte	'b',0,0,0,'w'	;
 	.byte	0,0,0,0,0,0,0,'a'
-
+.else
+	rts			;} // tempout()
+.endif

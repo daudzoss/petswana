@@ -60,6 +60,9 @@ rcretna	tay			;
 	POPVARS			;
 	rts			;} // rcindex()
 
+.if VIC20UNEXP
+hal_cnf
+.else
 reallyq	.null $0d,$90,"are you sure?";static char reallyq[] = "\nare you sure?";
 hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
 	ldy	#$ff		; stckstr(reallyq, reallyq+sizeof(reallyq));
@@ -78,6 +81,7 @@ hal_cnf	stckstr	reallyq,hal_cnf	;uint8_t hal_cnf(void) {
 	beq	+		;
 	ldy	#0		;
 	beq	++		;
+.endif
 +	ldy	#1		; return y = (tolower(key) == 'y') ? 1 : 0;
 +	POPVARS			;
 	rts			;} // hal_cnf()

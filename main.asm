@@ -21,6 +21,8 @@
 	.null	format("%4d",main)
 +	.word	0
 
+VIC20UNEXP :?= false
+
 ;;; 10x8 playfield: labeled 1-10 on top, 11-18 on right, A-H on left, I-R on bot
 GRIDW	= $0a
 GRIDH	= $08
@@ -33,7 +35,7 @@ PORTALS	= vararea + 2*GRIDSIZ
 PORTINT	= vararea + 2*GRIDSIZ + ANSWERS
 OTHRVAR	= vararea + 2*GRIDSIZ + 2*ANSWERS + 0
 LASTVAR = OTHRVAR + 16
-.if SCREENH && (LASTVAR >= SCREENM)
+.if SCREENH && (LASTVAR >= SCREENM) && VIC20UNEXP
  .warn "code has grown too big for unexpanded vic20"
 .endif
 
@@ -160,7 +162,10 @@ DRW_LBL	= 1<<6			;no args
 DRW_MSH	= 1<<7			;no args; also draws screen decorations if any
 DRW_DEC	= DRW_MSH|DRW_LBL	;to draw both the portal labels and mesh
 
-.include "stdlib.asm"
+.include "stdin.asm"
+.if !VIC20UNEXP
+.include "stdout.asm"
+.endif
 
 main	jsrAPCS	b2basic+1	;int main(void) {
 b2basic	rts			;
@@ -200,26 +205,35 @@ b2basic	rts			;
 	jsrAPCS	chkgrid		;
 	tya			;
 	bne	+		;    if (chkgrid(y) == 0) {
+.if !VIC20UNEXP
 	stckstr	youwin,youwon	;     stckstr(youwin, youwin+sizeof(youwin));
 	ldy	#DRW_MSG	;
 	jsrAPCS	visualz		;     visualz(y = DRW_MSG);
 	ldy @w	V0LOCAL	;//remng;
+.endif
 	jmp	mainend	    	;     exit(y = remng);
 +	dec @w	V0LOCAL	;//remng;
 	beq	+		;
 	jmp	-		;    } else if (--remnng == 0) {
-+	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
++
+.if !VIC20UNEXP
+	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
 	ldy	#DRW_MSG	;
 	jsrAPCS	visualz		;     visualz(DRW_MSG);
 	ldy	#DRW_HID	;
 	jsrAPCS	visualz		;     visualz(DRW_HID);
 	ldy	#0		;     exit(y = 0);
+.endif
 	jmp	mainend		;    }
 +	jmp	-		;   }
 +	jsrAPCS	shinein		;  } else { // portal check
+.if !VIC20UNEXP
 	tya			;   tempout(shinein(a)); // FIXME: add msg
 	jsr	tempout		;
 	ldy	#DRW_LBL	;   visualz(y = DRW_LBL);
+.else
+	ldy	#DRW_DEC|DRW_TRY;
+.endif
 	jsrAPCS	visualz		;  }
 	jmp	-		; } while (a);
 mainend	POPVARS			;
@@ -231,7 +245,7 @@ youlose	.null	$0d,"you lose after guess 2"
 youlost
 
 modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
-.if SCREENH
+.if SCREENH && !VIC20UNEXP
 	.text	$13,$13,$1d	; clear any BASIC 3.5/7 subwindows on the screen
 .for d := 0, d <= GRIDPIT*GRIDW, d += 1
 	.text	$1d
@@ -243,6 +257,7 @@ modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
 .next
 .endif
 initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
+.if !VIC20UNEXP
 .if SCREENH
 	pha			;
 	lda	#>(SCREENW*(GRIDPIT*GRIDH+2))
@@ -277,6 +292,7 @@ initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 -	sta	OTHRVAR-1,y	; for (y = 16; y; y--) {
 	dey			;  OTHRVAR[y-1] = 1; // for LASTROW,LASTCOL
 	bne	-		; }
+.endif
 .if BKGRNDC
 	lda	#VIDEOBG	; if (BKGRNDC) // use available color screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
@@ -759,7 +775,7 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 .endif
 	rts			;} // rndgrid()
 
-.if SCREENH && SCREENW
+.if SCREENH && SCREENW && !VIC20UNEXP
 wipescr	lda #>(SCREENW*SCREENH)	;void wipescr(void) {
 	pha	;//>i=V0LOCAL	;
 	lda #<(SCREENW*SCREENH)	;
