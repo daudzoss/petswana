@@ -3,18 +3,14 @@ ask_ans	.byte	SAY_ANS		;
 ask_prt	.byte	SAY_PRT		;
 ask_pek	.byte	SAY_PEK		;
 
-nteract	pha	;//V0LOCAL=what	;void nteract(register uint8_t a, uint1_t arg0){
+nteract	pha	;//V0LOCAL=what	;uint8_t nteract(register uint8_t a) {
 	bit	ask_key		; uint8_t what = a;             //^^^which grid?
 	beq	+		; if (ask_key & SAY_KEY) {
-	jsrAPCS	hal_key		;  return hal_key(what);
-	jmp	++		; } else {
-+	jsrAPCS	hal_inp		;  return hal_inp(what);
+	jsr	getchar		;  return y = getchar();
+	bne	++		; } else {
++	jsrAPCS	hal_inp		;  return y = hal_inp(what);
 +	POPVARS			; }
 	rts			;} // nteract()
-
-hal_key	jsr	getchar		; register uint8_t a = getchar();
-	POPVARS			;
-	rts			;
 
 confirm	jsrAPCS	hal_cnf		;void confirm(register uint8_t a) { // FIXME: add visualz DRW_MSG
 	POPVARS			; return hal_cnf(a);
@@ -173,12 +169,14 @@ hilighc	lda @w	A0FUNCT	;//col 	;void hilighc(int8_t col,int8_t row,int8_t what)
 +	POPVARS			; }
 	rts			;} // hilighc()
 
-portalf	.byte	%0010 .. %0000	;//FIXME: C might be close, asm definitely wrong
 portlcw	tay			;void portlcw(register int8_t a, uint8_t &col,
+.if !VIC20UNEXP
 	beq	portalp		;                                uint8_t &row) {
 	bpl	+		; if ((y > 0) &&
 	jmp	portaln		;
-+	cpy	#$33		;
++
+.endif
+	cpy	#$33		;
 	bcc	+		;     (y <= 50)){ // warp to specific portal 1~50
 	jmp	portlno		;  static uint8_t portalx[50] = {
 portalx	.byte	1,2,3,4,5	;   1, 2, 3, 4, 5,
@@ -213,7 +211,9 @@ portalr	.byte	$0,$0,$0,$0,$0	;   0, 0, 0, 0, 0,
 	sta @w	A0FUNCT	;//col	;  *col = portalx[y];
 	lda	portalr,y	;
 	sta @w	A1FUNCT	;//row	;  *row = portalr[y];
+.if !VIC20UNEXP
 	jmp	portlno		;
+portalf	.byte	%0010 .. %0000	;//FIXME: C might be close, asm definitely wrong
 portalp	lda @w	A0FUNCT	;//col	; } else if (y == 0) { // CW: alpha inc,num dec
 	ldy @w	A1FUNCT	;//row	;
 	jsr_a_y	rcindex,OTHRVAR	;  register uint8_t a = rcindex(a=col, y=row);
@@ -271,6 +271,7 @@ portaln	lda @w	A0FUNCT	;//col	;  }
 	bne	portlno		;    if (a == 0x32) // R, need to wrap around
 	inc @w	A0FUNCT	;//col	;     --*col;
 	bne	portlno		;  }}
+.endif
 portlno	POPVARS			; }
 	rts			;} // portlcw()
 
@@ -313,7 +314,9 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS	inright		;   inright(&incol, &inrow);
 	jmp	-		;   break;
-+	cmp	#','		;
++
+.if !VIC20UNEXP
+	cmp	#','		;
 	bne	+		;  case '<': // next portal counter-clockwise
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
@@ -327,6 +330,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	ldy	#$00		;
 	jsrAPCS	portlcw		;   portlcw(y = 0, &incol, &inrow); // N=0, CW
 	jmp	-		;   break;
+.endif
 +	cmp	#$14		;
 	bne	++++		;  case 0x14: // DEL blanks cell (if not a hint)
 +	lda @w	V3LOCAL	;//incol;
@@ -384,6 +388,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 shrtkey	.byte	RUBOUT,RUBWHT	;
 	.byte	RUBRED,0,0,0	;
 	.byte	RUBBLU,RUBYEL	;
+.if !VIC20UNEXP
 	cmp	#'+'		;
 	beq	+		;  case '+': // cycle through tints (next higher)
 	cmp	#'-'		;
@@ -432,7 +437,6 @@ shrtkey	.byte	RUBOUT,RUBWHT	;
 +	sta	TRYGRID,y	;   TRYGRID[y] = a;
 	jsrAPCS	hal_cel		;   hal_cel(y, incol, inrow, intyp);
 	jmp	-		;   break;
-.if !VIC20UNEXP
 chkpeek	cmp	#$20		;
 	bne	+++		;  case ' ':
 	lda @w	V3LOCAL	;//incol;
@@ -447,8 +451,6 @@ chkpeek	cmp	#$20		;
 +	tya			;
 	ora	#%1000 .. %0000	;
 	jmp	inpreta		;    return y |= 0x80;//request a hint this cell
-.else
-chkpeek
 .endif
 +	and	#$5f		;   break;
 	cmp	#'s'		;

@@ -46,14 +46,14 @@ visualz pha	;//V0LOCAL=whata;void visualz(register uint8_t a, uint8_t arg0,
 .if VIC20UNEXP
 visualm
 .else
-	jmp	visualx		;  return; // can't subsequently print a message
+	jmp	+		;  return; // can't subsequently print a message
 visualm	lda @w	V0LOCAL		; }       // since it requires a string on stack
 	and	#DRW_MSG	; what = whata & DRW_MSG;
-	beq	visualx		; if (what) {
+	beq	+		; if (what) {
 	POPVARS			;
 	DONTRTS			;
 	jmp	hal_msg		;  hal_msg(); // needs direct A0FUNCT access
-visualx
++
 .endif
 	POPVARS			; }
 	rts			;} // visualz()
