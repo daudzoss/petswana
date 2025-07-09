@@ -651,9 +651,6 @@ halvprt	bcs	+		;void halvpr(register uint8_t y, // row#
 hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	tay			;
 	jsr	bportal		; register uint8_t y = bportal(a & 0x7f);
-.if VIC20UNEXP;bombs out shortly after here, only 2 bytes free so can't use jmp
- bcc *
-.endif
 	tya			;
 	cmp	#$0a  		;
 	bcs	+		; if (y < 10) { // portals 1~10 are [0~9]
@@ -661,7 +658,7 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	asl			;
 	tay			;
 	iny			;  y = y * GRIDPIT + 1; // SCREENM[1,3,5,...19]
-.elsif GRIDPT == 3
+.elsif GRIDPIT == 3
 	sta	OTHRVAR		;
 	asl			;
 	clc			;
@@ -682,7 +679,7 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	asl			;
 	tay			;
 	iny			;  y = (y-10)*GRIDPIT+1; // [1,3,5,...]
-.elsif GRIDPT == 3
+.elsif GRIDPIT == 3
 	sta	OTHRVAR		;
 	asl			;
 	clc			;
@@ -718,6 +715,12 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	jmp	halvprt		;  halvprt(y,0); // paint left character and blw
 	
 +	cmp	#$24		;
+.if VIC20UNEXP;bombs out because A >= 36!
+ tay
+ ora #$80
+ sta SCREENM,y
+ bne *
+.endif
 	bcs	+		; } else if (y < 36) { // portal i~r are [26~35]
 	sec			;
 	sbc	#$1a		;
