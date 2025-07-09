@@ -290,6 +290,9 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	pha	;//V2LOCAL=inrow; uint8_t incol; // 1~10 grid, 0|11 l|r portal
 	lda	LASTCOL		;
 	pha	;//V3LOCAL=incol; incol = 1, inrow = 1;//0; // portal "1"
+.if VIC20UNEXP;bombs out shortly after here, only 2 bytes free so can't use jmp
+ bcc *
+.endif
 -	jsrAPCS	hilighc		; do {
 	jsr	getchar		;  hilighc(incol, inrow);
 	tya			;  register uint8_t a, y;

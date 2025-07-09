@@ -40,7 +40,7 @@ HIDGRID	= vararea + 2*ANSWERS + GRIDSIZ
 OTHRVAR	= vararea + 2*ANSWERS + 2*GRIDSIZ
 LASTVAR = OTHRVAR + 2		; OTHRVAR, LASTCOL, LASTROW, ...
 .if SCREENH && (LASTVAR >= SCREENM) && VIC20UNEXP
- .warn "code has grown too big for unexpanded vic20"
+ .error "code has grown too big for unexpanded vic20"
 .endif
 
 ;;; HIDGRID[] and TRYGRID[]:
