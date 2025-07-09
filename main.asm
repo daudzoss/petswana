@@ -15,13 +15,17 @@
 ;;; in the first jsrAPCS example, the flags at the entry into f() are set per Y
 ;;; in the second jsrAPCS example, the  "    "  "    "     "   "   "   "   "  A
 
+VIC20UNEXP :?= false
+
 *	= BASIC+1
 	.word	(+),2055
 	.text	$9e
+.if VIC20UNEXP
+	.null	format("%4d",main),':',$a2 ; NEW because static data overwritten
+.else
 	.null	format("%4d",main)
+.endif
 +	.word	0
-
-VIC20UNEXP :?= false
 
 ;;; 10x8 playfield: labeled 1-10 on top, 11-18 on right, A-H on left, I-R on bot
 GRIDW	= $0a
@@ -179,6 +183,7 @@ b2basic	rts			;
 	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
 	tya			;
 	bne	+		;  if (y == 0) { // user quit
+.if !VIC20UNEXP
 	jsrAPCS	confirm		;   register uint8_t y = confirm();
 	tya			;
 	pha			;   uint8_t yesorno = confirm();
@@ -186,6 +191,7 @@ b2basic	rts			;
 	pla			;   if (!yesorno) // no
 	beq	-		;    break /*switch*/;
 	lda	#0		;
+.endif
 	jmp	mainend		;   exit(0);
 +	bpl	+		;  } else if (y & SAY_PEK) { // cell check
 	jsrAPCS	peekcel		;   peekcel(y); // FIXME: add msg
@@ -194,6 +200,7 @@ b2basic	rts			;
 	jmp	-		;
 +	and	#%01 .. %000000	;
 	beq	++++		;  } else if (y & 0x40) { // special input  
+.if !VIC20UNEXP
 	cpy	#SUBMITG	;   switch (y) {
 	bne	-		;   case SUBMITG:
 	jsrAPCS	confirm		;
@@ -202,6 +209,7 @@ b2basic	rts			;
 	jsrAPCS	wipescr		;    wipescr();
 	pla			;    if (!yesorno) // no
 	beq	-		;     break /*switch*/;
+.endif
 	jsrAPCS	chkgrid		;
 	tya			;
 	bne	+		;    if (chkgrid(y) == 0) {
@@ -239,13 +247,14 @@ b2basic	rts			;
 mainend	POPVARS			;
 	rts			;} // main()
 
+.if !VIC20UNEXP
 youwin	.null	$0d,"grid correct, you win!"
 youwon
 youlose	.null	$0d,"you lose after guess 2"
 youlost
 
 modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
-.if SCREENH && !VIC20UNEXP
+.if SCREENH
 	.text	$13,$13,$1d	; clear any BASIC 3.5/7 subwindows on the screen
 .for d := 0, d <= GRIDPIT*GRIDW, d += 1
 	.text	$1d
@@ -256,6 +265,8 @@ modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
 	.text	$11
 .next
 .endif
+.endif
+	
 initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 .if !VIC20UNEXP
 .if SCREENH
@@ -297,12 +308,12 @@ initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 	lda	#VIDEOBG	; if (BKGRNDC) // use available color screen
 	sta	BKGRNDC		;  BKGRNDC = VIDEOBG;
 .endif
-	jsr	iniport		;
-	clc			; iniport();
-	jsr	inigrid		; inigrid(0 /* TRYGRID */);
 	sec			;
 	jsr	inigrid		; inigrid(1 /* HIDGRID */);
 	jsrAPCS	rndgrid		; rndgrid();
+	jsr	iniport		;
+	clc			; iniport();
+	jsr	inigrid		; inigrid(0 /* TRYGRID */);
 	POPVARS			;
 	rts			;} // initize()
 
@@ -775,7 +786,8 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 .endif
 	rts			;} // rndgrid()
 
-.if SCREENH && SCREENW && !VIC20UNEXP
+.if !VIC20UNEXP
+.if SCREENH && SCREENW
 wipescr	lda #>(SCREENW*SCREENH)	;void wipescr(void) {
 	pha	;//>i=V0LOCAL	;
 	lda #<(SCREENW*SCREENH)	;
@@ -793,14 +805,15 @@ wipescr	lda #>(SCREENW*SCREENH)	;void wipescr(void) {
 .else
 wipescr	rts			;void wipescr(void) {} // wipescr()
 .endif
-
+.endif
+	
 .include "visualz.asm"
 .include "nteract.asm"
 .if !VIC20UNEXP
 .include "obstacle.asm"		; so we can run the program twice in a row
 .endif
 pre_end
-;.align $10			;//FIXME:unnecessary for production
+;.align $100			;//FIXME:unnecessary for production
 vararea
 .if VIC20UNEXP
 .include "obstacle.asm"		; will overwrite the obstacle data with variables

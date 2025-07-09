@@ -149,6 +149,7 @@ lpar_1	.byte	$7 .. $7	; H LH parallelogram
 	.byte	(SQUARE	<<5)|$08
 lpar_1e	.byte	(CHAMFBR<<5)|$10
 
+.if 0
 tra3_0	.byte	$5 .. $9	; V trapezoid pointing toward LT
 	.byte	(CHAMFTL<<5)|$00
 	.byte	(SQUARE	<<5)|$01
@@ -176,5 +177,6 @@ rct2_0e	.byte	(SQUARE <<5)|$01
 rct2_1	.byte	$7 .. $8	; H pair
 	.byte	(SQUARE <<5)|$00
 rct2_1e	.byte	(SQUARE	<<5)|$08
+.endif
 
 obsten2
