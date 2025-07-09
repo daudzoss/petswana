@@ -650,7 +650,10 @@ halvprt	bcs	+		;void halvpr(register uint8_t y, // row#
 
 hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	tay			;
-	jsrAPCS	bportal		; register uint8_t y = bportal(a & 0x7f);
+	jsr	bportal		; register uint8_t y = bportal(a & 0x7f);
+.if VIC20UNEXP;bombs out shortly after here, only 2 bytes free so can't use jmp
+ bcc *
+.endif
 	tya			;
 	cmp	#$0a  		;
 	bcs	+		; if (y < 10) { // portals 1~10 are [0~9]
