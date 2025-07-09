@@ -715,7 +715,7 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 	jmp	halvprt		;  halvprt(y,0); // paint left character and blw
 	
 +	cmp	#$24		;
-.if VIC20UNEXP;bombs out because A >= 36!
+.if 0 && VIC20UNEXP;bombs out because A >= 36!
  tay
  ora #$80
  sta SCREENM,y

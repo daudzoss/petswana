@@ -155,6 +155,12 @@ delighc
 hilighc	lda @w	A0FUNCT	;//col 	;void hilighc(int8_t col,int8_t row,int8_t what)
 	ldy @w	A1FUNCT	;//row	;{
 	jsr_a_y	rcindex,OTHRVAR	;
+.if VIC20UNEXP;bombs out because A >= 36!
+ tay
+ ora #$80
+ sta SCREENM,y
+ bne *
+.endif
 	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
 	bmi	+		;  // cell in range (1~10,1~8)
 	lda	#DRW_CEL|DRW_SEL;  // DRW_SEL bit set, so will highlight
