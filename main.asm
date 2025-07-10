@@ -227,10 +227,11 @@ mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 .else
 	POPVARS			;
 -	lda	youwin,y	;
-	jsr	tinyput		;
+	jsr	$ffd2		;
 	iny			;
 	cpy	#youwon-youwin	;
 	bcc	-		;
+	jsr	getchar		;
 .endif
 	rts		    	;     exit(y = remng);
 +	dec @w	V0LOCAL	;//remng;
@@ -248,10 +249,11 @@ mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 	ldy	#0		;    }
 .if VIC20UNEXP
 -	lda	youlose,y	;
-	jsr	tinyput		;
+	jsr	$ffd2		;
 	iny			;
 	cpy	#youlost-youlose;
 	bcc	-		;
+	jsr	getchar		;
 .endif
 	rts			;   }
 prtlchk	jsrAPCS	shinein		;  } else { // portal check
@@ -265,9 +267,9 @@ prtlchk	jsrAPCS	shinein		;  } else { // portal check
 	jsrAPCS	visualz		;  }
 	jmp	mainlp		; } while (a); }
 
-youwin	.null	VIC20UNEXP ? $0d x 0 : $0d,"grid correct, you win!"
+youwin	.null	VIC20UNEXP ? $13 : $0d,$12,"grid correct, you win!"
 youwon
-youlose	.null	VIC20UNEXP ? $0d x 0 : $0d,"you lose after guess ",'0'|SOLVTRY
+youlose	.null	VIC20UNEXP ? $13 : $0d,$12,"you lose after guess ",'0'|SOLVTRY
 youlost
 
 .if !VIC20UNEXP
@@ -283,13 +285,6 @@ modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
 	.text	$11
 .next
 .endif
-.endif
-
-.if VIC20UNEXP
-tinyput	sty	OTHRVAR
-	jsr	$ffd2
-	ldy	OTHRVAR
-	rts
 .endif
 
 initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
