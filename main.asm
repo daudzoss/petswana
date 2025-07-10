@@ -39,10 +39,13 @@ TRYGRID	= vararea + 2*ANSWERS
 HIDGRID	= vararea + 2*ANSWERS + GRIDSIZ
 OTHRVAR	= vararea + 2*ANSWERS + 2*GRIDSIZ
 LASTVAR = OTHRVAR + 3		; OTHRVAR, LASTCOL, LASTROW, ...
-.if SCREENH && (LASTVAR >= SCREENM) && VIC20UNEXP
- .error "code has grown too big for unexpanded vic20"
+.if VIC20UNEXP && SCREENH
+.if LASTVAR > SCREENM
+ .error "outgrown unexpanded vic20 by $",format("%04x",LASTVAR-SCREENM)," bytes"
+.else
+ .warn "$",format("%04x",SCREENM-LASTVAR)," bytes under $",format("%4x",SCREENM)
 .endif
-
+.endif
 ;;; HIDGRID[] and TRYGRID[]:
 ;;; a cell in a grid has a 7-bit state, representing the residing object portion
 ;;;	7	6	5	4	|	3	2	1	0
@@ -152,9 +155,11 @@ SAY_KEY	= 1<<4		 	; returns the key value
 SAY_ANS	= 1<<5			; returns %01 .. special code %111111, or $00
 SAY_PRT	= 1<<6			; returns %00 .. portal_1~50, or $00 for quit
 SAY_PEK	= 1<<7			; returns %1 .. cell_0~79, or $00 for quit
-SAY_ANY = SAY_PEK|SAY_PRT|SAY_ANS
+SAY_ANY = SAY_PRT|SAY_ANS;|SAY_PEK ;peek not working, and kinda is cheating
 	;; special codes here
 SUBMITG	= %01 .. %111111	; turn in answer for grading, please
+
+SOLVTRY	= 3 ; incorrect attempts before game over
 
 DRW_CEL	= 1<<0			; // A0: col#1~10, A1: row#1-8
 DRW_SEL	= 1<<1			; // A0: as above, then highlights/dehighlights
@@ -173,7 +178,7 @@ DRW_DEC	= DRW_MSH|DRW_LBL	;to draw both the portal labels and mesh
 
 main	jsrAPCS	b2basic+1	;int main(void) {
 b2basic	rts			;
-	lda	#2		;
+	lda	#SOLVTRY	;
 	pha	;//V0LOCAL=remng; uint8_t remng = 2; // guesses remaining
 	jsrAPCS	initize		; initize(); // screen, portals, grids, vars
 mainlp
@@ -250,7 +255,7 @@ mainend	POPVARS			;
 .if !VIC20UNEXP
 youwin	.null	$0d,"grid correct, you win!"
 youwon
-youlose	.null	$0d,"you lose after guess 2"
+youlose	.null	$0d,"you lose after guess ",'0'+(SOLVTRY & (%0000 .. %1111))
 youlost
 
 modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
