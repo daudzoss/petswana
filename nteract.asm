@@ -154,13 +154,19 @@ delighc
 .endif
 hilighc	lda @w	A0FUNCT	;//col 	;void hilighc(int8_t col,int8_t row,int8_t what)
 	ldy @w	A1FUNCT	;//row	;{
-	jsr_a_y	rcindex,OTHRVAR	;
-.if VIC20UNEXP;bombs out because A >= 36!
- tay
- ora #$80
+.if 0&&VIC20UNEXP;bombs out because row in y is 66+14 decimal!
+ pha
+ lda #$a0
  sta SCREENM,y
- bne *
-.endif
+ pla
+ tay
+ lda #$a0
+ sta SCREENM+22*12,y
+ ldx #$f0
+ txs
+ jmp *
+.else
+	jsr_a_y	rcindex,OTHRVAR	;
 	tya			; if ((y = rcindex(a=col,y=row)) & 0x80 == 0) {
 	bmi	+		;  // cell in range (1~10,1~8)
 	lda	#DRW_CEL|DRW_SEL;  // DRW_SEL bit set, so will highlight
@@ -173,16 +179,21 @@ hilighc	lda @w	A0FUNCT	;//col 	;void hilighc(int8_t col,int8_t row,int8_t what)
 	jmp	++		; } else { // portal, so draw it selected
 +	jsrAPCS	hal_prt		;  hal_prt(y, c = col, r = row, w = DRW_SEL);
 +	POPVARS			; }
+.endif
 	rts			;} // hilighc()
 
+.if VIC20UNEXP
+portalp
+portaln	
+	inc	BKGRNDC
+;	bne	portalp
+;	beq	portaln
+.endif
 portlcw	tay			;void portlcw(register int8_t a, uint8_t &col,
-.if !VIC20UNEXP
 	beq	portalp		;                                uint8_t &row) {
 	bpl	+		; if ((y > 0) &&
 	jmp	portaln		;
-+
-.endif
-	cpy	#$33		;
++	cpy	#$33		;
 	bcc	+		;     (y <= 50)){ // warp to specific portal 1~50
 	jmp	portlno		;  static uint8_t portalx[50] = {
 portalx	.byte	1,2,3,4,5	;   1, 2, 3, 4, 5,
@@ -281,6 +292,7 @@ portaln	lda @w	A0FUNCT	;//col	;  }
 portlno	POPVARS			; }
 	rts			;} // portlcw()
 
+.if !VIC20UNEXP
 toportl
  lda #0
  sta A1FUNCT
@@ -288,6 +300,7 @@ toportl
  sta A0FUNCT
 	POPVARS
 	rts			;} // toportl()
+.endif
 
 rollund	.byte	%0111 .. %0000	;
 hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {

@@ -740,7 +740,8 @@ hal_prt	and	#$7f		;void hal_prt(register uint8_t a) {
 .endif
 	sec			;  halhprt(y, 1);// paint bot character and next
 	jmp	halhprt		; } else exit(DRW_SEL);
-+	brk			;} // hal_prt()
++	POPVARS			;} // hal_prt()
+	rts			;
 
 ocupied	.byte	%0000 .. %0111	;
 sel_cel	.byte	DRW_SEL
