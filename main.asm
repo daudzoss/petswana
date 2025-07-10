@@ -181,8 +181,7 @@ b2basic	rts			;
 	lda	#SOLVTRY	;
 	pha	;//V0LOCAL=remng; uint8_t remng = 2; // guesses remaining
 	jsrAPCS	initize		; initize(); // screen, portals, grids, vars
-mainlp
--	ldy	#DRW_DEC|DRW_TRY; do {
+mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	visualz		;  visualz(DRW_MSH|DRW_LBL|DRW_TRY);
 	ldy	#SAY_ANY	;
 	jsrAPCS	nteract		;  y = nteract(SAY_ANY);  
@@ -194,52 +193,68 @@ mainlp
 	pha			;   uint8_t yesorno = confirm();
 	jsrAPCS	wipescr		;   wipescr();
 	pla			;   if (!yesorno) // no
-	beq	-		;    break /*switch*/;
+	beq	mainlp		;    break /*switch*/;
 	lda	#0		;
+	POPVARS			;
 .endif
-	jmp	mainend		;   exit(0);
+	rts			;   exit(0);
 +	bpl	+		;  } else if (y & SAY_PEK) { // cell check
 	jsrAPCS	peekcel		;   peekcel(y); // FIXME: add msg
 	ldy	#DRW_TRY	;
 	jsrAPCS visualz		;
-	jmp	-		;
+	jmp	mainlp		;
 +	and	#%01 .. %000000	;
-	beq	++++		;  } else if (y & 0x40) { // special input  
+	beq	prtlchk		;  } else if (y & 0x40) { // special input  
 .if !VIC20UNEXP
 	cpy	#SUBMITG	;   switch (y) {
-	bne	-		;   case SUBMITG:
+	bne	mainlp		;   case SUBMITG:
 	jsrAPCS	confirm		;
 	tya			;
 	pha			;    uint8_t yesorno = confirm();
 	jsrAPCS	wipescr		;    wipescr();
 	pla			;    if (!yesorno) // no
-	beq	-		;     break /*switch*/;
+	beq	mainlp		;     break /*switch*/;
 .endif
 	jsrAPCS	chkgrid		;
 	tya			;
 	bne	+		;    if (chkgrid(y) == 0) {
+	POPVARS			;
 .if !VIC20UNEXP
 	stckstr	youwin,youwon	;     stckstr(youwin, youwin+sizeof(youwin));
 	ldy	#DRW_MSG	;
 	jsrAPCS	visualz		;     visualz(y = DRW_MSG);
+	POPVARS			;
 	ldy @w	V0LOCAL	;//remng;
+.else
+-	lda	youwin,y	;
+	jsr	tinyput		;
+	iny			;
+	cpy	#youwon-youwin	;
+	bcc	-		;
 .endif
-	jmp	mainend	    	;     exit(y = remng);
+	rts		    	;     exit(y = remng);
 +	dec @w	V0LOCAL	;//remng;
 	beq	+		;
-	jmp	-		;    } else if (--remnng == 0) {
+	jmp	mainlp		;    } else if (--remnng == 0) {
 +
 .if !VIC20UNEXP
 	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
 	ldy	#DRW_MSG	;
 	jsrAPCS	visualz		;     visualz(DRW_MSG);
 .endif
-	ldy	#DRW_HID	;
-	jsrAPCS	visualz		;     visualz(DRW_HID);
-	ldy	#0		;     exit(y = 0);
-	jmp	mainend		;    }
-+	jmp	-		;   }
-+	jsrAPCS	shinein		;  } else { // portal check
+	ldy	#DRW_HID	;     visualz(DRW_HID);
+	jsrAPCS	visualz		;     exit(y = 0);
+	POPVARS			;
+	ldy	#0		;    }
+.if VIC20UNEXP
+-	lda	youlose,y	;
+	jsr	tinyput		;
+	iny			;
+	cpy	#youlost-youlose;
+	bcc	-		;
+.endif
+	rts			;   }
+prtlchk	jsrAPCS	shinein		;  } else { // portal check
 .if !VIC20UNEXP
 	tya			;   tempout(shinein(a)); // FIXME: add msg
 	jsr	tempout		;
@@ -248,13 +263,11 @@ mainlp
 	ldy	#DRW_DEC|DRW_TRY;
 .endif
 	jsrAPCS	visualz		;  }
-	jmp	-		; } while (a);
-mainend	POPVARS			;
-	rts			;} // main()
+	jmp	mainlp		; } while (a); }
 
-youwin	.null	VIC20UNEXP ? $0d x 4 : $0d,"grid correct, you win!"
+youwin	.null	VIC20UNEXP ? $0d x 0 : $0d,"grid correct, you win!"
 youwon
-youlose	.null	VIC20UNEXP ? $0d x 4 : $0d,"you lose after guess ",'0'|SOLVTRY
+youlose	.null	VIC20UNEXP ? $0d x 0 : $0d,"you lose after guess ",'0'|SOLVTRY
 youlost
 
 .if !VIC20UNEXP
@@ -271,7 +284,14 @@ modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
 .next
 .endif
 .endif
-	
+
+.if VIC20UNEXP
+tinyput	sty	OTHRVAR
+	jsr	$ffd2
+	ldy	OTHRVAR
+	rts
+.endif
+
 initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 .if !VIC20UNEXP
 .if SCREENH
