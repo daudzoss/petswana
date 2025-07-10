@@ -218,7 +218,6 @@ mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS	chkgrid		;
 	tya			;
 	bne	+		;    if (chkgrid(y) == 0) {
-	POPVARS			;
 .if !VIC20UNEXP
 	stckstr	youwin,youwon	;     stckstr(youwin, youwin+sizeof(youwin));
 	ldy	#DRW_MSG	;
@@ -226,6 +225,7 @@ mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 	POPVARS			;
 	ldy @w	V0LOCAL	;//remng;
 .else
+	POPVARS			;
 -	lda	youwin,y	;
 	jsr	tinyput		;
 	iny			;
