@@ -58,9 +58,11 @@ visualm	lda @w	V0LOCAL		; }       // since it requires a string on stack
 	POPVARS			; }
 	rts			;} // visualz()
 
+.if !VIC20UNEXP
 tinted	.byte	(RUBRED|RUBYEL|RUBBLU|RUBWHT|RUBOUT)
 pokthru	.byte	(SOBLANK & SOFILLD)
 guessed	.byte	(CHAMFBR|CHAMFBL|CHAMFTL|CHAMFTR|SQUARE)
+.endif
 
 ;;; color-memory codes for addressable screens
 .if BKGRNDC
@@ -475,8 +477,10 @@ symartl	.byte	$20		; // BLANK
 	.byte	$a0		; // SQUARE
 	.byte	$f9		; // BOREDLR
 	.byte	$f6		; // BOREDTB
+.if !VIC20UNEXP
 	.byte	$4d		; // SOBLANK
 	.byte	$55		; // SOFILLED
+.endif
 	;.byte	0,0,0,0,0,0
 
 symartr	.byte	$20		; // BLANK
@@ -487,8 +491,10 @@ symartr	.byte	$20		; // BLANK
 	.byte	$a0		; // SQUARE
 	.byte	$f9		; // BOREDLR
 	.byte	$f5		; // BOREDTB
+.if !VIC20UNEXP
 	.byte	$4e		; // SOBLANK
 	.byte	$49		; // SOFILLED
+.endif
 	;.byte	0,0,0,0,0,0
 
 symarbl	.byte	$20		; // BLANK
@@ -499,8 +505,10 @@ symarbl	.byte	$20		; // BLANK
 	.byte	$a0		; // SQUARE
 	.byte	$f8		; // BOREDLR
 	.byte	$f6		; // BOREDTB
+.if !VIC20UNEXP
 	.byte	$4e		; // SOBLANK
 	.byte	$4a		; // SOFILLED
+.endif
 	;.byte	0,0,0,0,0,0
 
 symarbr	.byte	$20		; // BLANK
@@ -511,8 +519,10 @@ symarbr	.byte	$20		; // BLANK
 	.byte	$a0		; // SQUARE
 	.byte	$f8		; // BOREDLR
 	.byte	$f5		; // BOREDTB
+.if !VIC20UNEXP
 	.byte	$4d		; // SOBLANK
 	.byte	$4b		; // SOFILLED
+.endif
 	;.byte	0,0,0,0,0,0
 
 tintarr	.byte	VIDEOBG		; // UNTINTD
@@ -749,25 +759,29 @@ hal_cel	pha	;V0LOCAL=gridi	;void hal_cel(register uint8_t a, uint8_t col,
 	tay			;                   uint8_t row, uint8_t what) {
 	lda	TRYGRID,y	; uint8_t gridi = a; // so we can hint iff a<80
 	and	#%0000 .. %1111	; uint8_t cellv = TRYGRID[a/*0~70|80~159*/]&0xf;
+.if !VIC20UNEXP
 	cpy	#GRIDSIZ	;
-	bcs	++	;dhidden; if (gridi < GRIDSIZ) { // no hints in HIDGRID
+	bcs	hal_tnt	;dhidden; if (gridi < GRIDSIZ) { // no hints in HIDGRID
 	bit	pokthru		;
- 	beq	++	;deither;  if (cellv & pokthru) { // if unknown, hint
+ 	beq	hal_tnt	;deither;  if (cellv & pokthru) { // if unknown, hint
 	bit	guessed		;
 	beq	+		;   if (cellv & guessed) // we placed block so
 	and #~(SOBLANK&SOFILLD)	;    cellv &= ~pokthru; // show guess, not hint
-	bne	++	;deither;   else // no guess placed here so
+	bne	hal_tnt	;deither;   else // no guess placed here so
 +	lda	HIDGRID,y	;    // set flag to show either tinted circle
 	ora	#SOBLANK&SOFILLD;    cellv = HIDGRID[y] | pokthru; // or X
-+	pha	;V1LOCAL=cellv	;  }
+.endif
+hal_tnt	pha	;V1LOCAL=cellv	;  }
 	lda	#$98		; }
 	pha	;V2LOCAL=cellt	; uint8_t cellt = 0x98 /* or CIRLC? */; // for X
+.if !VIC20UNEXP
 	lda	TRYGRID,y	;
 	bit	pokthru		;
 	beq	+		; if ((pokthru & TRYGRID[y] == 0) // not a hint
 	lda	HIDGRID,y	;
 	bit	ocupied		;
 	beq	++		;  || (ocupied & HIDGRID[y])) // cell is a shape
+.endif
 +	lda	TRYGRID,y	;
 	lsr			;
 	lsr			;

@@ -351,7 +351,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jmp	-		;   break;
 .endif
 +	cmp	#$14		;
-	bne	++++		;  case 0x14: // DEL blanks cell (if not a hint)
+	bne	shrtcts		;  case 0x14: // DEL blanks cell (if not a hint)
 +	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
 	jsr_a_y	rcindex,OTHRVAR	;   y = rcindex(incol, inrow);
@@ -361,12 +361,14 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 +	lda	TRYGRID,y	;   a = TRYGRID[y];
 	and	#%1111 .. %1000	;
 	sta	TRYGRID,y	;   TRYGRID[y] &= 0xf8; // can blank shape, but
+.if !VIC20UNEXP
 	and	pokthru		;   if (a & pokthru == 0) // if we bought a hint
 	beq	+		;
 	jmp	-		;    break; // we can't change this cell's tint
 +	sta	TRYGRID,y	;   TRYGRID[y] = UNTINTD;
+.endif
 	jmp	-		;   break;
-+	cmp	#'1'		;
+shrtcts	cmp	#'1'		;
 	beq	+		;  case '1': // black direct shortcut
 	cmp	#'2'		;
 	beq	+		;  case '2': // white direct shortcut
@@ -383,10 +385,12 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	bpl	+		;    break; // only cells have tint, not portals
 	jmp	-
 +	lda	TRYGRID,y	;   a = TRYGRID[y];
+.if !VIC20UNEXP
 	bit	pokthru		;   if (a & pokthru == 0) // if we bought a hint
-	beq	+		;
+	beq	settint		;
 	jmp	-		;    break; // we can't change this cell's tint
-+	and	#%0000 .. %0111	;
+.endif
+settint	and	#%0000 .. %0111	;
 	sta	OTHRVAR		;
 	tya			;
 	pha			;
@@ -516,9 +520,11 @@ chkpeek	cmp	#$20		;
 	adc	#%0000 .. %0001	;   a = (TRYGRID[y] & 0x07) + 1;// next shape
 	cmp	#MAXSHAP+1	;
 	bcc	+		;   if (a > MAXSHAP) { // roll around to BLANK
+.if !VIC20UNEXP
 	lda @w	V0LOCAL	;//input;
 	bit	pokthru		;
 	bne	++		;    if (input & pokthru == 0) // if not a hint
+.endif
 	lda	#BLANK		;     a = BLANK;//must clear tint to fully blank
 	beq	++		;  //else input &= 0xf8; // unchanged
 +	ora @w	V0LOCAL	;//input;   }

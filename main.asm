@@ -233,10 +233,10 @@ mainlp
 	stckstr	youlose,youlost	;     stckstr(youlose, youlose+sizeof(youlose));
 	ldy	#DRW_MSG	;
 	jsrAPCS	visualz		;     visualz(DRW_MSG);
+.endif
 	ldy	#DRW_HID	;
 	jsrAPCS	visualz		;     visualz(DRW_HID);
 	ldy	#0		;     exit(y = 0);
-.endif
 	jmp	mainend		;    }
 +	jmp	-		;   }
 +	jsrAPCS	shinein		;  } else { // portal check
@@ -324,7 +324,9 @@ initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 
 chkgrid	ldy	#GRIDSIZ	;inline register unit8_t chkgrid(void) {
 -	lda	TRYGRID-1,y	; for (uint8_t y = GRIDSIZ; y; y--) {
+.if !VIC20UNEXP
 	and	#~(SOBLANK)	;  register uint8_t a = TRYGRID[y-1] & 0xf7;
+.endif
 	cmp	HIDGRID-1,y	;  if (HIDGRID[y-1] != a) 
 	bne	+		;   break;
 	dey			;  // bit 3 was any hint revealed, not our guess
