@@ -252,12 +252,12 @@ mainlp
 mainend	POPVARS			;
 	rts			;} // main()
 
-.if !VIC20UNEXP
-youwin	.null	$0d,"grid correct, you win!"
+youwin	.null	VIC20UNEXP ? $0d x 4 : $0d,"grid correct, you win!"
 youwon
-youlose	.null	$0d,"you lose after guess ",'0'+(SOLVTRY & (%0000 .. %1111))
+youlose	.null	VIC20UNEXP ? $0d x 4 : $0d,"you lose after guess ",'0'|SOLVTRY
 youlost
 
+.if !VIC20UNEXP
 modekey	.text	$09,$83,$08	; enable upper/lower case, uppercase, lock upper
 .if SCREENH
 	.text	$13,$13,$1d	; clear any BASIC 3.5/7 subwindows on the screen
