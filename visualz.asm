@@ -1285,7 +1285,8 @@ tempout	pha			;inline void tempout(register uint8_t a) {
 	beq	+		; if (a & portalf) { // portal A~R (0x21~0x32)
 	eor	#%0110 .. %0000	;  a ^= 0x60; // -> 0x41~0x52
 	jmp	++		; } else { // portal 1~18 (0x01~0x12)
-+	ora	#%0011 .. %0000	;  a |= 0x30; // -> 31~39,30,31,32 FIXME
++	clc			;
+	adc	#%0011 .. %0000	;  a += 0x30; // -> 0x31~0x42
 	cmp	#'9'+1		; 
 	bcc	+		;  if (a > '9') {
 	sec			;
