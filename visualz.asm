@@ -1265,45 +1265,45 @@ gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 	rts			;} // gridcir()
 
 
-tempstr	.null	$0d,$98,"beam @"
-tempout	pha			;
-	pha			;
+tempstr	.null	$0d,$98,"beam @";static char tempstr[] = "\n\0230beam @";
+tempout	pha			;inline void tempout(register uint8_t a) {
+	pha			; uint8_t stack = a;
 	ldy	#0		;
--	tya			;
-	pha			;
-	lda	tempstr,y	;
-	jsr	putchar		;
+-	tya			; for (register uint8_t y = 0;
+	pha			;      y < sizeof(tempstr);
+	lda	tempstr,y	;      y++) {
+	jsr	putchar		;  putchar(tempstr[y]);
 	pla			;
 	tay			;
 	iny			;
 	cmp #tempout-tempstr-1	;
-	bcc	-		;
+	bcc	-		; }
 	pla			;
-	jsr	bportal		;
-	lda	PORTALS,y	;
+	jsr	bportal		; register uint8_t y = bportal(a);
+	lda	PORTALS,y	; a = PORTALS[y];
 	bit	portalf		;
-	beq	+		;
-	eor	#%0110 .. %0000	;
-	jmp	++		;
-+	ora	#%0011 .. %0000	;
-	cmp	#'9'+1		;
-	bcc	+		;
+	beq	+		; if (a & portalf) { // portal A~R (0x21~0x32)
+	eor	#%0110 .. %0000	;  a ^= 0x60; // -> 0x41~0x52
+	jmp	++		; } else { // portal 1~18 (0x01~0x12)
++	ora	#%0011 .. %0000	;  a |= 0x30; // -> 31~39,30,31,32 FIXME
+	cmp	#'9'+1		; 
+	bcc	+		;  if (a > '9') {
 	sec			;
 	sbc	#$0a		;
-	pha			;
+	pha			;   uint8_t onesdig = a - 10;
 	lda	#'1'		;
-	jsr	putchar		;
-	pla			;
-+	jsr	putchar		;
-	lda	#':'		;
-	jsr	putchar		;
-	pla			;
+	jsr	putchar		;   putchar('1');
+	pla			;   a = onesdig;
++	jsr	putchar		;  }
+	lda	#':'		; }
+	jsr	putchar		; putchar(a); putchar(':');
+	pla			; a = stack;
 .endif
 .else
-tempout
+tempout				;inline void tempout(register uint8_t a) {
 .endif
 .if !VIC20UNEXP
-	pha			;void tempout(uint8_t a) {
+	pha			;
 	jsr	bportal		;
 	lda	PORTINT,y	;
 	sta	OTHRVAR		; OTHRVAR = PORTINT[bportal(a)];
