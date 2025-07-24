@@ -340,7 +340,13 @@ initize	pha	;//V0LOCAL	;void initize(void) { uint8_t y;
 chkgrid	ldy	#GRIDSIZ	;inline register unit8_t chkgrid(void) {
 -	lda	TRYGRID-1,y	; for (uint8_t y = GRIDSIZ; y; y--) {
 .if !VIC20UNEXP
-	and	#~(SOBLANK)	;  register uint8_t a = TRYGRID[y-1] & 0xf7;
+	beq	+		;
+	bit	guessed		;  register uint8_t a = TRYGRID[y-1] & 0xf7;
+	bne	+		;
+	lda	#UNTINTD	;  if (a & 0x07 == 0) //if no shape is selected,
+	sta	TRYGRID-1,y	;   TRYGRID[y-1] = a = 0;// any tint is nonsense
+	and	#~(SOBLANK)	;
++
 .endif
 	cmp	HIDGRID-1,y	;  if (HIDGRID[y-1] != a) 
 	bne	+		;   break;
