@@ -1265,7 +1265,7 @@ gridcir	ldy	#1+GRIDPIT*GRIDW;void gridcir(void) {
 	rts			;} // gridcir()
 
 
-tempstr	.null	$0d,$98,"beam @";static char tempstr[] = "\n\0230beam @";
+tempstr	.null	$0d,$90,$98,"beam @";static char tempstr[] = "\n\0230beam @";
 tempout	pha			;inline void tempout(register uint8_t a) {
 	pha			; uint8_t stack = a;
 	ldy	#0		;
