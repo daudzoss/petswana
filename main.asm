@@ -815,7 +815,7 @@ rndgrid	ldy	#GRIDSIZ	;void rndgrid(void) {static uint8_t cangrid[80];
 	rts			;} // rndgrid()
 
 .if !VIC20UNEXP
-.if SCREENH && SCREENW
+.if 0;SCREENH && SCREENW
 wipescr	lda #>(SCREENW*SCREENH)	;void wipescr(void) {
 	pha	;//>i=V0LOCAL	;
 	lda #<(SCREENW*SCREENH)	;
