@@ -25,7 +25,11 @@ VIC20UNEXP :?= false
 .else
 	.null	format("%4d",main)
 .endif
-+	.word	0
++
+.if VIC20UNEXP
+.else
+	.word	0
+.endif
 
 ;;; 10x8 playfield: labeled 1-10 on top, 11-18 on right, A-H on left, I-R on bot
 GRIDW	= $0a
@@ -204,7 +208,9 @@ mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 	jsrAPCS visualz		;
 	jmp	mainlp		;
 +	and	#%01 .. %000000	;
-	beq	prtlchk		;  } else if (y & 0x40) { // special input  
+	bne	+		;
+	jmp	prtlchk		;  } else if (y & 0x40) { // special input  
++
 .if !VIC20UNEXP
 	cpy	#SUBMITG	;   switch (y) {
 	bne	mainlp		;   case SUBMITG:
@@ -219,11 +225,14 @@ mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 	tya			;
 	bne	+		;    if (chkgrid(y) == 0) {
 .if !VIC20UNEXP
+	ldy	#DRW_HID	;
+	jsrAPCS	visualz		;     visualz(DRW_HID);
 	stckstr	youwin,youwon	;     stckstr(youwin, youwin+sizeof(youwin));
 	ldy	#DRW_MSG	;
 	jsrAPCS	visualz		;     visualz(y = DRW_MSG);
 	POPVARS			;
 	ldy @w	V0LOCAL	;//remng;
+	rts
 .else
 	POPVARS			;
 -	lda	youwin,y	;
@@ -231,9 +240,8 @@ mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 	iny			;
 	cpy	#youwon-youwin	;
 	bcc	-		;
-	jsr	getchar		;
+	jmp	getchar		;     exit(y = remng);
 .endif
-	rts		    	;     exit(y = remng);
 +	dec @w	V0LOCAL	;//remng;
 	beq	+		;
 	jmp	mainlp		;    } else if (--remnng == 0) {
@@ -253,9 +261,10 @@ mainlp	ldy	#DRW_DEC|DRW_TRY; do {
 	iny			;
 	cpy	#youlost-youlose;
 	bcc	-		;
-	jsr	getchar		;
-.endif
+	jmp	getchar		;
+.else
 	rts			;   }
+.endif
 prtlchk	jsrAPCS	shinein		;  } else { // portal check
 .if !VIC20UNEXP
 	tya			;   tempout(shinein(a)); // FIXME: add msg
@@ -267,9 +276,9 @@ prtlchk	jsrAPCS	shinein		;  } else { // portal check
 	jsrAPCS	visualz		;  }
 	jmp	mainlp		; } while (a); }
 
-youwin	.null	VIC20UNEXP ? $13 : $0d,$12,"grid correct, you win!"
+youwin	.null	$13,$12,"grid correct, you win!"
 youwon
-youlose	.null	VIC20UNEXP ? $13 : $0d,$12,"you lose after guess ",'0'|SOLVTRY
+youlose	.null	$13,$12,"you lose after guess ",'0'|SOLVTRY
 youlost
 
 .if !VIC20UNEXP
