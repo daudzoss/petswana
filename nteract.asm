@@ -337,6 +337,8 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 .if !VIC20UNEXP
 	cmp	#','		;
 	bne	+		;  case '<': // next portal counter-clockwise
+	cmp	#$5c		;
+	bne	+		;  case PO: // next portal counter-clockwise
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	ldy	#$ff		;
@@ -344,6 +346,8 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jmp	-		;   break;
 +	cmp	#'.'		;
 	bne	+		;  case '>': // next portal clockwise
+	cmp	#$5e		;
+	bne	+		;  case AU: // next portal clockwise
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
 	ldy	#$00		;
@@ -412,10 +416,10 @@ shrtkey	.byte	RUBOUT,RUBWHT	;
 	.byte	RUBRED,0,0,0	;
 	.byte	RUBBLU,RUBYEL	;
 .if !VIC20UNEXP
-	cmp	#'+'		;
-	beq	+		;  case '+': // cycle through tints (next higher)
-	cmp	#'-'		;
-	bne	chkpeek		;  case '-': // cycle through tints (next lower)
+	cmp	#$59		;
+	beq	+		;  case 'Y': // cycle through tints (next higher)
+	cmp	#$5a		;
+	bne	chkpeek		;  case 'Z': // cycle through tints (next lower)
 +	lda @w	V3LOCAL	;//incol;
 	ldy @w	V2LOCAL	;//inrow;
 	jsr_a_y	rcindex,OTHRVAR	;   y = rcindex(incol, inrow);
