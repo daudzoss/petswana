@@ -335,8 +335,6 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	jmp	-		;   break;
 +
 .if !VIC20UNEXP
-	cmp	#','		;
-	bne	+		;  case '<': // next portal counter-clockwise
 	cmp	#$5c		;
 	bne	+		;  case PO: // next portal counter-clockwise
 	jsrAPCS	delighc		;   delighc(incol, inrow);
@@ -344,9 +342,7 @@ hal_inp	pha	;//V0LOCAL=input;void hal_inp(register uint8_t a) {
 	ldy	#$ff		;
 	jsrAPCS	portlcw		;   portlcw(y = -1, &incol, &inrow); // N=1, CCW
 	jmp	-		;   break;
-+	cmp	#'.'		;
-	bne	+		;  case '>': // next portal clockwise
-	cmp	#$5e		;
++	cmp	#$5e		;
 	bne	+		;  case AU: // next portal clockwise
 	jsrAPCS	delighc		;   delighc(incol, inrow);
 	jsrAPCS toportl		;   toportl(&incol, &inrow);
@@ -432,12 +428,12 @@ shrtkey	.byte	RUBOUT,RUBWHT	;
 	jmp	-		;    break; // we can't change this cell's tint
 +	sta	OTHRVAR		;
 	sec			;
-	lda	#','		;
+	lda	#'y'		;
 	sbc @w	V0LOCAL	;//input; // 0x2b +  0x2c ,  0x2d - (so N flag set if -)
 	php			;
 	lda	OTHRVAR		;
 	plp			;
-	bpl	+++		;   if (input == '-') {
+	bpl	+++		;   if (input == 'z') {
 	sec			;
 	sbc	#%0001 .. %0000	;    a -= 0x10; // decrement tint, remembering
 	bit	rollund		;
@@ -451,7 +447,7 @@ shrtkey	.byte	RUBOUT,RUBWHT	;
 	and	#%0000 .. %1111	;
 	ora	#RUBWHT		;     a = 0x50 | (a & 0x0f);
 	jmp	+++		;
-+	clc			;   } else { // input == '+'
++	clc			;   } else { // input == 'y'
 	adc	#%0001 .. %0000	;    a += 0x10; // increment tint, remembering
 	bpl	+		;    if (a & RUBOUT) // we just advanced to 0x9_
 	and	#%0000 .. %1111	;
